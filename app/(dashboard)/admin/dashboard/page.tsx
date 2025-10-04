@@ -1,6 +1,20 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Users, UserCheck, Clock, Calendar, ExternalLink, AlertCircle, ArrowUpRight, Activity } from 'lucide-react'
+import { Separator } from '@/components/ui/separator'
+import { SidebarTrigger } from '@/components/ui/sidebar'
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb'
 
 export default async function AdminDashboard() {
   const supabase = await createClient()
@@ -42,129 +56,190 @@ export default async function AdminDashboard() {
     .eq('user_type', 'customer')
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">관리자 대시보드</h1>
-        <p className="text-gray-600">
-          안녕하세요, {profile?.full_name}님
-        </p>
+    <>
+      {/* Header */}
+      <header className="flex h-16 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+        <div className="flex items-center gap-2 px-4">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-2 h-4" />
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem className="hidden md:block">
+                <BreadcrumbLink href="/admin">관리자</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="hidden md:block" />
+              <BreadcrumbItem>
+                <BreadcrumbPage>대시보드</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
+        {/* Page Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">대시보드</h1>
+            <p className="text-muted-foreground mt-1">
+              안녕하세요, {profile?.full_name}님
+            </p>
+          </div>
+          <Button asChild>
+            <Link href="/admin/trainers">
+              트레이너 관리
+              <ArrowUpRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+
+        {/* Alert */}
+        {pendingTrainers && pendingTrainers > 0 && (
+          <Alert className="border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950">
+            <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-500" />
+            <AlertTitle className="text-yellow-900 dark:text-yellow-100">승인 대기 중인 트레이너</AlertTitle>
+            <AlertDescription className="text-yellow-800 dark:text-yellow-200">
+              {pendingTrainers}명의 트레이너가 승인을 기다리고 있습니다.
+              <Link href="/admin/trainers" className="ml-2 font-medium underline underline-offset-4 hover:text-yellow-900">
+                지금 확인하기
+              </Link>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Stats Grid */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card className="hover:shadow-md transition-shadow border-primary/20">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">전체 트레이너</CardTitle>
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                <Users className="h-4 w-4 text-primary" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-primary">{totalTrainers || 0}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                등록된 트레이너
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-md transition-shadow border-yellow-200">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">승인 대기</CardTitle>
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-yellow-100">
+                <Clock className="h-4 w-4 text-yellow-600" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-yellow-600">{pendingTrainers || 0}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                검토가 필요합니다
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-md transition-shadow border-green-200">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">활동 중</CardTitle>
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-100">
+                <UserCheck className="h-4 w-4 text-green-600" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{activeTrainers || 0}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                활성 트레이너
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-md transition-shadow border-blue-200">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">고객 수</CardTitle>
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100">
+                <Activity className="h-4 w-4 text-blue-600" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">{totalCustomers || 0}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                등록된 고객
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <Card className="hover:shadow-md transition-all hover:border-primary">
+            <CardHeader>
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                  <Users className="h-6 w-6 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <CardTitle className="text-base">트레이너 관리</CardTitle>
+                  <CardDescription className="text-xs">승인 및 Sanity 게시</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Button asChild variant="outline" className="w-full">
+                <Link href="/admin/trainers">
+                  바로가기
+                  <ArrowUpRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-md transition-all hover:border-primary">
+            <CardHeader>
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-950">
+                  <ExternalLink className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div className="flex-1">
+                  <CardTitle className="text-base">Sanity Studio</CardTitle>
+                  <CardDescription className="text-xs">CMS 관리</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Button asChild variant="outline" className="w-full">
+                <a href="http://localhost:3333/senior-care" target="_blank" rel="noopener noreferrer">
+                  열기
+                  <ExternalLink className="ml-2 h-4 w-4" />
+                </a>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-md transition-all hover:border-primary">
+            <CardHeader>
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-100 dark:bg-green-950">
+                  <Calendar className="h-6 w-6 text-green-600 dark:text-green-400" />
+                </div>
+                <div className="flex-1">
+                  <CardTitle className="text-base">예약 관리</CardTitle>
+                  <CardDescription className="text-xs">예약 현황 확인</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Button asChild variant="outline" className="w-full">
+                <Link href="/admin/bookings">
+                  바로가기
+                  <ArrowUpRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-
-      {/* 통계 카드 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm mb-1">전체 트레이너</p>
-              <p className="text-3xl font-bold">{totalTrainers || 0}</p>
-            </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">👨‍⚕️</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm mb-1">승인 대기</p>
-              <p className="text-3xl font-bold text-yellow-600">{pendingTrainers || 0}</p>
-            </div>
-            <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">⏳</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm mb-1">활동 중</p>
-              <p className="text-3xl font-bold text-green-600">{activeTrainers || 0}</p>
-            </div>
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">✅</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm mb-1">고객 수</p>
-              <p className="text-3xl font-bold">{totalCustomers || 0}</p>
-            </div>
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">👥</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 빠른 액션 */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-bold mb-4">빠른 액션</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Link
-            href="/admin/trainers"
-            className="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
-          >
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
-              <span className="text-xl">👨‍⚕️</span>
-            </div>
-            <div>
-              <h3 className="font-semibold">트레이너 관리</h3>
-              <p className="text-sm text-gray-500">승인 및 Sanity 게시</p>
-            </div>
-          </Link>
-
-          <a
-            href="http://localhost:3333/senior-care"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors"
-          >
-            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-4">
-              <span className="text-xl">📝</span>
-            </div>
-            <div>
-              <h3 className="font-semibold">Sanity Studio</h3>
-              <p className="text-sm text-gray-500">CMS 관리</p>
-            </div>
-          </a>
-
-          <Link
-            href="/admin/bookings"
-            className="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors"
-          >
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-4">
-              <span className="text-xl">📅</span>
-            </div>
-            <div>
-              <h3 className="font-semibold">예약 관리</h3>
-              <p className="text-sm text-gray-500">예약 현황 확인</p>
-            </div>
-          </Link>
-        </div>
-      </div>
-
-      {/* 최근 활동 (선택사항) */}
-      {pendingTrainers && pendingTrainers > 0 && (
-        <div className="mt-8 bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-yellow-800 mb-2">
-            ⚠️ 승인 대기 중인 트레이너가 있습니다
-          </h3>
-          <p className="text-yellow-700 mb-4">
-            {pendingTrainers}명의 트레이너가 승인을 기다리고 있습니다.
-          </p>
-          <Link
-            href="/admin/trainers"
-            className="inline-block px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
-          >
-            지금 확인하기 →
-          </Link>
-        </div>
-      )}
-    </div>
+    </>
   )
 }

@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Star, MapPin, Award, Home, Building, Search } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
+import { Badge } from '@/components/ui/badge'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 interface Trainer {
   id: string
@@ -21,6 +24,17 @@ interface Trainer {
   profiles?: {
     full_name: string
     avatar_url: string | null
+  }
+  sanity?: {
+    supabaseId: string
+    profileImage?: {
+      asset?: {
+        url: string
+      }
+    }
+    shortBio?: string
+    specializations?: string[]
+    featured?: boolean
   }
 }
 
@@ -139,15 +153,26 @@ export default function TrainersPage() {
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredTrainers.map((trainer) => (
-              <Card key={trainer.id} className="hover:shadow-lg transition-shadow">
+              <Card key={trainer.id} className="hover:shadow-lg transition-shadow relative">
+                {trainer.sanity?.featured && (
+                  <Badge className="absolute top-4 right-4 z-10" variant="secondary">
+                    ⭐ 추천
+                  </Badge>
+                )}
                 <CardHeader>
                   {/* 프로필 이미지 & 이름 */}
                   <div className="flex items-center gap-4 mb-3">
-                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-bold text-primary">
-                      {trainer.profiles?.full_name?.charAt(0) || trainer.profiles?.[0]?.full_name?.charAt(0) || 'T'}
-                    </div>
+                    <Avatar className="w-16 h-16">
+                      <AvatarImage
+                        src={trainer.sanity?.profileImage?.asset?.url || trainer.profiles?.avatar_url || undefined}
+                        alt={trainer.profiles?.full_name || '트레이너'}
+                      />
+                      <AvatarFallback className="text-2xl font-bold">
+                        {trainer.profiles?.full_name?.charAt(0) || 'T'}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="flex-1">
-                      <CardTitle className="text-xl">{trainer.profiles?.full_name || trainer.profiles?.[0]?.full_name || '이름 없음'}</CardTitle>
+                      <CardTitle className="text-xl">{trainer.profiles?.full_name || '이름 없음'}</CardTitle>
                       <div className="flex items-center gap-1 mt-1">
                         <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
                         <span className="font-bold">{trainer.rating?.toFixed(1)}</span>
@@ -166,19 +191,26 @@ export default function TrainersPage() {
                 </CardHeader>
 
                 <CardContent className="space-y-3">
-                  {/* 전문 분야 */}
-                  {trainer.specialties && trainer.specialties.length > 0 && (
+                  {/* Sanity 소개 또는 기본 bio */}
+                  {trainer.sanity?.shortBio && (
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {trainer.sanity.shortBio}
+                    </p>
+                  )}
+
+                  {/* 전문 분야 (Sanity 우선, 없으면 Supabase) */}
+                  {((trainer.sanity?.specializations && trainer.sanity.specializations.length > 0) ||
+                    (trainer.specialties && trainer.specialties.length > 0)) && (
                     <div>
                       <p className="text-sm font-semibold mb-2">전문 분야</p>
                       <div className="flex flex-wrap gap-2">
-                        {trainer.specialties.slice(0, 3).map((specialty: string, idx: number) => (
-                          <span
-                            key={idx}
-                            className="px-3 py-1 bg-primary/10 text-primary text-sm rounded-full"
-                          >
-                            {specialty}
-                          </span>
-                        ))}
+                        {(trainer.sanity?.specializations || trainer.specialties || [])
+                          .slice(0, 3)
+                          .map((specialty: string, idx: number) => (
+                            <Badge key={idx} variant="secondary">
+                              {specialty}
+                            </Badge>
+                          ))}
                       </div>
                     </div>
                   )}

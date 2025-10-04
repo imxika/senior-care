@@ -1,6 +1,14 @@
 // Supabase Query Helper Functions
 import { createClient } from '@/lib/supabase/client'
+import { createClient as createSanityClient } from '@sanity/client'
 import { Database } from '@/lib/database.types'
+
+const sanityClient = createSanityClient({
+  projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!,
+  dataset: process.env.NEXT_PUBLIC_SANITY_DATASET || 'production',
+  apiVersion: '2024-01-01',
+  useCdn: false,
+})
 
 type Tables = Database['public']['Tables']
 type Trainer = Tables['trainers']['Row']
@@ -13,7 +21,7 @@ type Review = Tables['reviews']['Row']
 // ====================================
 
 /**
- * 활성화되고 검증된 트레이너 목록 가져오기
+ * 활성화되고 검증된 트레이너 목록 가져오기 (Sanity 데이터 포함)
  */
 export async function getVerifiedTrainers() {
   console.log('🔍 getVerifiedTrainers: Starting query...')
@@ -49,8 +57,41 @@ export async function getVerifiedTrainers() {
       return []
     }
 
-    console.log('✅ Returning trainers:', data?.length || 0)
-    return data || []
+    // Sanity에서 추가 프로필 정보 가져오기
+    try {
+      const trainerIds = data?.map(t => t.id) || []
+      const sanityProfiles = await sanityClient.fetch(
+        `*[_type == "trainerProfile" && supabaseId in $ids && isActive == true]{
+          supabaseId,
+          profileImage{
+            asset->{
+              url
+            }
+          },
+          shortBio,
+          specializations,
+          featured
+        }`,
+        { ids: trainerIds }
+      )
+
+      // Supabase와 Sanity 데이터 병합
+      const enrichedTrainers = data?.map(trainer => {
+        const sanityProfile = sanityProfiles?.find(
+          (profile: any) => profile.supabaseId === trainer.id
+        )
+        return {
+          ...trainer,
+          sanity: sanityProfile
+        }
+      })
+
+      console.log('✅ Returning enriched trainers:', enrichedTrainers?.length || 0)
+      return enrichedTrainers || []
+    } catch (sanityError) {
+      console.warn('⚠️ Sanity fetch failed, returning Supabase data only:', sanityError)
+      return data || []
+    }
   } catch (err) {
     console.error('❌ Unexpected error in getVerifiedTrainers:', err)
     console.error('❌ Error type:', typeof err)
