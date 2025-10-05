@@ -12,12 +12,18 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 
 -- 인덱스 추가
-CREATE INDEX idx_notifications_user_id ON notifications(user_id);
-CREATE INDEX idx_notifications_created_at ON notifications(created_at DESC);
-CREATE INDEX idx_notifications_is_read ON notifications(is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);
 
 -- RLS 정책 활성화
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+
+-- 기존 정책 삭제 후 재생성
+DROP POLICY IF EXISTS "Users can view their own notifications" ON notifications;
+DROP POLICY IF EXISTS "Users can update their own notifications" ON notifications;
+DROP POLICY IF EXISTS "Service role can insert notifications" ON notifications;
+DROP POLICY IF EXISTS "Users can delete their own notifications" ON notifications;
 
 -- 사용자는 자신의 알림만 조회 가능
 CREATE POLICY "Users can view their own notifications"

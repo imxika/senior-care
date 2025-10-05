@@ -8,6 +8,7 @@ import {
   Settings,
   Home,
   MessageSquare,
+  GraduationCap,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -62,6 +63,11 @@ const data = {
       title: "리뷰",
       url: "/customer/reviews",
       icon: MessageSquare,
+    },
+    {
+      title: "트레이너 되기",
+      url: "/customer/become-trainer",
+      icon: GraduationCap,
     },
     {
       title: "설정",

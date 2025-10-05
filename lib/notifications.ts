@@ -1,4 +1,5 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient as createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 
 export type NotificationType =
   | 'booking_confirmed'
@@ -6,6 +7,7 @@ export type NotificationType =
   | 'booking_completed'
   | 'booking_pending'
   | 'booking_rejected'
+  | 'booking_matched'
   | 'system'
 
 interface CreateNotificationParams {
@@ -13,7 +15,7 @@ interface CreateNotificationParams {
   title: string
   message: string
   type: NotificationType
-  relatedId?: string
+  link?: string  // related_id 대신 link 사용
 }
 
 export async function createNotification({
@@ -21,9 +23,19 @@ export async function createNotification({
   title,
   message,
   type,
-  relatedId
+  link
 }: CreateNotificationParams) {
-  const supabase = await createClient()
+  // RLS를 우회하기 위해 Service Role 키 사용
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  )
 
   const { data, error } = await supabase
     .from('notifications')
@@ -32,7 +44,7 @@ export async function createNotification({
       title,
       message,
       type,
-      related_id: relatedId
+      link  // link 컬럼에 예약 상세 페이지 URL 등을 저장
     })
     .select()
     .single()
@@ -87,5 +99,19 @@ export const notificationTemplates = {
     title: '곧 예약 시간입니다',
     message: `${otherName}님과의 예약이 1시간 후입니다. (${scheduledAt.toLocaleString('ko-KR')})`,
     type: 'system' as NotificationType
+  }),
+
+  // 추천 예약 트레이너 매칭 완료 (고객에게)
+  trainerMatchedToCustomer: (trainerName: string, scheduledAt: Date) => ({
+    title: '트레이너 매칭 완료',
+    message: `${trainerName} 트레이너가 회원님의 예약에 배정되었습니다. 예약 일시: ${scheduledAt.toLocaleString('ko-KR')}`,
+    type: 'booking_matched' as NotificationType
+  }),
+
+  // 추천 예약 매칭 (트레이너에게)
+  matchedToTrainer: (customerName: string, scheduledAt: Date) => ({
+    title: '새 예약 배정',
+    message: `${customerName}님의 예약이 배정되었습니다. 예약 일시: ${scheduledAt.toLocaleString('ko-KR')}`,
+    type: 'booking_matched' as NotificationType
   })
 }

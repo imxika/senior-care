@@ -1,9 +1,18 @@
 import { createBrowserClient } from '@supabase/ssr'
 
 export function createClient() {
-  // 쿠키 옵션 생략 - 자동으로 로컬스토리지 사용
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: {
+        // 세션 유지 (새로고침 시에도 로그인 유지)
+        persistSession: true,
+        // 자동 토큰 갱신 활성화
+        autoRefreshToken: true,
+        // URL에서 세션 감지
+        detectSessionInUrl: true,
+      }
+    }
   )
 }

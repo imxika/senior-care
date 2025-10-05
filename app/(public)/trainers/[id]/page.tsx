@@ -7,13 +7,47 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 import { Star, MapPin, Award, Calendar, Home, Building, Mail, Phone, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link'
+import { FavoriteToggleButton } from '@/components/favorite-toggle-button'
 
 interface PageProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export default async function TrainerDetailPage({ params }: PageProps) {
+  const { id } = await params
   const supabase = await createClient()
+
+  // 현재 사용자 확인
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // 현재 사용자가 트레이너인지, 고객인지 확인
+  let isCurrentUserTrainer = false
+  let isOwnProfile = false
+  let customerId: string | null = null
+
+  if (user) {
+    const { data: currentTrainer } = await supabase
+      .from('trainers')
+      .select('id')
+      .eq('profile_id', user.id)
+      .single()
+
+    if (currentTrainer) {
+      isCurrentUserTrainer = true
+      isOwnProfile = currentTrainer.id === id
+    } else {
+      // 트레이너가 아니면 고객 ID 조회
+      const { data: customer } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('profile_id', user.id)
+        .single()
+
+      if (customer) {
+        customerId = customer.id
+      }
+    }
+  }
 
   // 트레이너 정보 가져오기
   const { data: trainer, error } = await supabase
@@ -27,7 +61,7 @@ export default async function TrainerDetailPage({ params }: PageProps) {
         phone
       )
     `)
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('is_verified', true)
     .eq('is_active', true)
     .single()
@@ -76,12 +110,29 @@ export default async function TrainerDetailPage({ params }: PageProps) {
                       <span>{trainer.experience_years || 0}년 경력</span>
                     </div>
                   </div>
-                  <Button asChild size="lg">
-                    <Link href={`/trainers/${trainer.id}/booking`}>
-                      <Calendar className="h-4 w-4 mr-2" />
-                      예약하기
-                    </Link>
-                  </Button>
+                  <div className="flex gap-2">
+                    <FavoriteToggleButton
+                      trainerId={trainer.id}
+                      customerId={customerId}
+                      size="lg"
+                    />
+                    {isOwnProfile ? (
+                      <Button disabled size="lg" variant="outline">
+                        내 프로필
+                      </Button>
+                    ) : isCurrentUserTrainer ? (
+                      <Button disabled size="lg" variant="outline">
+                        예약 불가
+                      </Button>
+                    ) : (
+                      <Button asChild size="lg">
+                        <Link href={`/trainers/${trainer.id}/booking`}>
+                          <Calendar className="h-4 w-4 mr-2" />
+                          예약하기
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Service Types */}
@@ -226,12 +277,22 @@ export default async function TrainerDetailPage({ params }: PageProps) {
                 </div>
               )}
               <Separator />
-              <Button asChild className="w-full">
-                <Link href={`/trainers/${trainer.id}/booking`}>
-                  <Calendar className="h-4 w-4 mr-2" />
-                  예약 문의하기
-                </Link>
-              </Button>
+              {isOwnProfile ? (
+                <Button disabled className="w-full" variant="outline">
+                  내 프로필
+                </Button>
+              ) : isCurrentUserTrainer ? (
+                <Button disabled className="w-full" variant="outline">
+                  예약 불가
+                </Button>
+              ) : (
+                <Button asChild className="w-full">
+                  <Link href={`/trainers/${trainer.id}/booking`}>
+                    <Calendar className="h-4 w-4 mr-2" />
+                    예약 문의하기
+                  </Link>
+                </Button>
+              )}
             </CardContent>
           </Card>
 

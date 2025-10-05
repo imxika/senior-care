@@ -39,15 +39,21 @@ export default function Home() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="text-lg h-14 px-8">
-              <Phone className="w-5 h-5 mr-2" />
-              무료 상담 신청
-            </Button>
+            <Link href="/booking/recommended">
+              <Button size="lg" className="text-lg h-14 px-8 w-full sm:w-auto">
+                <Shield className="w-5 h-5 mr-2" />
+                추천 예약 (기본가)
+              </Button>
+            </Link>
             <Button size="lg" variant="outline" className="text-lg h-14 px-8" onClick={handleTrainerClick}>
               <Users className="w-5 h-5 mr-2" />
-              트레이너 찾기
+              트레이너 직접 선택 (+30%)
             </Button>
           </div>
+
+          <p className="text-sm text-muted-foreground mt-4">
+            💡 추천 예약: 관리자가 최적의 트레이너를 매칭해드립니다 (추가 비용 없음)
+          </p>
         </div>
       </section>
 

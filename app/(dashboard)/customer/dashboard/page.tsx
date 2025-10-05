@@ -10,8 +10,10 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb'
-import { User, Calendar, Star, Search, ArrowUpRight } from 'lucide-react'
+import { User, Calendar, Star, Search, ArrowUpRight, Sparkles } from 'lucide-react'
 import Link from 'next/link'
+import { BookingProgressSimple } from '@/components/booking-progress-simple'
+import { SERVICE_TYPE_LABELS, type ServiceType } from '@/lib/constants'
 
 export default async function CustomerDashboard() {
   const supabase = await createClient()
@@ -38,6 +40,27 @@ export default async function CustomerDashboard() {
     customer?.mobility_level === 'assisted' ? '보조 필요' :
     customer?.mobility_level === 'wheelchair' ? '휠체어 사용' :
     customer?.mobility_level === 'bedridden' ? '와상 상태' : '-'
+
+  // 최근 활성 예약 조회
+  const { data: recentBookings } = await supabase
+    .from('bookings')
+    .select(`
+      *,
+      trainer:trainers(
+        id,
+        profiles!trainers_profile_id_fkey(full_name)
+      )
+    `)
+    .eq('customer_id', customer?.id)
+    .in('status', ['pending', 'confirmed', 'in_progress'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+
+  const recentBooking = recentBookings?.[0] || null
+
+  const serviceTypeLabel = recentBooking?.service_type
+    ? SERVICE_TYPE_LABELS[recentBooking.service_type as ServiceType]
+    : undefined
 
   return (
     <>
@@ -66,8 +89,49 @@ export default async function CustomerDashboard() {
           </p>
         </div>
 
+        {/* 진행 중인 예약 */}
+        {recentBooking && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
+              <h2 className="text-lg font-semibold">최근 예약 진행상황</h2>
+            </div>
+            <BookingProgressSimple
+              bookingType={recentBooking.booking_type}
+              currentStatus={recentBooking.status}
+              hasTrainer={!!recentBooking.trainer_id}
+              serviceType={serviceTypeLabel}
+              trainerName={recentBooking.trainer?.profiles?.full_name}
+              scheduledDate={new Date(recentBooking.booking_date).toLocaleDateString('ko-KR')}
+              scheduledTime={recentBooking.start_time}
+            />
+          </div>
+        )}
+
         {/* Quick Actions */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card className="hover:shadow-md transition-all hover:border-purple-500 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950">
+            <CardHeader>
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-100">
+                  <Sparkles className="h-6 w-6 text-purple-600" />
+                </div>
+                <div className="flex-1">
+                  <CardTitle className="text-base">추천 예약</CardTitle>
+                  <CardDescription className="text-xs">AI 맞춤 트레이너 매칭</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Button asChild className="w-full bg-purple-600 hover:bg-purple-700">
+                <Link href="/booking/recommended">
+                  시작하기
+                  <ArrowUpRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+
           <Card className="hover:shadow-md transition-all hover:border-primary">
             <CardHeader>
               <div className="flex items-center gap-4">
@@ -76,12 +140,12 @@ export default async function CustomerDashboard() {
                 </div>
                 <div className="flex-1">
                   <CardTitle className="text-base">트레이너 찾기</CardTitle>
-                  <CardDescription className="text-xs">전문 트레이너 검색</CardDescription>
+                  <CardDescription className="text-xs">직접 트레이너 선택</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <Button asChild className="w-full">
+              <Button asChild variant="outline" className="w-full">
                 <Link href="/trainers">
                   검색하기
                   <ArrowUpRight className="ml-2 h-4 w-4" />

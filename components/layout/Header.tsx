@@ -7,6 +7,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { getCurrentUser } from "@/app/actions/auth"
+import { NotificationsDropdown } from "@/components/notifications-dropdown"
 
 export default function Header() {
   const [user, setUser] = useState<{ id: string; email: string | undefined } | null>(null)
@@ -100,6 +101,8 @@ export default function Header() {
                     {userType ? `${userType} 계정` : '프로필 없음'}
                   </p>
                 </div>
+                {/* 알림 드롭다운 */}
+                <NotificationsDropdown />
                 <Link href={getDashboardLink()}>
                   <Button className="h-10 md:h-12">
                     <LayoutDashboard className="w-4 h-4 md:w-5 md:h-5 mr-2" />

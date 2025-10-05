@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS profiles (
 -- Customer details (고객 상세 정보)
 CREATE TABLE IF NOT EXISTS customers (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  profile_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  profile_id UUID REFERENCES profiles(id) ON DELETE CASCADE UNIQUE, -- ⚠️ UNIQUE 추가
   age INTEGER,
   gender TEXT CHECK (gender IN ('male', 'female', 'other')),
   address TEXT,
@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS customers (
 -- Trainer details (트레이너 상세 정보)
 CREATE TABLE IF NOT EXISTS trainers (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  profile_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  profile_id UUID REFERENCES profiles(id) ON DELETE CASCADE UNIQUE, -- ⚠️ UNIQUE 추가
   bio TEXT,
   specialties TEXT[], -- 전문 분야
   certifications TEXT[], -- 자격증
@@ -131,6 +131,12 @@ CREATE TABLE IF NOT EXISTS bookings (
   cancellation_reason TEXT,
   cancelled_by UUID REFERENCES profiles(id),
   cancelled_at TIMESTAMPTZ,
+  -- Booking flow tracking
+  booking_type TEXT CHECK (booking_type IN ('direct', 'recommended')), -- 예약 유형
+  trainer_matched_at TIMESTAMPTZ, -- 트레이너 매칭 시각 (추천 예약용)
+  trainer_confirmed_at TIMESTAMPTZ, -- 트레이너 승인 시각
+  service_started_at TIMESTAMPTZ, -- 서비스 시작 시각
+  service_completed_at TIMESTAMPTZ, -- 서비스 완료 시각
   -- Notes
   customer_notes TEXT,
   trainer_notes TEXT,

@@ -38,7 +38,7 @@ CREATE POLICY "Customers can create bookings"
     )
   );
 
-CREATE POLICY "Customers can update own pending bookings"
+CREATE POLICY "Customers can update own bookings"
   ON bookings FOR UPDATE
   USING (
     EXISTS (
@@ -46,7 +46,14 @@ CREATE POLICY "Customers can update own pending bookings"
       JOIN profiles p ON p.id = c.profile_id
       WHERE p.id = auth.uid()
       AND c.id = bookings.customer_id
-      AND bookings.status = 'pending'
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM customers c
+      JOIN profiles p ON p.id = c.profile_id
+      WHERE p.id = auth.uid()
+      AND c.id = bookings.customer_id
     )
   );
 

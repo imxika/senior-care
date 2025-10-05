@@ -28,6 +28,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { CaretSortIcon, ComponentPlaceholderIcon } from "@radix-ui/react-icons"
+import { signOut } from "@/app/actions/auth"
+import { useState } from "react"
 
 export function NavUser({
   user,
@@ -39,6 +41,13 @@ export function NavUser({
   }
 }) {
   const { isMobile } = useSidebar()
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleSignOut = async () => {
+    setIsLoading(true)
+    await signOut()
+    // redirect는 signOut 함수에서 처리
+  }
 
   return (
     <SidebarMenu>
@@ -101,9 +110,9 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleSignOut} disabled={isLoading}>
               <LogOut />
-              Log out
+              {isLoading ? '로그아웃 중...' : 'Log out'}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

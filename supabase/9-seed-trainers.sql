@@ -21,7 +21,7 @@ UPDATE trainers SET
   is_active = true,
   education = '[{"school": "서울대학교", "major": "체육교육학", "degree": "학사", "year": "2015"}]'::jsonb,
   show_education = true
-WHERE id IN (SELECT id FROM profiles WHERE email = 'trainer1@test.com');
+WHERE profile_id IN (SELECT id FROM profiles WHERE email = 'trainer1@test.com');
 
 UPDATE profiles SET
   phone = '010-1111-1111',
@@ -45,7 +45,7 @@ UPDATE trainers SET
   is_active = true,
   education = '[{"school": "연세대학교", "major": "물리치료학", "degree": "학사", "year": "2010"}, {"school": "고려대학교", "major": "재활의학", "degree": "석사", "year": "2015"}]'::jsonb,
   show_education = true
-WHERE id IN (SELECT id FROM profiles WHERE email = 'trainer2@test.com');
+WHERE profile_id IN (SELECT id FROM profiles WHERE email = 'trainer2@test.com');
 
 UPDATE profiles SET
   phone = '010-2222-2222',
@@ -69,7 +69,7 @@ UPDATE trainers SET
   is_active = true,
   education = '[{"school": "한양대학교", "major": "스포츠과학", "degree": "학사", "year": "2018"}]'::jsonb,
   show_education = false
-WHERE id IN (SELECT id FROM profiles WHERE email = 'trainer3@test.com');
+WHERE profile_id IN (SELECT id FROM profiles WHERE email = 'trainer3@test.com');
 
 UPDATE profiles SET
   phone = '010-3333-3333',
@@ -93,7 +93,7 @@ UPDATE trainers SET
   is_active = true,
   education = '[{"school": "성균관대학교", "major": "의료재활학", "degree": "학사", "year": "2017"}]'::jsonb,
   show_education = true
-WHERE id IN (SELECT id FROM profiles WHERE email = 'trainer4@test.com');
+WHERE profile_id IN (SELECT id FROM profiles WHERE email = 'trainer4@test.com');
 
 UPDATE profiles SET
   phone = '010-4444-4444',
@@ -117,7 +117,7 @@ UPDATE trainers SET
   is_active = true,
   education = '[{"school": "서울대학교", "major": "재활의학", "degree": "학사", "year": "2012"}, {"school": "서울대학교", "major": "재활의학", "degree": "석사", "year": "2014"}, {"school": "서울대학교", "major": "운동재활학", "degree": "박사", "year": "2018"}]'::jsonb,
   show_education = true
-WHERE id IN (SELECT id FROM profiles WHERE email = 'trainer5@test.com');
+WHERE profile_id IN (SELECT id FROM profiles WHERE email = 'trainer5@test.com');
 
 UPDATE profiles SET
   phone = '010-5555-5555',
@@ -141,7 +141,7 @@ UPDATE trainers SET
   is_active = true,
   education = '[]'::jsonb,
   show_education = false
-WHERE id IN (SELECT id FROM profiles WHERE email = 'trainer6@test.com');
+WHERE profile_id IN (SELECT id FROM profiles WHERE email = 'trainer6@test.com');
 
 UPDATE profiles SET
   phone = '010-6666-6666',
@@ -165,7 +165,7 @@ UPDATE trainers SET
   is_active = true,
   education = '[{"school": "경희대학교", "major": "체육학", "degree": "학사", "year": "2014"}, {"school": "서강대학교", "major": "스포츠재활", "degree": "석사", "year": "2018"}]'::jsonb,
   show_education = true
-WHERE id IN (SELECT id FROM profiles WHERE email = 'trainer7@test.com');
+WHERE profile_id IN (SELECT id FROM profiles WHERE email = 'trainer7@test.com');
 
 UPDATE profiles SET
   phone = '010-7777-7777',
@@ -189,7 +189,7 @@ UPDATE trainers SET
   is_active = true,
   education = '[{"school": "이화여대", "major": "운동과학", "degree": "학사", "year": "2020"}]'::jsonb,
   show_education = true
-WHERE id IN (SELECT id FROM profiles WHERE email = 'trainer8@test.com');
+WHERE profile_id IN (SELECT id FROM profiles WHERE email = 'trainer8@test.com');
 
 UPDATE profiles SET
   phone = '010-8888-8888',

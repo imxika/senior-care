@@ -2,22 +2,18 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
-import { Star, Calendar, Clock, MapPin, Home, Building, ArrowLeft } from 'lucide-react'
+import { Star, Home, Building, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
-import { createBooking } from './actions'
+import { BookingForm } from '@/components/booking-form'
 
 interface PageProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export default async function TrainerBookingPage({ params }: PageProps) {
+  const { id } = await params
   const supabase = await createClient()
 
   // 인증 확인
@@ -59,7 +55,7 @@ export default async function TrainerBookingPage({ params }: PageProps) {
         phone
       )
     `)
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('is_verified', true)
     .eq('is_active', true)
     .single()
@@ -72,7 +68,7 @@ export default async function TrainerBookingPage({ params }: PageProps) {
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       {/* Back Button */}
       <Link
-        href={`/trainers/${params.id}`}
+        href={`/trainers/${id}`}
         className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6"
       >
         <ArrowLeft className="h-4 w-4 mr-2" />
@@ -90,113 +86,11 @@ export default async function TrainerBookingPage({ params }: PageProps) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form action={createBooking} className="space-y-6">
-                {/* Hidden trainer ID */}
-                <input type="hidden" name="trainer_id" value={trainer.id} />
-
-                {/* Date & Time */}
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="date">
-                      <Calendar className="h-4 w-4 inline mr-2" />
-                      희망 날짜
-                    </Label>
-                    <Input
-                      id="date"
-                      name="date"
-                      type="date"
-                      required
-                      min={new Date().toISOString().split('T')[0]}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="time">
-                      <Clock className="h-4 w-4 inline mr-2" />
-                      희망 시간
-                    </Label>
-                    <Select name="time" required>
-                      <SelectTrigger>
-                        <SelectValue placeholder="시간 선택" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="09:00">09:00</SelectItem>
-                        <SelectItem value="10:00">10:00</SelectItem>
-                        <SelectItem value="11:00">11:00</SelectItem>
-                        <SelectItem value="13:00">13:00</SelectItem>
-                        <SelectItem value="14:00">14:00</SelectItem>
-                        <SelectItem value="15:00">15:00</SelectItem>
-                        <SelectItem value="16:00">16:00</SelectItem>
-                        <SelectItem value="17:00">17:00</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Service Type */}
-                <div className="space-y-2">
-                  <Label htmlFor="service-type">
-                    <MapPin className="h-4 w-4 inline mr-2" />
-                    서비스 유형
-                  </Label>
-                  <Select name="service_type" required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="서비스 유형 선택" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {trainer.home_visit_available && (
-                        <SelectItem value="home">
-                          <Home className="h-4 w-4 inline mr-2" />
-                          방문 서비스
-                        </SelectItem>
-                      )}
-                      {trainer.center_visit_available && (
-                        <SelectItem value="center">
-                          <Building className="h-4 w-4 inline mr-2" />
-                          센터 방문
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Duration */}
-                <div className="space-y-2">
-                  <Label htmlFor="duration">예상 시간</Label>
-                  <Select name="duration" required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="시간 선택" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="60">1시간</SelectItem>
-                      <SelectItem value="90">1시간 30분</SelectItem>
-                      <SelectItem value="120">2시간</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Separator />
-
-                {/* Notes */}
-                <div className="space-y-2">
-                  <Label htmlFor="notes">요청사항 (선택)</Label>
-                  <Textarea
-                    id="notes"
-                    name="notes"
-                    placeholder="특별히 요청하실 사항이나 전달하고 싶은 내용을 입력해주세요"
-                    rows={4}
-                  />
-                </div>
-
-                {/* Submit */}
-                <div className="pt-4">
-                  <Button type="submit" className="w-full" size="lg">
-                    예약 요청하기
-                  </Button>
-                  <p className="text-sm text-muted-foreground text-center mt-3">
-                    예약 요청 후 트레이너가 확인하면 알림을 받게 됩니다
-                  </p>
-                </div>
-              </form>
+              <BookingForm
+                trainerId={trainer.id}
+                homeVisitAvailable={trainer.home_visit_available}
+                centerVisitAvailable={trainer.center_visit_available}
+              />
             </CardContent>
           </Card>
         </div>

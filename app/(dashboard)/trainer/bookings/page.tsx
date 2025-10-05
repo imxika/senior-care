@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Calendar, Clock, CheckCircle } from 'lucide-react'
+import { Calendar, Clock, CheckCircle, XCircle } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { SidebarTrigger } from '@/components/ui/sidebar'
@@ -60,41 +60,52 @@ export default async function TrainerBookingsPage() {
   }
 
   // 예약 목록 가져오기 (고객 정보 포함)
-  const { data: bookings, error } = await supabase
+  // docs/DATABASE_SCHEMA.md 참조: bookings.customer_id -> customers.id -> profiles
+  const { data: rawBookings, error } = await supabase
     .from('bookings')
     .select(`
       *,
-      customer:profiles!bookings_customer_id_fkey(
+      customers!bookings_customer_id_fkey(
         id,
-        full_name,
-        email,
-        phone
+        profiles!customers_profile_id_fkey(
+          full_name,
+          email,
+          phone
+        )
       )
     `)
     .eq('trainer_id', trainerInfo.id)
-    .order('scheduled_at', { ascending: true })
+    .order('booking_date', { ascending: true })
 
   if (error) {
     console.error('Error fetching bookings:', error)
   }
 
-  // 통계 계산
+  // 데이터 구조 변환: customers -> customer로 rename
+  const bookings = rawBookings?.map((booking: any) => ({
+    ...booking,
+    customer: booking.customers
+  }))
+
+  // 통계 계산 (utils 사용 필요)
   const now = new Date()
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000)
 
   const stats = {
-    todayBookings: bookings?.filter(b =>
-      b.status === 'confirmed' &&
-      new Date(b.scheduled_at) >= todayStart &&
-      new Date(b.scheduled_at) < todayEnd
-    ).length || 0,
+    todayBookings: bookings?.filter(b => {
+      if (b.status !== 'confirmed') return false
+      const bookingDateTime = new Date(`${b.booking_date}T${b.start_time}`)
+      return bookingDateTime >= todayStart && bookingDateTime < todayEnd
+    }).length || 0,
     pending: bookings?.filter(b => b.status === 'pending').length || 0,
-    upcoming: bookings?.filter(b =>
-      b.status === 'confirmed' && new Date(b.scheduled_at) > now
-    ).length || 0,
+    upcoming: bookings?.filter(b => {
+      if (b.status !== 'confirmed') return false
+      const bookingDateTime = new Date(`${b.booking_date}T${b.start_time}`)
+      return bookingDateTime > now
+    }).length || 0,
     thisMonthCompleted: bookings?.filter(b => {
-      const bookingDate = new Date(b.scheduled_at)
+      const bookingDate = new Date(b.booking_date)
       return b.status === 'completed' &&
         bookingDate.getMonth() === now.getMonth() &&
         bookingDate.getFullYear() === now.getFullYear()
@@ -103,14 +114,17 @@ export default async function TrainerBookingsPage() {
 
   // 상태별 분류
   const pendingBookings = bookings?.filter(b => b.status === 'pending') || []
-  const todayBookings = bookings?.filter(b =>
-    b.status === 'confirmed' &&
-    new Date(b.scheduled_at) >= todayStart &&
-    new Date(b.scheduled_at) < todayEnd
-  ) || []
-  const upcomingBookings = bookings?.filter(b =>
-    b.status === 'confirmed' && new Date(b.scheduled_at) > todayEnd
-  ) || []
+  const todayBookings = bookings?.filter(b => {
+    if (b.status !== 'confirmed') return false
+    const bookingDateTime = new Date(`${b.booking_date}T${b.start_time}`)
+    return bookingDateTime >= todayStart && bookingDateTime < todayEnd
+  }) || []
+  const upcomingBookings = bookings?.filter(b => {
+    if (b.status !== 'confirmed') return false
+    const bookingDateTime = new Date(`${b.booking_date}T${b.start_time}`)
+    return bookingDateTime > todayEnd
+  }) || []
+  const cancelledBookings = bookings?.filter(b => b.status === 'cancelled' || b.status === 'no_show') || []
 
   return (
     <>
@@ -238,6 +252,19 @@ export default async function TrainerBookingsPage() {
                 </button>
               </div>
             )}
+          </Section>
+        )}
+
+        {/* 취소/거절된 예약 */}
+        {cancelledBookings.length > 0 && (
+          <Section
+            title="취소/거절된 예약"
+            subtitle={`${cancelledBookings.length}건의 취소된 예약`}
+            icon={<XCircle className="w-6 h-6 text-red-600" />}
+          >
+            {cancelledBookings.map(booking => (
+              <TrainerBookingCard key={booking.id} booking={booking} />
+            ))}
           </Section>
         )}
 

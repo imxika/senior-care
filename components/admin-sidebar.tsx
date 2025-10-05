@@ -69,12 +69,8 @@ const data = {
       icon: Settings,
       items: [
         {
-          title: "일반 설정",
-          url: "/admin/settings/general",
-        },
-        {
-          title: "사용자 관리",
-          url: "/admin/settings/users",
+          title: "알림 설정",
+          url: "/admin/settings",
         },
       ],
     },

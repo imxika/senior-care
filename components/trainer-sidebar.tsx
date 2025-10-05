@@ -8,6 +8,7 @@ import {
   Settings,
   Home,
   ClipboardList,
+  Clock,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -47,6 +48,11 @@ const data = {
           url: "/trainer/bookings?status=pending",
         },
       ],
+    },
+    {
+      title: "가능 시간",
+      url: "/trainer/availability",
+      icon: Clock,
     },
     {
       title: "고객 관리",

@@ -78,3 +78,23 @@ CREATE TRIGGER update_trainer_rating_on_review
   AFTER INSERT OR UPDATE ON reviews
   FOR EACH ROW
   EXECUTE FUNCTION update_trainer_rating();
+
+-- Function to automatically create customer record when user_type is customer
+CREATE OR REPLACE FUNCTION create_customer_on_profile_insert()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Only create customer if user_type is 'customer'
+  IF NEW.user_type = 'customer' THEN
+    INSERT INTO customers (profile_id)
+    VALUES (NEW.id)
+    ON CONFLICT (profile_id) DO NOTHING;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger to run after profile insert
+CREATE TRIGGER create_customer_after_profile_insert
+  AFTER INSERT ON profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION create_customer_on_profile_insert();

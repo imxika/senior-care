@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Users, UserCheck, Clock, Calendar, ExternalLink, AlertCircle, ArrowUpRight, Activity } from 'lucide-react'
+import { Users, UserCheck, Clock, Calendar, ExternalLink, AlertCircle, ArrowUpRight, Activity, UserCog } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import {
@@ -55,6 +55,14 @@ export default async function AdminDashboard() {
     .select('*', { count: 'exact', head: true })
     .eq('user_type', 'customer')
 
+  // 추천 예약 매칭 대기 수
+  const { count: pendingRecommendedBookings } = await supabase
+    .from('bookings')
+    .select('*', { count: 'exact', head: true })
+    .eq('booking_type', 'recommended')
+    .eq('status', 'pending')
+    .is('trainer_id', null)
+
   return (
     <>
       {/* Header */}
@@ -94,19 +102,34 @@ export default async function AdminDashboard() {
           </Button>
         </div>
 
-        {/* Alert */}
-        {pendingTrainers && pendingTrainers > 0 && (
-          <Alert className="border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950">
-            <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-500" />
-            <AlertTitle className="text-yellow-900 dark:text-yellow-100">승인 대기 중인 트레이너</AlertTitle>
-            <AlertDescription className="text-yellow-800 dark:text-yellow-200">
-              {pendingTrainers}명의 트레이너가 승인을 기다리고 있습니다.
-              <Link href="/admin/trainers" className="ml-2 font-medium underline underline-offset-4 hover:text-yellow-900">
-                지금 확인하기
-              </Link>
-            </AlertDescription>
-          </Alert>
-        )}
+        {/* Alerts */}
+        <div className="space-y-3">
+          {pendingRecommendedBookings && pendingRecommendedBookings > 0 && (
+            <Alert className="border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950">
+              <UserCog className="h-4 w-4 text-green-600 dark:text-green-500" />
+              <AlertTitle className="text-green-900 dark:text-green-100">추천 예약 매칭 대기</AlertTitle>
+              <AlertDescription className="text-green-800 dark:text-green-200">
+                {pendingRecommendedBookings}건의 추천 예약이 트레이너 매칭을 기다리고 있습니다.
+                <Link href="/admin/bookings/recommended" className="ml-2 font-medium underline underline-offset-4 hover:text-green-900">
+                  지금 매칭하기
+                </Link>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {pendingTrainers && pendingTrainers > 0 && (
+            <Alert className="border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950">
+              <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-500" />
+              <AlertTitle className="text-yellow-900 dark:text-yellow-100">승인 대기 중인 트레이너</AlertTitle>
+              <AlertDescription className="text-yellow-800 dark:text-yellow-200">
+                {pendingTrainers}명의 트레이너가 승인을 기다리고 있습니다.
+                <Link href="/admin/trainers" className="ml-2 font-medium underline underline-offset-4 hover:text-yellow-900">
+                  지금 확인하기
+                </Link>
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
 
         {/* Stats Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -232,6 +255,30 @@ export default async function AdminDashboard() {
             <CardContent>
               <Button asChild variant="outline" className="w-full">
                 <Link href="/admin/bookings">
+                  바로가기
+                  <ArrowUpRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-md transition-all hover:border-green-500">
+            <CardHeader>
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-100 dark:bg-green-950">
+                  <UserCog className="h-6 w-6 text-green-600 dark:text-green-400" />
+                </div>
+                <div className="flex-1">
+                  <CardTitle className="text-base">추천 예약 매칭</CardTitle>
+                  <CardDescription className="text-xs">
+                    {pendingRecommendedBookings ? `${pendingRecommendedBookings}건 대기 중` : '대기 없음'}
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Button asChild variant="outline" className="w-full">
+                <Link href="/admin/bookings/recommended">
                   바로가기
                   <ArrowUpRight className="ml-2 h-4 w-4" />
                 </Link>

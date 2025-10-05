@@ -10,6 +10,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { createClient } from '@/lib/supabase/client'
 
 interface Trainer {
   id: string
@@ -43,10 +44,30 @@ export default function TrainersPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [serviceFilter, setServiceFilter] = useState<'all' | 'home' | 'center'>('all')
+  const [currentUserTrainerId, setCurrentUserTrainerId] = useState<string | null>(null)
 
   useEffect(() => {
     loadTrainers()
+    checkCurrentUser()
   }, [])
+
+  const checkCurrentUser = async () => {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (user) {
+      // 현재 사용자가 트레이너인지 확인
+      const { data: trainer } = await supabase
+        .from('trainers')
+        .select('id')
+        .eq('profile_id', user.id)
+        .single()
+
+      if (trainer) {
+        setCurrentUserTrainerId(trainer.id)
+      }
+    }
+  }
 
   const loadTrainers = async () => {
     try {
@@ -244,11 +265,31 @@ export default function TrainersPage() {
                 </CardContent>
 
                 <CardFooter>
-                  <Link href={`/trainers/${trainer.id}`} className="w-full">
-                    <Button className="w-full h-12 text-base">
-                      상세보기
-                    </Button>
-                  </Link>
+                  {currentUserTrainerId === trainer.id ? (
+                    <div className="w-full">
+                      <Button disabled className="w-full h-12 text-base" variant="outline">
+                        내 프로필
+                      </Button>
+                      <p className="text-xs text-center text-muted-foreground mt-2">
+                        본인의 프로필입니다
+                      </p>
+                    </div>
+                  ) : currentUserTrainerId ? (
+                    <div className="w-full">
+                      <Button disabled className="w-full h-12 text-base" variant="outline">
+                        예약 불가
+                      </Button>
+                      <p className="text-xs text-center text-muted-foreground mt-2">
+                        트레이너는 예약을 생성할 수 없습니다
+                      </p>
+                    </div>
+                  ) : (
+                    <Link href={`/trainers/${trainer.id}`} className="w-full">
+                      <Button className="w-full h-12 text-base">
+                        상세보기
+                      </Button>
+                    </Link>
+                  )}
                 </CardFooter>
               </Card>
             ))}

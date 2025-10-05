@@ -13,6 +13,7 @@ import Link from 'next/link'
 export default function SignupPage() {
   const router = useRouter()
   const supabase = createClient()
+  const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -45,7 +46,8 @@ export default function SignupPage() {
     }
 
     try {
-      const { error } = await supabase.auth.signUp({
+      // 1. 회원가입
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -53,18 +55,65 @@ export default function SignupPage() {
         }
       })
 
-      if (error) throw error
+      if (signUpError) throw signUpError
+      if (!authData.user) throw new Error('사용자 정보를 가져올 수 없습니다.')
+
+      // 2. 프로필이 이미 있는지 확인
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', authData.user.id)
+        .single()
+
+      // 3. 프로필이 없으면 생성
+      if (!existingProfile) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: authData.user.id,
+            email: authData.user.email,
+            full_name: fullName,
+            user_type: 'customer'
+          })
+
+        if (profileError) {
+          console.error('Profile creation error:', profileError)
+          throw new Error(`프로필 생성 실패: ${profileError.message}`)
+        }
+      }
+
+      // 4. 고객 레코드가 이미 있는지 확인
+      const { data: existingCustomer } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('profile_id', authData.user.id)
+        .single()
+
+      // 5. 고객 레코드가 없으면 생성
+      if (!existingCustomer) {
+        const { error: customerError } = await supabase
+          .from('customers')
+          .insert({
+            profile_id: authData.user.id
+          })
+
+        if (customerError) {
+          console.error('Customer creation error:', customerError)
+          throw new Error(`고객 정보 생성 실패: ${customerError.message}`)
+        }
+      }
 
       setMessage({
         type: 'success',
-        text: '회원가입이 완료되었습니다! 로그인해주세요.'
+        text: '회원가입이 완료되었습니다! 고객 대시보드로 이동합니다.'
       })
 
-      // 2초 후 로그인 페이지로 이동
+      // 1초 후 고객 대시보드로 이동
       setTimeout(() => {
-        router.push('/login')
-      }, 2000)
+        router.push('/customer/dashboard')
+      }, 1000)
     } catch (error) {
+      console.error('Signup error:', error)
       setMessage({
         type: 'error',
         text: error instanceof Error ? error.message : '회원가입 중 오류가 발생했습니다.'
@@ -88,6 +137,21 @@ export default function SignupPage() {
 
         <CardContent className="space-y-6">
           <form onSubmit={handleSignup} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="fullName" className="text-lg md:text-xl">
+                이름
+              </Label>
+              <Input
+                id="fullName"
+                type="text"
+                placeholder="홍길동"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+                className="h-12 md:h-14 text-base md:text-lg"
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="email" className="text-lg md:text-xl">
                 이메일

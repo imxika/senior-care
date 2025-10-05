@@ -22,7 +22,7 @@ interface Notification {
   title: string
   message: string
   type: string
-  related_id: string | null
+  link: string | null
   is_read: boolean
   created_at: string
 }
@@ -31,10 +31,50 @@ export function NotificationsDropdown() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [isOpen, setIsOpen] = useState(false)
+  const [audioContext, setAudioContext] = useState<AudioContext | null>(null)
   const supabase = createClient()
+
+  // 알림 소리 재생
+  const playNotificationSound = async () => {
+    try {
+      // AudioContext 재사용 또는 생성
+      let ctx = audioContext
+      if (!ctx) {
+        ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+        setAudioContext(ctx)
+      }
+
+      // AudioContext가 suspended 상태면 resume
+      if (ctx.state === 'suspended') {
+        await ctx.resume()
+      }
+
+      const oscillator = ctx.createOscillator()
+      const gainNode = ctx.createGain()
+
+      oscillator.connect(gainNode)
+      gainNode.connect(ctx.destination)
+
+      oscillator.frequency.value = 800 // 높은 음 (띵~)
+      oscillator.type = 'sine'
+
+      gainNode.gain.setValueAtTime(0.3, ctx.currentTime)
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5)
+
+      oscillator.start(ctx.currentTime)
+      oscillator.stop(ctx.currentTime + 0.5)
+    } catch (error) {
+      console.error('Failed to play notification sound:', error)
+    }
+  }
 
   useEffect(() => {
     loadNotifications()
+
+    // 알림 권한 요청
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
 
     // Subscribe to new notifications
     const channel = supabase
@@ -46,8 +86,24 @@ export function NotificationsDropdown() {
           schema: 'public',
           table: 'notifications',
         },
-        () => {
+        (payload) => {
+          console.log('🔔 New notification received:', payload)
           loadNotifications()
+
+          // 소리 재생
+          playNotificationSound()
+
+          // 브라우저 알림 표시
+          if ('Notification' in window && Notification.permission === 'granted') {
+            const newNotif = payload.new as any
+            new Notification(newNotif.title || '새 알림', {
+              body: newNotif.message || '',
+              icon: '/favicon.ico',
+              badge: '/favicon.ico',
+              tag: newNotif.id,
+              requireInteraction: false
+            })
+          }
         }
       )
       .subscribe()
@@ -97,16 +153,21 @@ export function NotificationsDropdown() {
   }
 
   const getNotificationLink = (notification: Notification) => {
-    if (notification.related_id) {
-      if (notification.type.includes('booking')) {
-        return `/admin/bookings/${notification.related_id}`
-      }
+    // link 컬럼에 이미 전체 경로가 저장되어 있음
+    return notification.link || '#'
+  }
+
+  // 드롭다운 열릴 때 AudioContext 초기화 (사용자 제스처)
+  const handleDropdownOpen = (open: boolean) => {
+    setIsOpen(open)
+    if (open && !audioContext) {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+      setAudioContext(ctx)
     }
-    return '#'
   }
 
   return (
-    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+    <DropdownMenu open={isOpen} onOpenChange={handleDropdownOpen}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
