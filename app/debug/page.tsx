@@ -131,8 +131,8 @@ export default function DebugPage() {
             <CardTitle>해결 방법</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <p><strong>1. 프로필 없음:</strong> "Admin 프로필 생성" 버튼 클릭</p>
-            <p><strong>2. 이상한 세션:</strong> "강제 로그아웃" → 다시 로그인</p>
+            <p><strong>1. 프로필 없음:</strong> &quot;Admin 프로필 생성&quot; 버튼 클릭</p>
+            <p><strong>2. 이상한 세션:</strong> &quot;강제 로그아웃&quot; → 다시 로그인</p>
             <p><strong>3. 모든 쿠키 삭제:</strong> 브라우저 개발자도구 → Application → Cookies → 전체 삭제</p>
           </CardContent>
         </Card>

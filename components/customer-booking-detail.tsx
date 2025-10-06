@@ -52,12 +52,11 @@ export function CustomerBookingDetail({ booking }: CustomerBookingDetailProps) {
   const [cancelSuccess, setCancelSuccess] = useState<{ refundAmount: number; feeAmount: number } | null>(null)
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      weekday: 'long'
-    })
+    const d = new Date(date)
+    const month = d.getMonth() + 1
+    const day = d.getDate()
+    const weekday = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()]
+    return `${month}.${day} (${weekday})`
   }
 
   const formatTime = (time: string) => {
@@ -124,17 +123,17 @@ export function CustomerBookingDetail({ booking }: CustomerBookingDetailProps) {
                        canCancel
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
-      <div className="mb-6">
+    <div className="container mx-auto p-4 md:p-6 max-w-4xl">
+      <div className="mb-4 md:mb-6">
         <Link href="/customer/bookings">
-          <Button variant="ghost" className="mb-4">
+          <Button variant="ghost" size="sm" className="mb-3 md:mb-4 -ml-2">
             ← 예약 목록으로
           </Button>
         </Link>
-        <h1 className="text-3xl font-bold">예약 상세</h1>
+        <h1 className="text-2xl md:text-3xl font-bold">예약 상세</h1>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-4 md:space-y-6">
         {/* 취소 성공 메시지 */}
         {cancelSuccess && (
           <Alert className="border-green-200 bg-green-50">
@@ -166,41 +165,41 @@ export function CustomerBookingDetail({ booking }: CustomerBookingDetailProps) {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>예약 정보</CardTitle>
-              <div className="flex gap-2 items-center">
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-lg md:text-xl">예약 정보</CardTitle>
                 {getStatusBadge(booking.status)}
-                {isCancellable && (
-                  <CancelBookingDialog
-                    bookingId={booking.id}
-                    booking_date={booking.booking_date}
-                    start_time={booking.start_time}
-                    total_price={booking.total_price}
-                    onCancel={handleCancelBooking}
-                  />
-                )}
               </div>
+              {isCancellable && (
+                <CancelBookingDialog
+                  bookingId={booking.id}
+                  booking_date={booking.booking_date}
+                  start_time={booking.start_time}
+                  total_price={booking.total_price}
+                  onCancel={handleCancelBooking}
+                />
+              )}
             </div>
             {!canCancel && booking.status !== 'cancelled' && booking.status !== 'completed' && (
-              <CardDescription className="text-orange-600">
+              <CardDescription className="text-orange-600 text-sm">
                 취소는 예약 24시간 전까지만 가능합니다 (남은 시간: {Math.round(hoursUntil)}시간)
               </CardDescription>
             )}
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="flex items-center gap-3">
-                <Calendar className="h-5 w-5 text-muted-foreground" />
-                <div>
+          <CardContent className="space-y-3 md:space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+              <div className="flex items-start gap-3">
+                <Calendar className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                <div className="min-w-0">
                   <p className="text-sm text-muted-foreground">예약 일시</p>
-                  <p className="font-medium">{formatDate(booking.booking_date)}</p>
+                  <p className="font-medium text-base">{formatDate(booking.booking_date)}</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <Clock className="h-5 w-5 text-muted-foreground" />
-                <div>
+              <div className="flex items-start gap-3">
+                <Clock className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                <div className="min-w-0">
                   <p className="text-sm text-muted-foreground">시간</p>
-                  <p className="font-medium">
+                  <p className="font-medium text-base">
                     {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
                     <span className="text-sm text-muted-foreground ml-2">
                       ({booking.duration_minutes}분)
@@ -209,45 +208,45 @@ export function CustomerBookingDetail({ booking }: CustomerBookingDetailProps) {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <MapPin className="h-5 w-5 text-muted-foreground" />
-                <div>
+              <div className="flex items-start gap-3">
+                <MapPin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                <div className="min-w-0">
                   <p className="text-sm text-muted-foreground">서비스 유형</p>
-                  <p className="font-medium">{getServiceTypeLabel(booking.service_type)}</p>
+                  <p className="font-medium text-base">{getServiceTypeLabel(booking.service_type)}</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <DollarSign className="h-5 w-5 text-muted-foreground" />
-                <div>
+              <div className="flex items-start gap-3">
+                <DollarSign className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                <div className="min-w-0">
                   <p className="text-sm text-muted-foreground">예약 타입</p>
-                  <p className="font-medium">{getBookingTypeLabel(booking.booking_type)}</p>
+                  <p className="font-medium text-base">{getBookingTypeLabel(booking.booking_type)}</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <Users className="h-5 w-5 text-muted-foreground" />
-                <div>
+              <div className="flex items-start gap-3">
+                <Users className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                <div className="min-w-0">
                   <p className="text-sm text-muted-foreground">세션 유형</p>
-                  <p className="font-medium">{getSessionTypeLabel(booking.session_type || '1:1')}</p>
+                  <p className="font-medium text-base">{getSessionTypeLabel(booking.session_type || '1:1')}</p>
                 </div>
               </div>
 
               {booking.group_size > 1 && (
-                <div className="flex items-center gap-3">
-                  <Users className="h-5 w-5 text-muted-foreground" />
-                  <div>
+                <div className="flex items-start gap-3">
+                  <Users className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div className="min-w-0">
                     <p className="text-sm text-muted-foreground">참가 인원</p>
-                    <p className="font-medium">{booking.group_size}명</p>
+                    <p className="font-medium text-base">{booking.group_size}명</p>
                   </div>
                 </div>
               )}
 
               {booking.service_type === 'home_visit' && (
                 <div className="flex items-start gap-3 md:col-span-2">
-                  <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">방문 주소</p>
+                  <MapPin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <p className="text-xs md:text-sm text-muted-foreground">방문 주소</p>
                     {booking.booking_address ? (
                       <>
                         {booking.booking_address.address_label && (
@@ -255,13 +254,13 @@ export function CustomerBookingDetail({ booking }: CustomerBookingDetailProps) {
                             {booking.booking_address.address_label}
                           </span>
                         )}
-                        <p className="font-medium">{booking.booking_address.address}</p>
+                        <p className="font-medium text-sm md:text-base break-words">{booking.booking_address.address}</p>
                         {booking.booking_address.address_detail && (
-                          <p className="text-sm text-muted-foreground">{booking.booking_address.address_detail}</p>
+                          <p className="text-xs md:text-sm text-muted-foreground break-words">{booking.booking_address.address_detail}</p>
                         )}
                       </>
                     ) : (
-                      <p className="font-medium text-muted-foreground">주소 정보 없음</p>
+                      <p className="font-medium text-sm md:text-base text-muted-foreground">주소 정보 없음</p>
                     )}
                   </div>
                 </div>
@@ -269,9 +268,9 @@ export function CustomerBookingDetail({ booking }: CustomerBookingDetailProps) {
             </div>
 
             {booking.customer_notes && booking.customer_notes.split('[요청 정보]')[0].trim() && (
-              <div className="pt-4 border-t">
-                <p className="text-sm text-muted-foreground mb-2">요청사항</p>
-                <p className="whitespace-pre-wrap">{booking.customer_notes.split('[요청 정보]')[0].trim()}</p>
+              <div className="pt-3 md:pt-4 border-t">
+                <p className="text-xs md:text-sm text-muted-foreground mb-2">요청사항</p>
+                <p className="text-sm md:text-base whitespace-pre-wrap break-words">{booking.customer_notes.split('[요청 정보]')[0].trim()}</p>
               </div>
             )}
           </CardContent>
@@ -281,15 +280,15 @@ export function CustomerBookingDetail({ booking }: CustomerBookingDetailProps) {
         {booking.trainer ? (
           <Card>
             <CardHeader>
-              <CardTitle>배정된 트레이너</CardTitle>
+              <CardTitle className="text-lg md:text-xl">배정된 트레이너</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <User className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">이름</p>
-                    <p className="font-medium text-lg">
+                <div className="flex items-start gap-3">
+                  <User className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <p className="text-xs md:text-sm text-muted-foreground">이름</p>
+                    <p className="font-medium text-base md:text-lg">
                       {booking.trainer.profiles?.full_name || '이름 없음'}
                     </p>
                   </div>
@@ -297,15 +296,15 @@ export function CustomerBookingDetail({ booking }: CustomerBookingDetailProps) {
 
                 {booking.trainer.profiles?.phone && (
                   <div>
-                    <p className="text-sm text-muted-foreground">연락처</p>
-                    <p className="font-medium">{booking.trainer.profiles.phone}</p>
+                    <p className="text-xs md:text-sm text-muted-foreground">연락처</p>
+                    <p className="font-medium text-sm md:text-base">{booking.trainer.profiles.phone}</p>
                   </div>
                 )}
 
                 {booking.trainer.profiles?.email && (
                   <div>
-                    <p className="text-sm text-muted-foreground">이메일</p>
-                    <p className="font-medium">{booking.trainer.profiles.email}</p>
+                    <p className="text-xs md:text-sm text-muted-foreground">이메일</p>
+                    <p className="font-medium text-sm md:text-base break-all">{booking.trainer.profiles.email}</p>
                   </div>
                 )}
               </div>
@@ -314,8 +313,8 @@ export function CustomerBookingDetail({ booking }: CustomerBookingDetailProps) {
         ) : (
           <Card>
             <CardHeader>
-              <CardTitle>트레이너 매칭 대기 중</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-lg md:text-xl">트레이너 매칭 대기 중</CardTitle>
+              <CardDescription className="text-sm">
                 관리자가 최적의 트레이너를 매칭하고 있습니다. 매칭이 완료되면 알림을 보내드립니다.
               </CardDescription>
             </CardHeader>
@@ -326,17 +325,17 @@ export function CustomerBookingDetail({ booking }: CustomerBookingDetailProps) {
         {booking.total_price > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>결제 정보</CardTitle>
+              <CardTitle className="text-lg md:text-xl">결제 정보</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
                 {booking.group_size > 1 && (
-                  <div className="flex justify-between">
+                  <div className="flex justify-between text-sm md:text-base">
                     <span className="text-muted-foreground">인당 가격</span>
                     <span>{booking.price_per_person.toLocaleString()}원</span>
                   </div>
                 )}
-                <div className="flex justify-between font-bold text-lg pt-2 border-t">
+                <div className="flex justify-between font-bold text-base md:text-lg pt-2 border-t">
                   <span>총 금액</span>
                   <span>{booking.total_price.toLocaleString()}원</span>
                 </div>

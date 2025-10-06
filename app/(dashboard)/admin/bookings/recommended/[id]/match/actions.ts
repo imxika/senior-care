@@ -125,21 +125,22 @@ export async function matchTrainerToBooking(
 
   // 고객 이름 조회
   console.log('🔔🔔🔔 Starting notification creation...')
-  console.log('Customer profile_id:', booking.customer?.profile_id)
+  const customerData = Array.isArray(booking.customer) ? booking.customer[0] : booking.customer
+  console.log('Customer profile_id:', customerData?.profile_id)
   console.log('Trainer profile_id:', trainer.profile_id)
 
   const { data: customerProfile } = await supabase
     .from('profiles')
     .select('full_name')
-    .eq('id', booking.customer?.profile_id)
+    .eq('id', customerData?.profile_id)
     .single()
 
   console.log('Customer profile:', customerProfile)
 
   // 알림 생성
   const scheduledAt = new Date(`${booking.booking_date}T${booking.start_time}`)
-  const trainerName = trainer.profiles?.full_name || '트레이너'
-  const customerName = customerProfile?.full_name || '고객'
+  const trainerName = (trainer.profiles as any)?.full_name || '트레이너'
+  const customerName = (customerProfile as any)?.full_name || '고객'
 
   console.log('Creating notifications for:', { customerName, trainerName })
 
@@ -148,7 +149,7 @@ export async function matchTrainerToBooking(
   console.log('Customer notification:', customerNotif)
 
   const customerResult = await createNotification({
-    userId: booking.customer?.profile_id,
+    userId: customerData?.profile_id,
     title: customerNotif.title,
     message: customerNotif.message,
     type: customerNotif.type,

@@ -16,12 +16,13 @@ export async function updateCustomerProfile(formData: FormData) {
   // Extract form data
   const fullName = formData.get('full_name') as string
   const phone = formData.get('phone') as string
-  const age = formData.get('age') as string
+  const birthDate = formData.get('birth_date') as string
   const gender = formData.get('gender') as string
   const address = formData.get('address') as string
   const addressDetail = formData.get('address_detail') as string
-  const emergencyContact = formData.get('emergency_contact') as string
-  const emergencyPhone = formData.get('emergency_phone') as string
+  const guardianName = formData.get('guardian_name') as string
+  const guardianRelationship = formData.get('guardian_relationship') as string
+  const guardianPhone = formData.get('guardian_phone') as string
   const mobilityLevel = formData.get('mobility_level') as string
   const notes = formData.get('notes') as string
 
@@ -61,12 +62,13 @@ export async function updateCustomerProfile(formData: FormData) {
     const { error: customerError } = await supabase
       .from('customers')
       .update({
-        age: age ? parseInt(age) : null,
+        birth_date: birthDate || null,
         gender: gender || null,
         address: address || null,
         address_detail: addressDetail || null,
-        emergency_contact: emergencyContact || null,
-        emergency_phone: emergencyPhone || null,
+        guardian_name: guardianName || null,
+        guardian_relationship: guardianRelationship || null,
+        guardian_phone: guardianPhone || null,
         mobility_level: mobilityLevel || null,
         notes: notes || null,
         updated_at: new Date().toISOString()

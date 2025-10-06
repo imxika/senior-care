@@ -1,26 +1,25 @@
 'use client'
 
-import { Check, Clock, UserCheck, Calendar, CheckCircle2, XCircle } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import React from 'react'
+import { Check, Clock, UserCheck, Calendar, CheckCircle2, XCircle, Users, Target } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface BookingProgressSimpleProps {
   bookingType: 'direct' | 'recommended'
   currentStatus: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show'
   hasTrainer: boolean
-  serviceType?: string
-  trainerName?: string
   scheduledDate?: string
   scheduledTime?: string
+  participantsCount?: number
 }
 
 export function BookingProgressSimple({
   bookingType,
   currentStatus,
   hasTrainer,
-  serviceType,
   scheduledDate,
-  scheduledTime
+  scheduledTime,
+  participantsCount
 }: BookingProgressSimpleProps) {
 
   // 현재 상태 정보
@@ -139,19 +138,19 @@ export function BookingProgressSimple({
     if (bookingType === 'recommended') {
       return [
         {
-          label: '예약 접수',
+          label: '예약\n접수',
           description: '예약이 접수되었습니다',
           icon: <Check className="h-5 w-5" />,
           status: 'completed' as const
         },
         {
-          label: '트레이너 매칭',
+          label: '트레이너\n매칭',
           description: hasTrainer ? '매칭이 완료되었습니다' : '최적의 트레이너를 찾는 중입니다',
           icon: <UserCheck className="h-5 w-5" />,
           status: (currentStatus === 'cancelled' ? 'cancelled' : hasTrainer ? 'completed' : 'current') as const
         },
         {
-          label: '트레이너 승인',
+          label: '트레이너\n승인',
           description: currentStatus === 'confirmed' || currentStatus === 'in_progress' || currentStatus === 'completed'
             ? '트레이너가 승인했습니다'
             : hasTrainer
@@ -165,7 +164,7 @@ export function BookingProgressSimple({
           ) as const
         },
         {
-          label: '예약 확정',
+          label: '예약\n확정',
           description: currentStatus === 'confirmed' || currentStatus === 'in_progress'
             ? '예약이 확정되었습니다'
             : currentStatus === 'completed'
@@ -179,7 +178,7 @@ export function BookingProgressSimple({
           ) as const
         },
         {
-          label: '서비스 완료',
+          label: '서비스\n완료',
           description: currentStatus === 'completed' ? '서비스가 완료되었습니다' : '예정된 날짜에 진행됩니다',
           icon: <CheckCircle2 className="h-5 w-5" />,
           status: (
@@ -191,13 +190,13 @@ export function BookingProgressSimple({
     } else {
       return [
         {
-          label: '예약 요청',
+          label: '예약\n요청',
           description: '트레이너에게 예약을 요청했습니다',
           icon: <Check className="h-5 w-5" />,
           status: 'completed' as const
         },
         {
-          label: '트레이너 승인',
+          label: '트레이너\n승인',
           description: currentStatus === 'confirmed' || currentStatus === 'in_progress' || currentStatus === 'completed'
             ? '트레이너가 승인했습니다'
             : '트레이너 승인을 기다리는 중입니다',
@@ -209,7 +208,7 @@ export function BookingProgressSimple({
           ) as const
         },
         {
-          label: '예약 확정',
+          label: '예약\n확정',
           description: currentStatus === 'confirmed' || currentStatus === 'in_progress'
             ? '예약이 확정되었습니다'
             : currentStatus === 'completed'
@@ -224,7 +223,7 @@ export function BookingProgressSimple({
           ) as const
         },
         {
-          label: '서비스 완료',
+          label: '서비스\n완료',
           description: currentStatus === 'completed' ? '서비스가 완료되었습니다' : '예정된 날짜에 진행됩니다',
           icon: <CheckCircle2 className="h-5 w-5" />,
           status: (
@@ -239,15 +238,16 @@ export function BookingProgressSimple({
   const steps = getProgressSteps()
 
   return (
-    <Card>
-      <CardContent className="pt-6 space-y-4">
-        {/* Progress Bar */}
-        {currentStatus !== 'cancelled' && currentStatus !== 'no_show' && (
-          <div className="relative">
-            <div className="flex items-start justify-between gap-4 relative">
-              {/* Progress Line - Horizontal */}
+    <div className="space-y-4 py-4 md:py-6 bg-gray-50/50 rounded-lg">
+      {/* Progress Bar */}
+      {currentStatus !== 'cancelled' && currentStatus !== 'no_show' && (
+        <div className="relative">
+          <div className="flex items-start justify-between gap-2 md:gap-4 relative">
+              {/* Progress Line - Horizontal - centered through icons */}
+              {/* size-9 = 36px, center = 18px for mobile */}
+              {/* size-11 = 44px, center = 22px for desktop */}
               <div
-                className="absolute top-6 h-0.5 bg-gray-200"
+                className="absolute h-0.5 bg-gray-200 top-[18px] md:top-[22px]"
                 style={{
                   left: `calc((100% / ${steps.length}) / 2)`,
                   right: `calc((100% / ${steps.length}) / 2)`
@@ -255,22 +255,27 @@ export function BookingProgressSimple({
               />
 
               {steps.map((s, idx) => (
-                <div key={idx} className="relative flex flex-col items-center flex-1 min-w-0">
+                <div key={idx} className="relative flex flex-col items-center flex-1">
                   {/* Icon */}
                   <div className={cn(
-                    "relative z-10 flex h-12 w-12 items-center justify-center rounded-full border-2 transition-all duration-300 flex-shrink-0",
+                    "relative z-10 flex items-center justify-center rounded-full border-2 transition-all duration-300 shrink-0 aspect-square",
+                    "size-9 md:size-11",
                     s.status === 'completed' && "bg-green-500 border-green-500 text-white",
                     s.status === 'current' && "bg-blue-500 border-blue-500 text-white animate-pulse",
                     s.status === 'cancelled' && "bg-red-500 border-red-500 text-white",
                     s.status === 'upcoming' && "bg-gray-100 border-gray-300 text-gray-400"
                   )}>
-                    {s.status === 'cancelled' ? <XCircle className="h-5 w-5" /> : s.icon}
+                    {s.status === 'cancelled' ? (
+                      <XCircle className="size-4 md:size-4 shrink-0" />
+                    ) : (
+                      React.cloneElement(s.icon as React.ReactElement, { className: "size-4 md:size-4 shrink-0" })
+                    )}
                   </div>
 
                   {/* Label & Description */}
-                  <div className="mt-4 text-center w-full">
+                  <div className="mt-2 md:mt-4 text-center w-full px-0.5">
                     <h4 className={cn(
-                      "font-semibold transition-colors text-sm",
+                      "font-semibold transition-colors text-sm md:text-base leading-tight whitespace-pre-line",
                       s.status === 'completed' && "text-green-700",
                       s.status === 'current' && "text-blue-700",
                       s.status === 'cancelled' && "text-red-700",
@@ -279,7 +284,7 @@ export function BookingProgressSimple({
                       {s.label}
                     </h4>
                     <p className={cn(
-                      "text-xs mt-1 transition-colors",
+                      "text-[10px] md:text-xs mt-1 transition-colors leading-tight hidden md:block",
                       s.status === 'upcoming' && "text-gray-400",
                       s.status !== 'upcoming' && "text-gray-600"
                     )}>
@@ -292,22 +297,44 @@ export function BookingProgressSimple({
           </div>
         )}
 
-        {/* 예약 정보 */}
-        <div className="text-sm space-y-1">
-          {serviceType && (
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground">서비스:</span>
-              <span className="font-medium">{serviceType}</span>
-            </div>
-          )}
-          {scheduledDate && scheduledTime && (
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground">예정일시:</span>
-              <span className="font-medium">{scheduledDate} {scheduledTime}</span>
-            </div>
-          )}
+      {/* 예약 정보 - 컴팩트 한 줄 */}
+      <div className="flex items-center justify-center gap-3 pt-3 text-sm md:text-base text-muted-foreground">
+        {/* 예약 타입 */}
+        <div className="flex items-center gap-1.5">
+          <Target className="h-4 w-4 shrink-0" />
+          <span className="font-medium text-foreground">
+            {bookingType === 'recommended' ? '추천' : '지정'}
+          </span>
         </div>
-      </CardContent>
-    </Card>
+
+        {/* 구분선 */}
+        <span className="text-muted-foreground/50">|</span>
+
+        {/* 세션 유형 */}
+        {participantsCount && (
+          <>
+            <div className="flex items-center gap-1.5">
+              <Users className="h-4 w-4 shrink-0" />
+              <span className="font-medium text-foreground">
+                1:{participantsCount}
+              </span>
+            </div>
+
+            {/* 구분선 */}
+            <span className="text-muted-foreground/50">|</span>
+          </>
+        )}
+
+        {/* 예정일시 */}
+        {scheduledDate && scheduledTime && (
+          <div className="flex items-center gap-1.5">
+            <Calendar className="h-4 w-4 shrink-0" />
+            <span className="font-medium text-foreground">
+              {scheduledDate} {scheduledTime.slice(0, 5)}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
   )
 }

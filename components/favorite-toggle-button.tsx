@@ -13,6 +13,7 @@ interface FavoriteToggleButtonProps {
   variant?: 'default' | 'outline' | 'ghost'
   size?: 'default' | 'sm' | 'lg' | 'icon'
   showText?: boolean
+  className?: string
 }
 
 export function FavoriteToggleButton({
@@ -21,21 +22,24 @@ export function FavoriteToggleButton({
   variant = 'outline',
   size = 'default',
   showText = true,
+  className,
 }: FavoriteToggleButtonProps) {
   const router = useRouter()
   const [isFavorited, setIsFavorited] = useState(false)
   const [favoriteId, setFavoriteId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isChecking, setIsChecking] = useState(true)
-
-  // 고객이 아니면 버튼 표시 안함
-  if (!customerId) {
-    return null
-  }
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    checkFavoriteStatus()
-  }, [trainerId, customerId])
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (customerId && mounted) {
+      checkFavoriteStatus()
+    }
+  }, [trainerId, customerId, mounted])
 
   const checkFavoriteStatus = async () => {
     const supabase = createClient()
@@ -106,11 +110,17 @@ export function FavoriteToggleButton({
     router.refresh()
   }
 
-  if (isChecking) {
+  // 고객이 아니면 버튼 표시 안함
+  if (!customerId) {
+    return null
+  }
+
+  // 클라이언트에서 마운트될 때까지 서버 렌더링과 동일한 내용 표시
+  if (!mounted || isChecking) {
     return (
-      <Button variant={variant} size={size} disabled>
+      <Button variant={variant} size={size} disabled className={className}>
         <Heart className="h-4 w-4" />
-        {showText && <span className="ml-2">로딩중...</span>}
+        {showText && <span className="ml-2">즐겨찾기</span>}
       </Button>
     )
   }
@@ -121,7 +131,7 @@ export function FavoriteToggleButton({
       size={size}
       onClick={handleToggle}
       disabled={isLoading}
-      className={isFavorited ? 'text-red-500 hover:text-red-600' : ''}
+      className={`${isFavorited ? 'text-red-500 hover:text-red-600' : ''} ${className || ''}`}
     >
       <Heart className={`h-4 w-4 ${isFavorited ? 'fill-current' : ''}`} />
       {showText && (

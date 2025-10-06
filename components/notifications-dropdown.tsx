@@ -28,11 +28,17 @@ interface Notification {
 }
 
 export function NotificationsDropdown() {
+  const [mounted, setMounted] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [isOpen, setIsOpen] = useState(false)
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null)
   const supabase = createClient()
+
+  // 클라이언트 마운트 확인
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // 알림 소리 재생
   const playNotificationSound = async () => {
@@ -173,15 +179,24 @@ export function NotificationsDropdown() {
     }
   }
 
+  // SSR 방지: 클라이언트에서만 렌더링
+  if (!mounted) {
+    return (
+      <Button variant="ghost" className="relative h-14 w-14 p-0 shrink-0" disabled>
+        <Bell className="h-8 w-8" />
+      </Button>
+    )
+  }
+
   return (
     <DropdownMenu open={isOpen} onOpenChange={handleDropdownOpen}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
+        <Button variant="ghost" className="relative h-14 w-14 p-0 shrink-0">
+          <Bell className="h-8 w-8" />
           {unreadCount > 0 && (
             <Badge
               variant="destructive"
-              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+              className="absolute -top-1 -right-1 h-6 w-6 flex items-center justify-center p-0 text-xs font-bold"
             >
               {unreadCount > 9 ? '9+' : unreadCount}
             </Badge>
@@ -189,14 +204,14 @@ export function NotificationsDropdown() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">
-        <DropdownMenuLabel className="flex items-center justify-between">
+        <DropdownMenuLabel className="flex items-center justify-between text-base">
           <span>알림</span>
           {unreadCount > 0 && (
             <Button
               variant="ghost"
               size="sm"
               onClick={markAllAsRead}
-              className="h-auto p-0 text-xs text-primary"
+              className="h-auto p-0 text-sm text-primary"
             >
               모두 읽음
             </Button>
@@ -205,7 +220,7 @@ export function NotificationsDropdown() {
         <DropdownMenuSeparator />
 
         {notifications.length === 0 ? (
-          <div className="py-8 text-center text-sm text-muted-foreground">
+          <div className="py-8 text-center text-base text-muted-foreground">
             알림이 없습니다
           </div>
         ) : (
@@ -213,7 +228,7 @@ export function NotificationsDropdown() {
             {notifications.map((notification) => (
               <DropdownMenuItem
                 key={notification.id}
-                className={`flex flex-col items-start p-3 cursor-pointer ${
+                className={`flex flex-col items-start p-4 cursor-pointer ${
                   !notification.is_read ? 'bg-muted/50' : ''
                 }`}
                 onClick={() => {
@@ -227,16 +242,16 @@ export function NotificationsDropdown() {
               >
                 <div className="flex items-start justify-between w-full gap-2">
                   <div className="flex-1">
-                    <p className="font-semibold text-sm">{notification.title}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="font-semibold text-base">{notification.title}</p>
+                    <p className="text-sm text-muted-foreground mt-1">
                       {notification.message}
                     </p>
                   </div>
                   {!notification.is_read && (
-                    <div className="w-2 h-2 bg-primary rounded-full mt-1" />
+                    <div className="w-2.5 h-2.5 bg-primary rounded-full mt-1" />
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
+                <p className="text-sm text-muted-foreground mt-2">
                   {formatDistanceToNow(new Date(notification.created_at), {
                     addSuffix: true,
                     locale: ko

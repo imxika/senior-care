@@ -213,68 +213,68 @@ export default async function TrainerEarningsPage({ searchParams }: PageProps) {
       </header>
 
       <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">수입 관리</h1>
-            <p className="text-muted-foreground mt-1">수입 현황과 통계를 확인하세요</p>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">수입 관리</h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-1">수입 현황과 통계를 확인하세요</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              엑셀 다운로드
+            <Button variant="outline" size="sm" className="flex-1 md:flex-none">
+              <Download className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">엑셀 다운로드</span>
             </Button>
-            <Button variant="outline">
-              <FileText className="h-4 w-4 mr-2" />
-              세금계산서
+            <Button variant="outline" size="sm" className="flex-1 md:flex-none">
+              <FileText className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">세금계산서</span>
             </Button>
           </div>
         </div>
 
         {/* 통계 카드 */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 grid-cols-2 md:gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-4 md:pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">이번 달 수입</p>
-                  <p className="text-2xl font-bold mt-2">{thisMonthEarnings.toLocaleString()}원</p>
-                  <p className="text-xs text-muted-foreground mt-1">{thisMonthSessions}회 세션</p>
+                  <p className="text-xs md:text-sm font-medium text-muted-foreground">이번 달 수입</p>
+                  <p className="text-lg md:text-2xl font-bold mt-1 md:mt-2">{thisMonthEarnings.toLocaleString()}원</p>
+                  <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 md:mt-1">{thisMonthSessions}회 세션</p>
                 </div>
-                <DollarSign className="h-8 w-8 text-green-600" />
+                <DollarSign className="h-6 w-6 md:h-8 md:w-8 text-green-600 shrink-0" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-4 md:pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">이번 주 수입</p>
-                  <p className="text-2xl font-bold mt-2">{thisWeekEarnings.toLocaleString()}원</p>
+                  <p className="text-xs md:text-sm font-medium text-muted-foreground">이번 주 수입</p>
+                  <p className="text-lg md:text-2xl font-bold mt-1 md:mt-2">{thisWeekEarnings.toLocaleString()}원</p>
                 </div>
-                <Calendar className="h-8 w-8 text-blue-600" />
+                <Calendar className="h-6 w-6 md:h-8 md:w-8 text-blue-600 shrink-0" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-4 md:pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">총 수입</p>
-                  <p className="text-2xl font-bold mt-2">{totalEarnings.toLocaleString()}원</p>
-                  <p className="text-xs text-muted-foreground mt-1">{bookings.length}회 세션</p>
+                  <p className="text-xs md:text-sm font-medium text-muted-foreground">총 수입</p>
+                  <p className="text-lg md:text-2xl font-bold mt-1 md:mt-2">{totalEarnings.toLocaleString()}원</p>
+                  <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 md:mt-1">{bookings.length}회 세션</p>
                 </div>
-                <TrendingUp className="h-8 w-8 text-purple-600" />
+                <TrendingUp className="h-6 w-6 md:h-8 md:w-8 text-purple-600 shrink-0" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-4 md:pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">시간당 기본요금</p>
-                  <p className="text-2xl font-bold mt-2">{(trainerInfo.hourly_rate || 80000).toLocaleString()}원</p>
+                  <p className="text-xs md:text-sm font-medium text-muted-foreground">시간당 기본요금</p>
+                  <p className="text-lg md:text-2xl font-bold mt-1 md:mt-2">{(trainerInfo.hourly_rate || 80000).toLocaleString()}원</p>
                 </div>
-                <DollarSign className="h-8 w-8 text-muted-foreground" />
+                <DollarSign className="h-6 w-6 md:h-8 md:w-8 text-muted-foreground shrink-0" />
               </div>
             </CardContent>
           </Card>
@@ -314,74 +314,116 @@ export default async function TrainerEarningsPage({ searchParams }: PageProps) {
         {/* 최근 수입 내역 */}
         <Card>
           <CardHeader>
-            <CardTitle>이번 달 수입 내역 ({recentEarnings.length}건)</CardTitle>
-            <CardDescription>{currentYear}년 {currentMonth}월의 완료된 세션</CardDescription>
+            <CardTitle className="text-lg md:text-xl">이번 달 수입 내역 ({recentEarnings.length}건)</CardTitle>
+            <CardDescription className="text-sm">{currentYear}년 {currentMonth}월의 완료된 세션</CardDescription>
           </CardHeader>
           <CardContent>
             {recentEarnings.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="text-center py-8 text-sm md:text-base text-muted-foreground">
                 이번 달 완료된 세션이 없습니다
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="text-left p-3 font-semibold">날짜</th>
-                      <th className="text-left p-3 font-semibold">시간</th>
-                      <th className="text-left p-3 font-semibold">고객명</th>
-                      <th className="text-left p-3 font-semibold">타입</th>
-                      <th className="text-right p-3 font-semibold">금액</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentEarnings.map((booking) => (
-                      <tr key={booking.id} className="border-b hover:bg-muted/50">
-                        <td className="p-3">
-                          {new Date(booking.booking_date).toLocaleDateString('ko-KR', {
-                            year: 'numeric',
-                            month: '2-digit',
-                            day: '2-digit',
-                          })}
-                        </td>
-                        <td className="p-3 text-sm text-muted-foreground">
-                          {booking.start_time} - {booking.end_time}
-                        </td>
-                        <td className="p-3">
-                          <div className="font-medium">
+              <>
+                {/* 모바일: 카드 형식 */}
+                <div className="md:hidden space-y-3">
+                  {recentEarnings.map((booking) => (
+                    <div key={booking.id} className="border rounded-lg p-3 space-y-2">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-medium text-sm">
                             {booking.customer?.profiles?.full_name || '고객 정보 없음'}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {booking.customer?.profiles?.email}
-                          </div>
-                        </td>
-                        <td className="p-3">
-                          <Badge variant="outline">
-                            {booking.booking_type === 'direct' ? '지정' : '추천'}
-                          </Badge>
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(booking.booking_date).toLocaleDateString('ko-KR', {
+                              year: 'numeric',
+                              month: '2-digit',
+                              day: '2-digit',
+                            })}
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          {booking.booking_type === 'direct' ? '지정' : '추천'}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <p className="text-xs text-muted-foreground">
+                          {booking.start_time} - {booking.end_time}
+                        </p>
+                        <p className="text-lg font-bold">
+                          {(booking.price || trainerInfo.hourly_rate || 80000).toLocaleString()}원
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="border-t-2 pt-3 flex items-center justify-between">
+                    <p className="font-semibold">합계</p>
+                    <p className="text-xl font-bold text-primary">
+                      {thisMonthEarnings.toLocaleString()}원
+                    </p>
+                  </div>
+                </div>
+
+                {/* 데스크톱: 테이블 형식 */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b bg-muted/50">
+                        <th className="text-left p-3 font-semibold">날짜</th>
+                        <th className="text-left p-3 font-semibold">시간</th>
+                        <th className="text-left p-3 font-semibold">고객명</th>
+                        <th className="text-left p-3 font-semibold">타입</th>
+                        <th className="text-right p-3 font-semibold">금액</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentEarnings.map((booking) => (
+                        <tr key={booking.id} className="border-b hover:bg-muted/50">
+                          <td className="p-3">
+                            {new Date(booking.booking_date).toLocaleDateString('ko-KR', {
+                              year: 'numeric',
+                              month: '2-digit',
+                              day: '2-digit',
+                            })}
+                          </td>
+                          <td className="p-3 text-sm text-muted-foreground">
+                            {booking.start_time} - {booking.end_time}
+                          </td>
+                          <td className="p-3">
+                            <div className="font-medium">
+                              {booking.customer?.profiles?.full_name || '고객 정보 없음'}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {booking.customer?.profiles?.email}
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <Badge variant="outline">
+                              {booking.booking_type === 'direct' ? '지정' : '추천'}
+                            </Badge>
+                          </td>
+                          <td className="p-3 text-right">
+                            <span className="font-semibold text-lg">
+                              {(booking.price || trainerInfo.hourly_rate || 80000).toLocaleString()}원
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 bg-muted/30">
+                        <td colSpan={4} className="p-3 text-right font-semibold">
+                          합계
                         </td>
                         <td className="p-3 text-right">
-                          <span className="font-semibold text-lg">
-                            {(booking.price || trainerInfo.hourly_rate || 80000).toLocaleString()}원
+                          <span className="text-xl font-bold text-primary">
+                            {thisMonthEarnings.toLocaleString()}원
                           </span>
                         </td>
                       </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="border-t-2 bg-muted/30">
-                      <td colSpan={4} className="p-3 text-right font-semibold">
-                        합계
-                      </td>
-                      <td className="p-3 text-right">
-                        <span className="text-xl font-bold text-primary">
-                          {thisMonthEarnings.toLocaleString()}원
-                        </span>
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
+                    </tfoot>
+                  </table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

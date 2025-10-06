@@ -99,13 +99,13 @@ export default async function CustomerFavoritesPage() {
         </div>
       </header>
 
-      <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
+      <div className="flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Heart className="h-8 w-8 text-red-500" />
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
+            <Heart className="h-6 w-6 md:h-8 md:w-8 text-red-500" />
             즐겨찾기
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm md:text-base text-muted-foreground mt-1">
             {profile?.full_name}님이 즐겨찾기한 트레이너 목록입니다
           </p>
         </div>
@@ -113,12 +113,12 @@ export default async function CustomerFavoritesPage() {
         {/* 즐겨찾기 목록 */}
         {!favorites || favorites.length === 0 ? (
           <Card>
-            <CardContent className="py-12 text-center">
-              <Heart className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">
+            <CardContent className="py-8 md:py-12 text-center">
+              <Heart className="w-12 h-12 md:w-16 md:h-16 text-muted-foreground mx-auto mb-3 md:mb-4" />
+              <h3 className="text-lg md:text-xl font-semibold mb-2">
                 즐겨찾기한 트레이너가 없습니다
               </h3>
-              <p className="text-muted-foreground mb-6">
+              <p className="text-sm md:text-base text-muted-foreground mb-4 md:mb-6">
                 마음에 드는 트레이너를 즐겨찾기에 추가해보세요
               </p>
               <Link href="/trainers">
@@ -129,17 +129,17 @@ export default async function CustomerFavoritesPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 md:gap-6 md:grid-cols-2 lg:grid-cols-3">
             {favorites.map((favorite) => {
               const trainer = favorite.trainer
               if (!trainer) return null
 
               return (
-                <Card key={favorite.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                  <CardContent className="p-6">
+                <Card key={favorite.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                  <CardContent className="p-4 md:p-6">
                     {/* 프로필 헤더 */}
-                    <div className="flex items-start gap-4 mb-4">
-                      <Avatar className="h-16 w-16">
+                    <div className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4">
+                      <Avatar className="h-12 w-12 md:h-16 md:w-16">
                         <AvatarImage
                           src={trainer.profiles?.avatar_url || ''}
                           alt={trainer.profiles?.full_name || '트레이너'}
@@ -148,8 +148,8 @@ export default async function CustomerFavoritesPage() {
                           {trainer.profiles?.full_name?.charAt(0) || 'T'}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="flex-1">
-                        <h3 className="font-bold text-lg">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-base md:text-lg truncate">
                           {trainer.profiles?.full_name || '이름 없음'}
                         </h3>
                         <div className="flex items-center gap-1 text-sm text-yellow-600 mt-1">
@@ -165,14 +165,14 @@ export default async function CustomerFavoritesPage() {
 
                     {/* 소개 */}
                     {trainer.bio && (
-                      <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                      <p className="text-sm text-muted-foreground mb-3 md:mb-4 line-clamp-2">
                         {trainer.bio}
                       </p>
                     )}
 
                     {/* 전문 분야 */}
                     {trainer.specialties && trainer.specialties.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-4">
+                      <div className="flex flex-wrap gap-1 mb-3 md:mb-4">
                         {trainer.specialties.slice(0, 3).map((specialty, idx) => (
                           <Badge key={idx} variant="secondary" className="text-xs">
                             {specialty}
@@ -187,18 +187,18 @@ export default async function CustomerFavoritesPage() {
                     )}
 
                     {/* 정보 */}
-                    <div className="space-y-2 mb-4 text-sm">
+                    <div className="space-y-1.5 md:space-y-2 mb-3 md:mb-4 text-sm">
                       <div className="flex items-center gap-2 text-muted-foreground">
-                        <Users className="h-4 w-4" />
+                        <Users className="h-4 w-4 shrink-0" />
                         <span>{trainer.years_experience || 0}년 경력</span>
                       </div>
                       <div className="flex items-center gap-2 text-muted-foreground">
-                        <DollarSign className="h-4 w-4" />
+                        <DollarSign className="h-4 w-4 shrink-0" />
                         <span>시간당 {trainer.hourly_rate?.toLocaleString()}원</span>
                       </div>
                       {trainer.service_areas && trainer.service_areas.length > 0 && (
                         <div className="flex items-center gap-2 text-muted-foreground">
-                          <MapPin className="h-4 w-4" />
+                          <MapPin className="h-4 w-4 shrink-0" />
                           <span className="line-clamp-1">
                             {trainer.service_areas.join(', ')}
                           </span>
@@ -209,12 +209,12 @@ export default async function CustomerFavoritesPage() {
                     {/* 액션 버튼 */}
                     <div className="flex gap-2">
                       <Link href={`/trainers/${trainer.id}`} className="flex-1">
-                        <Button variant="outline" className="w-full">
+                        <Button variant="outline" className="w-full h-10">
                           프로필 보기
                         </Button>
                       </Link>
                       <Link href={`/customer/booking/new?trainer=${trainer.id}`} className="flex-1">
-                        <Button className="w-full">
+                        <Button className="w-full h-10">
                           예약하기
                         </Button>
                       </Link>

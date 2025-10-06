@@ -46,11 +46,13 @@ export interface Database {
           id: string
           profile_id: string | null
           age: number | null
+          birth_date: string | null
           gender: 'male' | 'female' | 'other' | null
           address: string | null
           address_detail: string | null
-          emergency_contact: string | null
-          emergency_phone: string | null
+          guardian_name: string | null
+          guardian_relationship: string | null
+          guardian_phone: string | null
           medical_conditions: string[] | null
           mobility_level: 'independent' | 'assisted' | 'wheelchair' | 'bedridden' | null
           notes: string | null
@@ -61,11 +63,13 @@ export interface Database {
           id?: string
           profile_id?: string | null
           age?: number | null
+          birth_date?: string | null
           gender?: 'male' | 'female' | 'other' | null
           address?: string | null
           address_detail?: string | null
-          emergency_contact?: string | null
-          emergency_phone?: string | null
+          guardian_name?: string | null
+          guardian_relationship?: string | null
+          guardian_phone?: string | null
           medical_conditions?: string[] | null
           mobility_level?: 'independent' | 'assisted' | 'wheelchair' | 'bedridden' | null
           notes?: string | null
@@ -76,11 +80,13 @@ export interface Database {
           id?: string
           profile_id?: string | null
           age?: number | null
+          birth_date?: string | null
           gender?: 'male' | 'female' | 'other' | null
           address?: string | null
           address_detail?: string | null
-          emergency_contact?: string | null
-          emergency_phone?: string | null
+          guardian_name?: string | null
+          guardian_relationship?: string | null
+          guardian_phone?: string | null
           medical_conditions?: string[] | null
           mobility_level?: 'independent' | 'assisted' | 'wheelchair' | 'bedridden' | null
           notes?: string | null

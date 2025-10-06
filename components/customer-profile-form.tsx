@@ -14,6 +14,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import { updateCustomerProfile } from '@/app/(dashboard)/customer/settings/actions'
 
 interface CustomerProfileFormProps {
@@ -23,11 +25,13 @@ interface CustomerProfileFormProps {
   }
   customer: {
     age?: number
+    birth_date?: string
     gender?: string
     address?: string
     address_detail?: string
-    emergency_contact?: string
-    emergency_phone?: string
+    guardian_name?: string
+    guardian_relationship?: string
+    guardian_phone?: string
     mobility_level?: string
     notes?: string
   }
@@ -42,14 +46,33 @@ export function CustomerProfileForm({ profile, customer }: CustomerProfileFormPr
   // Form state
   const [fullName, setFullName] = useState(profile?.full_name || '')
   const [phone, setPhone] = useState(profile?.phone || '')
-  const [age, setAge] = useState(customer?.age?.toString() || '')
+  const [birthDate, setBirthDate] = useState(customer?.birth_date || '')
   const [gender, setGender] = useState(customer?.gender || '')
   const [address, setAddress] = useState(customer?.address || '')
   const [addressDetail, setAddressDetail] = useState(customer?.address_detail || '')
-  const [emergencyContact, setEmergencyContact] = useState(customer?.emergency_contact || '')
-  const [emergencyPhone, setEmergencyPhone] = useState(customer?.emergency_phone || '')
+  const [guardianName, setGuardianName] = useState(customer?.guardian_name || '')
+  const [guardianRelationship, setGuardianRelationship] = useState(customer?.guardian_relationship || '')
+  const [guardianPhone, setGuardianPhone] = useState(customer?.guardian_phone || '')
   const [mobilityLevel, setMobilityLevel] = useState(customer?.mobility_level || '')
   const [notes, setNotes] = useState(customer?.notes || '')
+
+  // Collapsible state - open if guardian data exists
+  const [isGuardianOpen, setIsGuardianOpen] = useState(
+    !!(customer?.guardian_name || customer?.guardian_relationship || customer?.guardian_phone)
+  )
+
+  // Calculate age from birth_date
+  const calculateAge = (birthDate: string) => {
+    if (!birthDate) return ''
+    const today = new Date()
+    const birth = new Date(birthDate)
+    let age = today.getFullYear() - birth.getFullYear()
+    const monthDiff = today.getMonth() - birth.getMonth()
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--
+    }
+    return age.toString()
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -60,12 +83,13 @@ export function CustomerProfileForm({ profile, customer }: CustomerProfileFormPr
     const formData = new FormData()
     formData.set('full_name', fullName)
     formData.set('phone', phone)
-    formData.set('age', age)
+    formData.set('birth_date', birthDate)
     formData.set('gender', gender)
     formData.set('address', address)
     formData.set('address_detail', addressDetail)
-    formData.set('emergency_contact', emergencyContact)
-    formData.set('emergency_phone', emergencyPhone)
+    formData.set('guardian_name', guardianName)
+    formData.set('guardian_relationship', guardianRelationship)
+    formData.set('guardian_phone', guardianPhone)
     formData.set('mobility_level', mobilityLevel)
     formData.set('notes', notes)
 
@@ -80,6 +104,22 @@ export function CustomerProfileForm({ profile, customer }: CustomerProfileFormPr
       router.refresh()
       setTimeout(() => setSuccess(false), 3000)
     }
+  }
+
+  const handleCancel = () => {
+    setFullName(profile?.full_name || '')
+    setPhone(profile?.phone || '')
+    setBirthDate(customer?.birth_date || '')
+    setGender(customer?.gender || '')
+    setAddress(customer?.address || '')
+    setAddressDetail(customer?.address_detail || '')
+    setGuardianName(customer?.guardian_name || '')
+    setGuardianRelationship(customer?.guardian_relationship || '')
+    setGuardianPhone(customer?.guardian_phone || '')
+    setMobilityLevel(customer?.mobility_level || '')
+    setNotes(customer?.notes || '')
+    setError(null)
+    setSuccess(false)
   }
 
   return (
@@ -108,14 +148,21 @@ export function CustomerProfileForm({ profile, customer }: CustomerProfileFormPr
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="age">나이</Label>
+          <Label htmlFor="birth_date">
+            생년월일 <span className="text-xs text-muted-foreground">(예: 1964년 1월 1일)</span>
+          </Label>
           <Input
-            id="age"
-            type="number"
-            value={age}
-            onChange={(e) => setAge(e.target.value)}
-            placeholder="65"
+            id="birth_date"
+            type="date"
+            value={birthDate}
+            onChange={(e) => setBirthDate(e.target.value)}
+            max={new Date().toISOString().split('T')[0]}
           />
+          {birthDate && (
+            <p className="text-xs text-muted-foreground">
+              만 {calculateAge(birthDate)}세
+            </p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -156,29 +203,69 @@ export function CustomerProfileForm({ profile, customer }: CustomerProfileFormPr
         </div>
       </div>
 
-      {/* 비상연락망 */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="emergency_contact">비상연락처 이름</Label>
-          <Input
-            id="emergency_contact"
-            value={emergencyContact}
-            onChange={(e) => setEmergencyContact(e.target.value)}
-            placeholder="김보호자"
-          />
-        </div>
+      {/* 보호자 정보 (선택사항 - Collapsible) */}
+      <Collapsible open={isGuardianOpen} onOpenChange={setIsGuardianOpen}>
+        <div className="border rounded-lg p-4 bg-muted/50">
+          <CollapsibleTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full flex items-center justify-between hover:bg-transparent p-0 h-auto mb-4"
+            >
+              <div className="flex items-center gap-2">
+                <span className="font-semibold">보호자 정보</span>
+                <span className="text-xs text-muted-foreground">(선택사항)</span>
+              </div>
+              {isGuardianOpen ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </Button>
+          </CollapsibleTrigger>
 
-        <div className="space-y-2">
-          <Label htmlFor="emergency_phone">비상연락처 전화번호</Label>
-          <Input
-            id="emergency_phone"
-            type="tel"
-            value={emergencyPhone}
-            onChange={(e) => setEmergencyPhone(e.target.value)}
-            placeholder="010-9876-5432"
-          />
+          <CollapsibleContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="guardian_name">보호자 이름</Label>
+                <Input
+                  id="guardian_name"
+                  value={guardianName}
+                  onChange={(e) => setGuardianName(e.target.value)}
+                  placeholder="홍길동"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="guardian_relationship">관계</Label>
+                <Select value={guardianRelationship} onValueChange={setGuardianRelationship}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="선택하세요" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="자녀">자녀</SelectItem>
+                    <SelectItem value="배우자">배우자</SelectItem>
+                    <SelectItem value="친척">친척</SelectItem>
+                    <SelectItem value="친구">친구</SelectItem>
+                    <SelectItem value="기타">기타</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="guardian_phone">보호자 연락처</Label>
+                <Input
+                  id="guardian_phone"
+                  type="tel"
+                  value={guardianPhone}
+                  onChange={(e) => setGuardianPhone(e.target.value)}
+                  placeholder="010-1234-5678"
+                />
+              </div>
+            </div>
+          </CollapsibleContent>
         </div>
-      </div>
+      </Collapsible>
 
       {/* 거동 능력 */}
       <div className="space-y-2">
@@ -222,9 +309,14 @@ export function CustomerProfileForm({ profile, customer }: CustomerProfileFormPr
       )}
 
       {/* 제출 버튼 */}
-      <Button type="submit" disabled={loading} className="w-full md:w-auto">
-        {loading ? '저장 중...' : '저장하기'}
-      </Button>
+      <div className="flex gap-2 w-full md:w-auto">
+        <Button type="button" variant="outline" onClick={handleCancel} disabled={loading} className="flex-1 md:flex-none">
+          초기화
+        </Button>
+        <Button type="submit" disabled={loading} className="flex-1 md:flex-none">
+          {loading ? '저장 중...' : '저장하기'}
+        </Button>
+      </div>
     </form>
   )
 }

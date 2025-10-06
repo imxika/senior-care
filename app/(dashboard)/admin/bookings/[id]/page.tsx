@@ -94,7 +94,7 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
     notFound()
   }
 
-  const statusConfig = BOOKING_STATUS_CONFIG[booking.status] || BOOKING_STATUS_CONFIG.pending
+  const statusConfig = BOOKING_STATUS_CONFIG[booking.status as keyof typeof BOOKING_STATUS_CONFIG] || BOOKING_STATUS_CONFIG.pending
   const scheduledDateTime = combineDateTime(booking.booking_date, booking.start_time)
 
   return (
@@ -241,7 +241,7 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
               <InfoRow
                 icon={<FileText className="h-4 w-4" />}
                 label="서비스 타입"
-                value={SERVICE_TYPE_LABELS[booking.service_type] || booking.service_type}
+                value={SERVICE_TYPE_LABELS[booking.service_type as keyof typeof SERVICE_TYPE_LABELS] || booking.service_type}
               />
               {booking.service_type === 'home_visit' && booking.service_address && (
                 <InfoRow

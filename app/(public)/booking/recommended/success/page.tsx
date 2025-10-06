@@ -88,7 +88,7 @@ export default function RecommendedBookingSuccessPage() {
 
           {/* 추가 정보 */}
           <div className="text-center text-sm text-gray-500 pt-4 border-t">
-            <p>예약 내역은 "내 예약" 페이지에서 확인하실 수 있습니다.</p>
+            <p>예약 내역은 &quot;내 예약&quot; 페이지에서 확인하실 수 있습니다.</p>
             <p className="mt-1">문의사항이 있으시면 고객센터로 연락주세요.</p>
           </div>
         </CardContent>

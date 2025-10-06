@@ -212,6 +212,42 @@ export default async function TrainerBookingsPage({ searchParams }: PageProps) {
     return type === 'direct' ? '지정' : '추천'
   }
 
+  // 날짜 포맷 함수 (서버에서 미리 포맷팅)
+  const formatBookingDate = (dateString: string, time: string) => {
+    const date = new Date(dateString)
+    const year = String(date.getFullYear()).slice(2) // 2025 -> 25
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const weekday = ['일', '월', '화', '수', '목', '금', '토'][date.getDay()]
+    // 시간에서 초 제거 (14:30:00 -> 14:30)
+    const timeWithoutSeconds = time.substring(0, 5)
+    return `${year}.${month}.${day} (${weekday}) ${timeWithoutSeconds}`
+  }
+
+  const formatCreatedDate = (dateString: string) => {
+    const date = new Date(dateString)
+    const year = String(date.getFullYear()).slice(2)
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}.${month}.${day}`
+  }
+
+  const formatFullDate = (dateString: string, time: string) => {
+    const date = new Date(dateString)
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}.${month}.${day} ${time}`
+  }
+
+  const formatDateOnly = (dateString: string) => {
+    const date = new Date(dateString)
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}.${month}.${day}`
+  }
+
   return (
     <>
       <header className="flex h-16 shrink-0 items-center gap-2 border-b">
@@ -234,53 +270,69 @@ export default async function TrainerBookingsPage({ searchParams }: PageProps) {
 
       <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">내 예약 스케줄</h1>
-          <p className="text-muted-foreground mt-1">{profile?.full_name} 트레이너님의 예약 일정</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">내 예약 스케줄</h1>
+          <p className="text-base text-muted-foreground mt-1">{profile?.full_name} 트레이너님의 예약 일정</p>
         </div>
 
         {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="p-3 md:p-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">오늘 예약</p>
-                  <p className="text-2xl font-bold mt-2">{todayCount}</p>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
+                    <Calendar className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">오늘 예약</p>
+                    <p className="text-2xl font-bold">{todayCount}</p>
+                  </div>
                 </div>
-                <Calendar className="h-8 w-8 text-muted-foreground" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="p-3 md:p-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">승인 대기</p>
-                  <p className="text-2xl font-bold mt-2">{pendingCount}</p>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-100">
+                    <Clock className="h-5 w-5 text-yellow-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">승인 대기</p>
+                    <p className="text-2xl font-bold">{pendingCount}</p>
+                  </div>
                 </div>
-                <Clock className="h-8 w-8 text-muted-foreground" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="p-3 md:p-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">예정된 예약</p>
-                  <p className="text-2xl font-bold mt-2">{upcomingCount}</p>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">예정된 예약</p>
+                    <p className="text-2xl font-bold">{upcomingCount}</p>
+                  </div>
                 </div>
-                <CheckCircle className="h-8 w-8 text-muted-foreground" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="p-3 md:p-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">이번달 완료</p>
-                  <p className="text-2xl font-bold mt-2">{thisMonthCompleted}</p>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">이번달 완료</p>
+                    <p className="text-2xl font-bold">{thisMonthCompleted}</p>
+                  </div>
                 </div>
-                <XCircle className="h-8 w-8 text-muted-foreground" />
               </div>
             </CardContent>
           </Card>
@@ -302,13 +354,67 @@ export default async function TrainerBookingsPage({ searchParams }: PageProps) {
         ) : (
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between gap-4">
-                <CardTitle>예약 목록 ({filteredBookings.length}건)</CardTitle>
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <CardTitle className="text-lg md:text-xl">예약 목록 ({filteredBookings.length}건)</CardTitle>
                 <TrainerBookingFilters />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
+              {/* 모바일: 카드 레이아웃 */}
+              <div className="flex flex-col gap-4 md:hidden">
+                {paginatedBookings.map((booking) => {
+                  const statusBadge = getStatusBadge(booking.status)
+                  return (
+                    <div key={booking.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div className="flex items-stretch gap-3">
+                        <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
+                          {/* 고객 정보 */}
+                          <div>
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <p className="font-semibold">
+                                {booking.customer?.profiles?.full_name || '고객 정보 없음'}
+                              </p>
+                              <Badge variant={statusBadge.variant} className="shrink-0">
+                                {statusBadge.label}
+                              </Badge>
+                              <Badge variant="outline" className="shrink-0">
+                                {getTypeBadge(booking.booking_type)}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground truncate">
+                              {booking.customer?.profiles?.phone || booking.customer?.profiles?.email}
+                            </p>
+                          </div>
+
+                          {/* 예약 정보 */}
+                          <div className="space-y-1 text-sm">
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <Calendar className="h-3.5 w-3.5 shrink-0" />
+                              <span>{formatBookingDate(booking.booking_date, booking.start_time)}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span className="font-mono">{booking.id.slice(0, 8)}</span>
+                              <span>•</span>
+                              <span>{formatCreatedDate(booking.created_at)}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 상세보기 버튼 */}
+                        <Link href={`/trainer/bookings/${booking.id}`} className="shrink-0">
+                          <Button variant="outline" className="h-full w-20 flex flex-col items-center justify-center gap-2">
+                            <Eye className="h-6 w-6" />
+                            <span className="text-xs font-medium">상세보기</span>
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* 데스크톱: 테이블 레이아웃 */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b bg-muted/50">
@@ -339,14 +445,10 @@ export default async function TrainerBookingsPage({ searchParams }: PageProps) {
                             </div>
                           </td>
                           <td className="p-3">
-                            {new Date(booking.booking_date).toLocaleDateString('ko-KR', {
-                              year: 'numeric',
-                              month: '2-digit',
-                              day: '2-digit',
-                            })} {booking.start_time}
+                            {formatFullDate(booking.booking_date, booking.start_time)}
                           </td>
                           <td className="p-3 text-sm text-muted-foreground">
-                            {new Date(booking.created_at).toLocaleDateString('ko-KR')}
+                            {formatDateOnly(booking.created_at)}
                           </td>
                           <td className="p-3">
                             <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>

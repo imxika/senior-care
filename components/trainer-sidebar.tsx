@@ -9,7 +9,9 @@ import {
   Settings,
   Home,
   ClipboardList,
-  Clock,
+  Bell,
+  CreditCard,
+  Shield,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -55,17 +57,7 @@ const data = {
       ],
     },
     {
-      title: "가능 시간",
-      url: "/trainer/availability",
-      icon: Clock,
-    },
-    {
-      title: "고객 관리",
-      url: "/trainer/customers",
-      icon: Users,
-    },
-    {
-      title: "프로그램",
+      title: "클래스 (클래스용)",
       url: "/trainer/programs",
       icon: ClipboardList,
     },
@@ -76,7 +68,7 @@ const data = {
     },
     {
       title: "설정",
-      url: "/trainer/settings",
+      url: "#",
       icon: Settings,
       items: [
         {
@@ -86,6 +78,18 @@ const data = {
         {
           title: "스케줄",
           url: "/trainer/settings/schedule",
+        },
+        {
+          title: "알림",
+          url: "/trainer/settings/notifications",
+        },
+        {
+          title: "계좌 정보",
+          url: "/trainer/settings/billing",
+        },
+        {
+          title: "보안",
+          url: "/trainer/settings/security",
         },
       ],
     },

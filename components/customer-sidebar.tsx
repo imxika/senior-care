@@ -101,17 +101,19 @@ export function CustomerSidebar({
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <div className="flex items-center justify-between gap-2 px-4 py-2">
-          <div className="flex items-center gap-2 flex-1">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <Home className="h-4 w-4" />
+        <div className="flex items-center justify-between gap-3 px-4 py-3">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground aspect-square">
+              <Home className="size-7" />
             </div>
-            <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-semibold">Senior Care</span>
-              <span className="truncate text-xs text-muted-foreground">고객</span>
+            <div className="grid flex-1 text-left leading-tight min-w-0">
+              <span className="truncate font-semibold text-lg">Senior Care</span>
+              <span className="truncate text-base text-muted-foreground">고객</span>
             </div>
           </div>
-          <NotificationsDropdown />
+          <div className="shrink-0">
+            <NotificationsDropdown />
+          </div>
         </div>
       </SidebarHeader>
       <SidebarContent>

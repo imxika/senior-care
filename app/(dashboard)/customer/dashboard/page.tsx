@@ -83,8 +83,8 @@ export default async function CustomerDashboard() {
       <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         {/* Page Header */}
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">고객 대시보드</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">고객 대시보드</h1>
+          <p className="text-sm md:text-base text-muted-foreground mt-1">
             안녕하세요, {profile?.full_name}님
           </p>
         </div>
@@ -94,36 +94,41 @@ export default async function CustomerDashboard() {
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <div className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
-              <h2 className="text-lg font-semibold">최근 예약 진행상황</h2>
+              <h2 className="text-base md:text-lg font-semibold">최근 예약 진행상황</h2>
             </div>
             <BookingProgressSimple
               bookingType={recentBooking.booking_type}
               currentStatus={recentBooking.status}
               hasTrainer={!!recentBooking.trainer_id}
-              serviceType={serviceTypeLabel}
-              trainerName={recentBooking.trainer?.profiles?.full_name}
-              scheduledDate={new Date(recentBooking.booking_date).toLocaleDateString('ko-KR')}
+              scheduledDate={(() => {
+                const date = new Date(recentBooking.booking_date)
+                const month = date.getMonth() + 1
+                const day = date.getDate()
+                const weekday = ['일', '월', '화', '수', '목', '금', '토'][date.getDay()]
+                return `${month}.${day} (${weekday})`
+              })()}
               scheduledTime={recentBooking.start_time}
+              participantsCount={recentBooking.participants_count || 1}
             />
           </div>
         )}
 
         {/* Quick Actions */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4 lg:gap-4">
           <Card className="hover:shadow-md transition-all hover:border-purple-500 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950">
-            <CardHeader>
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-100">
+            <CardHeader className="p-4 pb-3">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-purple-100">
                   <Sparkles className="h-6 w-6 text-purple-600" />
                 </div>
                 <div className="flex-1">
-                  <CardTitle className="text-base">추천 예약</CardTitle>
-                  <CardDescription className="text-xs">AI 맞춤 트레이너 매칭</CardDescription>
+                  <CardTitle className="text-base md:text-lg">추천 예약</CardTitle>
+                  <CardDescription className="text-xs md:text-sm mt-0.5">AI 맞춤 트레이너 매칭</CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <Button asChild className="w-full bg-purple-600 hover:bg-purple-700">
+            <CardContent className="p-4 pt-0">
+              <Button asChild className="w-full bg-purple-600 hover:bg-purple-700 h-10">
                 <Link href="/booking/recommended">
                   시작하기
                   <ArrowUpRight className="ml-2 h-4 w-4" />
@@ -133,19 +138,19 @@ export default async function CustomerDashboard() {
           </Card>
 
           <Card className="hover:shadow-md transition-all hover:border-primary">
-            <CardHeader>
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+            <CardHeader className="p-4 pb-3">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                   <Search className="h-6 w-6 text-primary" />
                 </div>
                 <div className="flex-1">
-                  <CardTitle className="text-base">트레이너 찾기</CardTitle>
-                  <CardDescription className="text-xs">직접 트레이너 선택</CardDescription>
+                  <CardTitle className="text-base md:text-lg">트레이너 찾기</CardTitle>
+                  <CardDescription className="text-xs md:text-sm mt-0.5">직접 트레이너 선택</CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <Button asChild variant="outline" className="w-full">
+            <CardContent className="p-4 pt-0">
+              <Button asChild variant="outline" className="w-full h-10">
                 <Link href="/trainers">
                   검색하기
                   <ArrowUpRight className="ml-2 h-4 w-4" />
@@ -155,19 +160,19 @@ export default async function CustomerDashboard() {
           </Card>
 
           <Card className="hover:shadow-md transition-all hover:border-primary">
-            <CardHeader>
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100">
+            <CardHeader className="p-4 pb-3">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-blue-100">
                   <Calendar className="h-6 w-6 text-blue-600" />
                 </div>
                 <div className="flex-1">
-                  <CardTitle className="text-base">내 예약</CardTitle>
-                  <CardDescription className="text-xs">예약 내역 확인</CardDescription>
+                  <CardTitle className="text-base md:text-lg">내 예약</CardTitle>
+                  <CardDescription className="text-xs md:text-sm mt-0.5">예약 내역 확인</CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <Button asChild variant="outline" className="w-full">
+            <CardContent className="p-4 pt-0">
+              <Button asChild variant="outline" className="w-full h-10">
                 <Link href="/customer/bookings">
                   보기
                   <ArrowUpRight className="ml-2 h-4 w-4" />
@@ -177,19 +182,19 @@ export default async function CustomerDashboard() {
           </Card>
 
           <Card className="hover:shadow-md transition-all hover:border-primary">
-            <CardHeader>
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-yellow-100">
+            <CardHeader className="p-4 pb-3">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-yellow-100">
                   <Star className="h-6 w-6 text-yellow-600" />
                 </div>
                 <div className="flex-1">
-                  <CardTitle className="text-base">리뷰 작성</CardTitle>
-                  <CardDescription className="text-xs">서비스 리뷰</CardDescription>
+                  <CardTitle className="text-base md:text-lg">리뷰 작성</CardTitle>
+                  <CardDescription className="text-xs md:text-sm mt-0.5">서비스 리뷰</CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <Button variant="outline" className="w-full">
+            <CardContent className="p-4 pt-0">
+              <Button variant="outline" className="w-full h-10">
                 작성하기
                 <ArrowUpRight className="ml-2 h-4 w-4" />
               </Button>

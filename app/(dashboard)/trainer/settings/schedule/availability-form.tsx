@@ -2,12 +2,13 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { LoadingButton } from '@/components/ui/loading-button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { TimeSelect } from '@/components/time-select'
 import { toast } from 'sonner'
-import { Clock, Calendar, Zap } from 'lucide-react'
+import { Calendar, Zap } from 'lucide-react'
 import { saveAvailability, deleteAvailability } from './actions'
 
 interface TimeSlot {
@@ -207,17 +208,17 @@ export function AvailabilityForm({
   const enabledCount = Object.values(schedules).filter(s => s.enabled).length
 
   return (
-    <div className="space-y-6">
-      {/* 상단 요약 및 빠른 설정 - 2컬럼 */}
-      <div className="grid md:grid-cols-2 gap-4">
+    <div className="space-y-4 md:space-y-6">
+      {/* 상단 요약 및 빠른 설정 */}
+      <div className="grid gap-3 md:gap-4 md:grid-cols-2">
         {/* 요약 카드 */}
         <Card className="border-blue-200 bg-blue-50/50">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-blue-900 text-lg">
-              <Calendar className="w-5 h-5" />
+          <CardHeader className="pb-3 md:pb-3 px-4 md:px-6 pt-4 md:pt-6">
+            <CardTitle className="flex items-center gap-2 text-blue-900 text-base md:text-lg">
+              <Calendar className="w-4 h-4 md:w-5 md:h-5 shrink-0" />
               가능 시간 요약
             </CardTitle>
-            <CardDescription className="text-blue-700">
+            <CardDescription className="text-blue-700 text-sm md:text-base">
               {enabledCount > 0
                 ? `${enabledCount}개 요일 운동 지도 가능`
                 : '요일을 선택해주세요'}
@@ -227,29 +228,28 @@ export function AvailabilityForm({
 
         {/* 빠른 설정 */}
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Zap className="w-5 h-5 text-yellow-500" />
+          <CardHeader className="pb-2 md:pb-3 px-4 md:px-6 pt-4 md:pt-6">
+            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+              <Zap className="w-4 h-4 md:w-5 md:h-5 text-yellow-500 shrink-0" />
               빠른 설정
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-0">
+          <CardContent className="pt-0 px-4 md:px-6 pb-4 md:pb-6">
             <Button
               onClick={applyToWeekdays}
               variant="outline"
-              size="sm"
-              className="w-full"
+              className="w-full h-11 md:h-10 text-sm active:scale-95 transition-transform"
               disabled={isLoading}
             >
-              <Calendar className="w-4 h-4 mr-2" />
-              월요일 → 평일 적용
+              <Calendar className="w-4 h-4 mr-2 shrink-0" />
+              <span className="truncate">월요일 → 평일 적용</span>
             </Button>
           </CardContent>
         </Card>
       </div>
 
-      {/* 요일별 설정 - 4컬럼 그리드 (데스크탑) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* 요일별 설정 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-3">
         {daysOfWeek.map(day => {
           const schedule = schedules[day.value]
           const isWeekend = day.value === 0 || day.value === 6
@@ -259,20 +259,21 @@ export function AvailabilityForm({
               key={day.value}
               className={schedule.enabled ? 'border-green-200 bg-green-50/30' : ''}
             >
-              <CardHeader className="pb-2 px-3 pt-3">
+              <CardHeader className="pb-3 px-4 pt-4">
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
+                  {/* 터치 영역 확대를 위한 라벨로 감싸기 */}
+                  <label className="flex items-center gap-3 cursor-pointer active:opacity-70 transition-opacity">
                     <Switch
                       checked={schedule.enabled}
                       onCheckedChange={(checked) => toggleDay(day.value, checked)}
                       disabled={isLoading}
                     />
-                    <span className={`text-sm font-semibold ${isWeekend ? 'text-red-600' : ''}`}>
+                    <span className={`text-base md:text-lg font-semibold ${isWeekend ? 'text-red-600' : ''}`}>
                       {day.label}
                     </span>
-                  </div>
+                  </label>
                   {schedule.enabled && (
-                    <div className="text-xs font-medium text-green-600 pl-10">
+                    <div className="text-sm font-medium text-green-600 pl-11">
                       {schedule.start_time} - {schedule.end_time}
                     </div>
                   )}
@@ -280,31 +281,31 @@ export function AvailabilityForm({
               </CardHeader>
 
               {schedule.enabled && (
-                <CardContent className="space-y-2 pt-0 px-3 pb-3">
-                  {/* 시간 선택 */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-1.5">
-                      <Label className="text-xs w-10 text-muted-foreground">시작</Label>
+                <CardContent className="space-y-3 pt-0 px-4 pb-4">
+                  {/* 시간 선택 - 터치 타겟 확대 */}
+                  <div className="space-y-2.5">
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm w-12 text-muted-foreground shrink-0">시작</Label>
                       <TimeSelect
                         value={schedule.start_time}
                         onChange={(value) => updateTime(day.value, 'start_time', value)}
                         disabled={isLoading}
-                        className="flex-1 h-7 text-xs"
+                        className="flex-1 h-11 text-sm"
                       />
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <Label className="text-xs w-10 text-muted-foreground">종료</Label>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm w-12 text-muted-foreground shrink-0">종료</Label>
                       <TimeSelect
                         value={schedule.end_time}
                         onChange={(value) => updateTime(day.value, 'end_time', value)}
                         disabled={isLoading}
-                        className="flex-1 h-7 text-xs"
+                        className="flex-1 h-11 text-sm"
                       />
                     </div>
                   </div>
 
-                  {/* 프리셋 버튼 - 2x2 그리드 */}
-                  <div className="grid grid-cols-2 gap-1">
+                  {/* 프리셋 버튼 - 터치하기 쉽게 크기 증가 */}
+                  <div className="grid grid-cols-2 gap-2">
                     {PRESETS.map(preset => (
                       <Button
                         key={preset.label}
@@ -313,7 +314,7 @@ export function AvailabilityForm({
                         size="sm"
                         onClick={() => applyPreset(day.value, preset)}
                         disabled={isLoading}
-                        className="h-6 text-[10px] px-1.5 py-0"
+                        className="h-9 text-xs px-2 active:scale-95 transition-transform"
                       >
                         {preset.label.split(' (')[0]}
                       </Button>
@@ -327,22 +328,31 @@ export function AvailabilityForm({
       </div>
 
       {/* 저장 버튼 */}
-      <div className="flex justify-end gap-3 sticky bottom-4 bg-background p-4 border rounded-lg shadow-lg">
+      <div
+        className="flex gap-2 md:gap-3 sticky bottom-4 p-3 md:p-4 border rounded-lg shadow-lg"
+        style={{
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
+          backgroundColor: 'rgba(255, 255, 255, 0.4)'
+        }}
+      >
         <Button
           variant="outline"
           onClick={() => setSchedules(initSchedules())}
           disabled={isLoading}
+          className="flex-1 h-11 md:h-12 md:flex-none md:min-w-[100px]"
         >
           초기화
         </Button>
-        <Button
+        <LoadingButton
           onClick={handleSave}
-          disabled={isLoading || enabledCount === 0}
-          size="lg"
-          className="min-w-[120px]"
+          disabled={enabledCount === 0}
+          loading={isLoading}
+          loadingText="저장 중..."
+          className="flex-1 h-11 md:h-12 md:flex-none md:min-w-[120px]"
         >
-          {isLoading ? '저장 중...' : `저장 (${enabledCount}개)`}
-        </Button>
+          저장 ({enabledCount}개)
+        </LoadingButton>
       </div>
     </div>
   )

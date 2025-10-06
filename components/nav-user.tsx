@@ -1,11 +1,7 @@
 "use client"
 
-import {
-  BadgeCheck,
-  Bell,
-  LogOut,
-  Sparkles,
-} from "lucide-react"
+import { LogOut } from "lucide-react"
+import { useState, useEffect } from "react"
 
 import {
   Avatar,
@@ -15,7 +11,6 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -27,9 +22,8 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { CaretSortIcon, ComponentPlaceholderIcon } from "@radix-ui/react-icons"
+import { CaretSortIcon } from "@radix-ui/react-icons"
 import { signOut } from "@/app/actions/auth"
-import { useState, useEffect } from "react"
 
 export function NavUser({
   user,
@@ -54,8 +48,8 @@ export function NavUser({
     // redirect는 signOut 함수에서 처리
   }
 
-  // Prevent hydration mismatch - use default side until mounted
-  const dropdownSide = isMounted ? (isMobile ? "bottom" : "right") : "right"
+  // Prevent hydration mismatch
+  const dropdownSide = isMounted ? (isMobile ? "top" : "right") : "right"
 
   return (
     <SidebarMenu>
@@ -66,15 +60,15 @@ export function NavUser({
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <Avatar className="h-8 w-8 rounded-lg">
+              <Avatar className="h-11 w-11 rounded-lg">
                 <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                <AvatarFallback className="rounded-lg text-lg">CN</AvatarFallback>
               </Avatar>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">{user.name}</span>
-                <span className="truncate text-xs">{user.email}</span>
+              <div className="grid flex-1 text-left leading-tight">
+                <span className="truncate font-semibold text-lg">{user.name}</span>
+                <span className="truncate text-base">{user.email}</span>
               </div>
-              <CaretSortIcon className="ml-auto size-4" />
+              <CaretSortIcon className="ml-auto size-5" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -96,31 +90,9 @@ export function NavUser({
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <Sparkles />
-                Upgrade to Pro
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <BadgeCheck />
-                Account
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <ComponentPlaceholderIcon />
-                Billing
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Bell />
-                Notifications
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSignOut} disabled={isLoading}>
               <LogOut />
-              {isLoading ? '로그아웃 중...' : 'Log out'}
+              {isLoading ? '로그아웃 중...' : '로그아웃'}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

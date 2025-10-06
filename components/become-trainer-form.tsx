@@ -47,8 +47,8 @@ export function BecomeTrainerForm({ userId }: BecomeTrainerFormProps) {
       <div className="space-y-4">
         <Alert>
           <AlertDescription className="text-base">
-            <strong className="block mb-2">트레이너 전환 안내</strong>
-            <ul className="space-y-1 text-sm text-muted-foreground">
+            <strong className="block mb-2 text-base">트레이너 전환 안내</strong>
+            <ul className="space-y-2 text-base text-muted-foreground">
               <li>• 트레이너로 전환하시면 고객 계정 기능은 그대로 유지됩니다.</li>
               <li>• 언제든지 트레이너 서비스를 중단하고 고객 계정으로 돌아갈 수 있습니다.</li>
               <li>• MVP 기간 동안 신청 즉시 승인됩니다.</li>
@@ -61,7 +61,7 @@ export function BecomeTrainerForm({ userId }: BecomeTrainerFormProps) {
             id="confirm"
             checked={confirmed}
             onCheckedChange={(checked) => setConfirmed(checked === true)}
-            className="mt-1"
+            className="mt-0.5 h-5 w-5"
           />
           <Label
             htmlFor="confirm"
@@ -75,25 +75,25 @@ export function BecomeTrainerForm({ userId }: BecomeTrainerFormProps) {
       {/* 에러 메시지 */}
       {error && (
         <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription className="text-base">{error}</AlertDescription>
         </Alert>
       )}
 
       {/* 제출 버튼 */}
-      <div className="flex gap-4">
+      <div className="flex gap-3">
         <Button
           type="button"
           variant="outline"
           onClick={() => router.back()}
           disabled={loading}
-          className="flex-1"
+          className="flex-1 h-11"
         >
           취소
         </Button>
         <Button
           type="submit"
           disabled={loading || !confirmed}
-          className="flex-1"
+          className="flex-1 h-11"
         >
           {loading ? '처리 중...' : '트레이너로 전환하기'}
         </Button>

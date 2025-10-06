@@ -63,7 +63,7 @@ export function TrainerMatchList({
   // 트레이너 필터링 및 점수 계산
   const scoredTrainers = trainers.map(trainer => {
     let score = 0
-    let matchReasons: string[] = []
+    const matchReasons: string[] = []
 
     // 1. 서비스 타입 매칭
     if (serviceType === 'home_visit' && trainer.home_visit_available) {

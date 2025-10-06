@@ -108,7 +108,7 @@ export default async function RecommendedBookingPage({ searchParams }: PageProps
                   다음 사항을 확인해주세요:
                 </p>
                 <ul className="text-sm text-yellow-700 space-y-1 list-disc list-inside">
-                  <li>회원가입 시 사용자 타입을 '고객(Customer)'으로 선택하셨나요?</li>
+                  <li>회원가입 시 사용자 타입을 &apos;고객(Customer)&apos;으로 선택하셨나요?</li>
                   <li>프로필 정보가 완전히 생성되었나요?</li>
                 </ul>
               </div>

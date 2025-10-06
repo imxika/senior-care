@@ -140,11 +140,11 @@ export function BookingActions({ bookingId, status, adminMatchedAt }: BookingAct
 
     return (
       <>
-        <div className="space-y-4">
+        <div className="space-y-3 md:space-y-4">
           {adminMatchedAt && (
-            <Alert>
-              <Clock className="h-4 w-4" />
-              <AlertDescription>
+            <Alert className="py-2 md:py-3">
+              <Clock className="h-4 w-4 shrink-0" />
+              <AlertDescription className="text-sm">
                 {canReject ? (
                   <>거절 가능 시간: <strong>{timeRemaining}</strong></>
                 ) : (
@@ -154,12 +154,11 @@ export function BookingActions({ bookingId, status, adminMatchedAt }: BookingAct
             </Alert>
           )}
 
-          <div className="flex gap-3">
+          <div className="flex flex-col gap-2 md:flex-row md:gap-3">
             <Button
               onClick={handleApprove}
               disabled={isLoading}
-              size="lg"
-              className="flex-1"
+              className="h-12 md:h-14 flex-1"
             >
               승인
             </Button>
@@ -167,8 +166,7 @@ export function BookingActions({ bookingId, status, adminMatchedAt }: BookingAct
               onClick={handleReject}
               disabled={isLoading || !canReject}
               variant="outline"
-              size="lg"
-              className="flex-1"
+              className="h-12 md:h-14 flex-1"
             >
               거절
             </Button>
@@ -177,19 +175,19 @@ export function BookingActions({ bookingId, status, adminMatchedAt }: BookingAct
 
         {/* 거절 사유 다이얼로그 */}
         <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-          <DialogContent>
+          <DialogContent className="max-w-[95vw] md:max-w-md">
             <DialogHeader>
-              <DialogTitle>예약 거절</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="text-base md:text-lg">예약 거절</DialogTitle>
+              <DialogDescription className="text-sm">
                 예약을 거절하는 사유를 선택해주세요. 패널티 측정에 사용됩니다.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 py-4">
+            <div className="space-y-3 md:space-y-4 py-3 md:py-4">
               <div className="space-y-2">
-                <Label htmlFor="reason">거절 사유 *</Label>
+                <Label htmlFor="reason" className="text-sm">거절 사유 *</Label>
                 <Select value={rejectionReason} onValueChange={setRejectionReason}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-11">
                     <SelectValue placeholder="사유를 선택하세요" />
                   </SelectTrigger>
                   <SelectContent>
@@ -203,22 +201,24 @@ export function BookingActions({ bookingId, status, adminMatchedAt }: BookingAct
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="note">추가 설명 (선택)</Label>
+                <Label htmlFor="note" className="text-sm">추가 설명 (선택)</Label>
                 <Textarea
                   id="note"
                   placeholder="거절 사유에 대한 추가 설명을 입력하세요"
                   value={rejectionNote}
                   onChange={(e) => setRejectionNote(e.target.value)}
                   rows={3}
+                  className="text-sm md:text-base resize-none"
                 />
               </div>
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="flex-col gap-2 md:flex-row">
               <Button
                 variant="outline"
                 onClick={() => setShowRejectDialog(false)}
                 disabled={isLoading}
+                className="h-12 w-full md:w-auto"
               >
                 취소
               </Button>
@@ -226,6 +226,7 @@ export function BookingActions({ bookingId, status, adminMatchedAt }: BookingAct
                 onClick={confirmReject}
                 disabled={isLoading || !rejectionReason}
                 variant="destructive"
+                className="h-12 w-full md:w-auto"
               >
                 {isLoading ? '처리 중...' : '거절하기'}
               </Button>
@@ -242,8 +243,7 @@ export function BookingActions({ bookingId, status, adminMatchedAt }: BookingAct
         <Button
           onClick={handleComplete}
           disabled={isLoading}
-          size="lg"
-          className="flex-1"
+          className="h-12 md:h-14 flex-1"
         >
           완료 처리
         </Button>
@@ -251,8 +251,7 @@ export function BookingActions({ bookingId, status, adminMatchedAt }: BookingAct
           onClick={handleNoShow}
           disabled={isLoading}
           variant="outline"
-          size="lg"
-          className="flex-1"
+          className="h-12 md:h-14 flex-1"
         >
           노쇼
         </Button>

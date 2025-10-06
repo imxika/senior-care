@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { AdminSidebar } from '@/components/admin-sidebar'
 import { TrainerSidebar } from '@/components/trainer-sidebar'
 import { CustomerSidebar } from '@/components/customer-sidebar'
+import { NavigationProgress } from '@/components/navigation-progress'
 import {
   SidebarInset,
   SidebarProvider,
@@ -53,6 +54,7 @@ export default async function DashboardLayout({
 
   return (
     <SidebarProvider>
+      <NavigationProgress />
       <SidebarComponent user={userData} />
       <SidebarInset>
         {children}

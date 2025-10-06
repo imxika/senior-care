@@ -69,16 +69,16 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
   }
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      weekday: 'long'
-    })
+    const d = new Date(date)
+    const year = d.getFullYear()
+    const month = d.getMonth() + 1
+    const day = d.getDate()
+    const weekday = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()]
+    return `${year}년 ${month}월 ${day}일 (${weekday})`
   }
 
   const formatTime = (time: string) => {
-    return time.slice(0, 5) // HH:MM
+    return time.substring(0, 5) // HH:MM
   }
 
   const getStatusBadge = (status: string) => {
@@ -118,29 +118,29 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
-      <div className="mb-6">
+    <div className="container mx-auto p-4 md:p-6 max-w-4xl">
+      <div className="mb-4 md:mb-6">
         <Link href="/trainer/bookings">
-          <Button variant="ghost" className="mb-4">
+          <Button variant="ghost" className="mb-2 md:mb-4 h-11">
             ← 예약 목록으로
           </Button>
         </Link>
-        <h1 className="text-3xl font-bold">예약 상세</h1>
+        <h1 className="text-2xl md:text-3xl font-bold">예약 상세</h1>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-4 md:space-y-6">
         {/* 예약 상태 */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>예약 정보</CardTitle>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <CardTitle className="text-lg md:text-xl">예약 정보</CardTitle>
               {getStatusBadge(booking.status)}
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid gap-3 md:gap-4 md:grid-cols-2">
               <div className="flex items-center gap-3">
-                <Calendar className="h-5 w-5 text-muted-foreground" />
+                <Calendar className="h-5 w-5 text-muted-foreground shrink-0" />
                 <div>
                   <p className="text-sm text-muted-foreground">예약 일시</p>
                   <p className="font-medium">{formatDate(booking.booking_date)}</p>
@@ -148,7 +148,7 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
               </div>
 
               <div className="flex items-center gap-3">
-                <Clock className="h-5 w-5 text-muted-foreground" />
+                <Clock className="h-5 w-5 text-muted-foreground shrink-0" />
                 <div>
                   <p className="text-sm text-muted-foreground">시간</p>
                   <p className="font-medium">
@@ -161,7 +161,7 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
               </div>
 
               <div className="flex items-center gap-3">
-                <MapPin className="h-5 w-5 text-muted-foreground" />
+                <MapPin className="h-5 w-5 text-muted-foreground shrink-0" />
                 <div>
                   <p className="text-sm text-muted-foreground">서비스 유형</p>
                   <p className="font-medium">{getServiceTypeLabel(booking.service_type)}</p>
@@ -169,7 +169,7 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
               </div>
 
               <div className="flex items-center gap-3">
-                <DollarSign className="h-5 w-5 text-muted-foreground" />
+                <DollarSign className="h-5 w-5 text-muted-foreground shrink-0" />
                 <div>
                   <p className="text-sm text-muted-foreground">예약 타입</p>
                   <p className="font-medium">{getBookingTypeLabel(booking.booking_type)}</p>
@@ -177,7 +177,7 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
               </div>
 
               <div className="flex items-center gap-3">
-                <User className="h-5 w-5 text-muted-foreground" />
+                <User className="h-5 w-5 text-muted-foreground shrink-0" />
                 <div>
                   <p className="text-sm text-muted-foreground">세션 유형</p>
                   <p className="font-medium">{getSessionTypeLabel(booking.session_type)}</p>
@@ -186,7 +186,7 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
 
               {booking.group_size > 1 && (
                 <div className="flex items-center gap-3">
-                  <User className="h-5 w-5 text-muted-foreground" />
+                  <User className="h-5 w-5 text-muted-foreground shrink-0" />
                   <div>
                     <p className="text-sm text-muted-foreground">참가 인원</p>
                     <p className="font-medium">{booking.group_size}명</p>
@@ -225,9 +225,9 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
             </div>
 
             {booking.customer_notes && booking.customer_notes.split('[요청 정보]')[0].trim() && (
-              <div className="pt-4 border-t">
+              <div className="pt-3 md:pt-4 border-t">
                 <p className="text-sm text-muted-foreground mb-2">고객 요청사항</p>
-                <p className="whitespace-pre-wrap">{booking.customer_notes.split('[요청 정보]')[0].trim()}</p>
+                <p className="text-sm md:text-base whitespace-pre-wrap">{booking.customer_notes.split('[요청 정보]')[0].trim()}</p>
               </div>
             )}
           </CardContent>
@@ -237,16 +237,16 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
         {booking.customer && (
           <Card>
             <CardHeader>
-              <CardTitle>고객 정보</CardTitle>
+              <CardTitle className="text-lg md:text-xl">고객 정보</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-3 md:space-y-4">
+                <div className="grid gap-3 md:gap-4 md:grid-cols-2">
                   <div className="flex items-center gap-3">
-                    <User className="h-5 w-5 text-muted-foreground" />
+                    <User className="h-5 w-5 text-muted-foreground shrink-0" />
                     <div>
                       <p className="text-sm text-muted-foreground">이름</p>
-                      <p className="font-medium text-lg">
+                      <p className="font-medium text-base md:text-lg">
                         {booking.customer.profiles?.full_name || '이름 없음'}
                       </p>
                     </div>
@@ -277,23 +277,23 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
                 </div>
 
                 {/* 연락처 */}
-                <div className="pt-4 border-t space-y-2">
+                <div className="pt-3 md:pt-4 border-t space-y-2">
                   {booking.customer.profiles?.phone && (
                     <div className="flex items-center gap-3">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
                       <div>
                         <p className="text-sm text-muted-foreground">연락처</p>
-                        <p className="font-medium">{booking.customer.profiles.phone}</p>
+                        <p className="font-medium text-sm md:text-base">{booking.customer.profiles.phone}</p>
                       </div>
                     </div>
                   )}
 
                   {booking.customer.profiles?.email && (
                     <div className="flex items-center gap-3">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <div>
+                      <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <div className="min-w-0">
                         <p className="text-sm text-muted-foreground">이메일</p>
-                        <p className="font-medium">{booking.customer.profiles.email}</p>
+                        <p className="font-medium text-sm md:text-base break-all">{booking.customer.profiles.email}</p>
                       </div>
                     </div>
                   )}
@@ -301,12 +301,12 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
 
                 {/* 주소 */}
                 {booking.service_type === 'home_visit' && booking.customer.address && (
-                  <div className="pt-4 border-t">
-                    <div className="flex items-center gap-3">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <div>
+                  <div className="pt-3 md:pt-4 border-t">
+                    <div className="flex items-start gap-3">
+                      <MapPin className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                      <div className="min-w-0">
                         <p className="text-sm text-muted-foreground">방문 주소</p>
-                        <p className="font-medium">{booking.customer.address}</p>
+                        <p className="font-medium text-sm md:text-base">{booking.customer.address}</p>
                         {booking.customer.address_detail && (
                           <p className="text-sm text-muted-foreground">{booking.customer.address_detail}</p>
                         )}
@@ -317,10 +317,10 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
 
                 {/* 비상 연락처 */}
                 {booking.customer.emergency_contact && (
-                  <div className="pt-4 border-t">
+                  <div className="pt-3 md:pt-4 border-t">
                     <p className="text-sm text-muted-foreground mb-2">비상 연락처</p>
                     <div className="space-y-1">
-                      <p className="font-medium">{booking.customer.emergency_contact}</p>
+                      <p className="font-medium text-sm md:text-base">{booking.customer.emergency_contact}</p>
                       {booking.customer.emergency_phone && (
                         <p className="text-sm text-muted-foreground">{booking.customer.emergency_phone}</p>
                       )}
@@ -330,11 +330,11 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
 
                 {/* 의료 정보 */}
                 {booking.customer.medical_conditions && booking.customer.medical_conditions.length > 0 && (
-                  <div className="pt-4 border-t">
+                  <div className="pt-3 md:pt-4 border-t">
                     <p className="text-sm text-muted-foreground mb-2">의료 정보</p>
                     <div className="flex flex-wrap gap-2">
                       {booking.customer.medical_conditions.map((condition, index) => (
-                        <Badge key={index} variant="outline">
+                        <Badge key={index} variant="outline" className="text-xs md:text-sm">
                           {condition}
                         </Badge>
                       ))}
@@ -350,17 +350,17 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
         {booking.total_price > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>결제 정보</CardTitle>
+              <CardTitle className="text-lg md:text-xl">결제 정보</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
                 {booking.group_size > 1 && (
-                  <div className="flex justify-between">
+                  <div className="flex justify-between text-sm md:text-base">
                     <span className="text-muted-foreground">인당 가격</span>
-                    <span>{booking.price_per_person.toLocaleString()}원</span>
+                    <span className="font-medium">{booking.price_per_person.toLocaleString()}원</span>
                   </div>
                 )}
-                <div className="flex justify-between font-bold text-lg pt-2 border-t">
+                <div className="flex justify-between font-bold text-base md:text-lg pt-2 border-t">
                   <span>총 금액</span>
                   <span>{booking.total_price.toLocaleString()}원</span>
                 </div>
@@ -373,7 +373,7 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
         {(booking.status === 'pending' || booking.status === 'confirmed') && (
           <Card>
             <CardHeader>
-              <CardTitle>예약 관리</CardTitle>
+              <CardTitle className="text-lg md:text-xl">예약 관리</CardTitle>
             </CardHeader>
             <CardContent>
               <BookingActions
@@ -388,8 +388,8 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
         {/* 트레이너 메모 */}
         <Card>
           <CardHeader>
-            <CardTitle>트레이너 메모</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-lg md:text-xl">트레이너 메모</CardTitle>
+            <CardDescription className="text-sm">
               이 고객에 대한 메모를 작성하세요. 세션 기록, 특이사항 등을 기록할 수 있습니다.
             </CardDescription>
           </CardHeader>

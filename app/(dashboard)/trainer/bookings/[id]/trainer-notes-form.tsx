@@ -49,11 +49,11 @@ export function TrainerNotesForm({ bookingId, initialNotes, initialSummary }: Tr
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
       {/* 트레이너 메모 */}
       <div className="space-y-2">
-        <Label htmlFor="trainer_notes" className="flex items-center gap-2">
-          <FileText className="h-4 w-4" />
+        <Label htmlFor="trainer_notes" className="flex items-center gap-2 text-sm md:text-base">
+          <FileText className="h-4 w-4 shrink-0" />
           트레이너 메모 (나만 볼 수 있음)
         </Label>
         <Textarea
@@ -62,7 +62,7 @@ export function TrainerNotesForm({ bookingId, initialNotes, initialSummary }: Tr
           onChange={(e) => setNotes(e.target.value)}
           placeholder="이 고객에 대한 개인적인 메모를 작성하세요. 특이사항, 주의할 점 등을 기록할 수 있습니다."
           rows={4}
-          className="resize-none"
+          className="resize-none text-sm md:text-base"
         />
         <p className="text-xs text-muted-foreground">
           이 메모는 트레이너 본인만 볼 수 있습니다.
@@ -71,8 +71,8 @@ export function TrainerNotesForm({ bookingId, initialNotes, initialSummary }: Tr
 
       {/* 세션 요약 */}
       <div className="space-y-2">
-        <Label htmlFor="session_summary" className="flex items-center gap-2">
-          <FileText className="h-4 w-4" />
+        <Label htmlFor="session_summary" className="flex items-center gap-2 text-sm md:text-base">
+          <FileText className="h-4 w-4 shrink-0" />
           세션 요약 (향후 고객과 공유 가능)
         </Label>
         <Textarea
@@ -81,7 +81,7 @@ export function TrainerNotesForm({ bookingId, initialNotes, initialSummary }: Tr
           onChange={(e) => setSummary(e.target.value)}
           placeholder="오늘 세션에서 진행한 내용을 요약하세요. 나중에 고객과 공유할 수 있습니다."
           rows={4}
-          className="resize-none"
+          className="resize-none text-sm md:text-base"
         />
         <p className="text-xs text-muted-foreground">
           향후 운동 일지 기능에서 고객과 공유될 수 있습니다.
@@ -91,19 +91,19 @@ export function TrainerNotesForm({ bookingId, initialNotes, initialSummary }: Tr
       {/* 에러 메시지 */}
       {error && (
         <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
-          <p className="text-sm text-destructive">{error}</p>
+          <p className="text-xs md:text-sm text-destructive">{error}</p>
         </div>
       )}
 
       {/* 성공 메시지 */}
       {success && (
         <div className="p-3 bg-green-50 border border-green-200 rounded-md">
-          <p className="text-sm text-green-700">메모가 저장되었습니다.</p>
+          <p className="text-xs md:text-sm text-green-700">메모가 저장되었습니다.</p>
         </div>
       )}
 
       {/* 저장 버튼 */}
-      <Button type="submit" disabled={loading} className="w-full">
+      <Button type="submit" disabled={loading} className="w-full h-12">
         {loading ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
