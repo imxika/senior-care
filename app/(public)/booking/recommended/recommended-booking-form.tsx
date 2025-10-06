@@ -8,20 +8,28 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { BookingCalendar } from "@/components/booking-calendar"
+import { AddressSelector } from "@/components/address-selector"
 import { createRecommendedBooking } from "./actions"
 import { BOOKING_CONFIG } from "@/lib/constants"
 import { formatPrice } from "@/lib/utils"
 
 interface RecommendedBookingFormProps {
   customerId: string
+  initialSessionType?: string
+  initialServiceType?: string
 }
 
-export function RecommendedBookingForm({ customerId }: RecommendedBookingFormProps) {
+export function RecommendedBookingForm({
+  customerId,
+  initialSessionType = '1:1',
+  initialServiceType
+}: RecommendedBookingFormProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
+  const [serviceType, setServiceType] = useState(initialServiceType || '')
 
   async function handleSubmit(formData: FormData) {
     setIsSubmitting(true)
@@ -73,10 +81,28 @@ export function RecommendedBookingForm({ customerId }: RecommendedBookingFormPro
         </p>
       </div>
 
+      {/* 세션 타입 */}
+      <div className="space-y-2">
+        <Label htmlFor="session_type">세션 유형 *</Label>
+        <Select name="session_type" required defaultValue={initialSessionType}>
+          <SelectTrigger>
+            <SelectValue placeholder="세션 유형을 선택하세요" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="1:1">1:1 개인 세션</SelectItem>
+            <SelectItem value="2:1">2:1 소그룹 (2명)</SelectItem>
+            <SelectItem value="3:1">3:1 소그룹 (3명)</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-sm text-gray-500">
+          소그룹 세션은 함께 운동할 분과 비용을 나눌 수 있습니다.
+        </p>
+      </div>
+
       {/* 서비스 타입 */}
       <div className="space-y-2">
         <Label htmlFor="service_type">서비스 유형 *</Label>
-        <Select name="service_type" required>
+        <Select name="service_type" required value={serviceType} onValueChange={setServiceType}>
           <SelectTrigger>
             <SelectValue placeholder="서비스 유형을 선택하세요" />
           </SelectTrigger>
@@ -105,19 +131,13 @@ export function RecommendedBookingForm({ customerId }: RecommendedBookingFormPro
         </Select>
       </div>
 
-      {/* 주소 (방문 서비스 선택 시) */}
-      <div className="space-y-2">
-        <Label htmlFor="address">주소</Label>
-        <Input
-          type="text"
-          id="address"
-          name="address"
-          placeholder="서울시 강남구..."
+      {/* Address Selector - Only show for home visit */}
+      {serviceType === 'home' && (
+        <AddressSelector
+          customerId={customerId}
+          serviceType={serviceType}
         />
-        <p className="text-sm text-gray-500">
-          방문 서비스 선택 시 필수입니다. 트레이너 매칭에 사용됩니다.
-        </p>
-      </div>
+      )}
 
       {/* 필요한 전문분야 */}
       <div className="space-y-2">

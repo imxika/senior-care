@@ -153,7 +153,9 @@ export default function Home() {
                   </ul>
                 </CardContent>
                 <CardFooter className="pt-6">
-                  <Button className="w-full h-16 md:h-12 text-xl md:text-base font-bold active:scale-95 transition-transform" size="lg">선택하기</Button>
+                  <Link href="/select-booking-type?session=1:1&service=home" className="w-full">
+                    <Button className="w-full h-16 md:h-12 text-xl md:text-base font-bold active:scale-95 transition-transform" size="lg">선택하기</Button>
+                  </Link>
                 </CardFooter>
               </Card>
 
@@ -184,7 +186,9 @@ export default function Home() {
                   </ul>
                 </CardContent>
                 <CardFooter className="pt-6">
-                  <Button variant="outline" className="w-full h-16 md:h-12 text-xl md:text-base font-bold border-orange-600 text-orange-600 hover:bg-orange-50 active:scale-95 transition-transform" size="lg">선택하기</Button>
+                  <Link href="/select-booking-type?session=2:1&service=home" className="w-full">
+                    <Button variant="outline" className="w-full h-16 md:h-12 text-xl md:text-base font-bold border-orange-600 text-orange-600 hover:bg-orange-50 active:scale-95 transition-transform" size="lg">선택하기</Button>
+                  </Link>
                 </CardFooter>
               </Card>
 
@@ -215,7 +219,9 @@ export default function Home() {
                   </ul>
                 </CardContent>
                 <CardFooter className="pt-6">
-                  <Button variant="outline" className="w-full h-16 md:h-12 text-xl md:text-base font-bold border-green-600 text-green-600 hover:bg-green-50 active:scale-95 transition-transform" size="lg">선택하기</Button>
+                  <Link href="/select-booking-type?session=3:1&service=home" className="w-full">
+                    <Button variant="outline" className="w-full h-16 md:h-12 text-xl md:text-base font-bold border-green-600 text-green-600 hover:bg-green-50 active:scale-95 transition-transform" size="lg">선택하기</Button>
+                  </Link>
                 </CardFooter>
               </Card>
             </div>
@@ -291,7 +297,9 @@ export default function Home() {
                   </ul>
                 </CardContent>
                 <CardFooter className="pt-6">
-                  <Button className="w-full h-16 md:h-12 text-xl md:text-base font-bold bg-green-600 hover:bg-green-700 active:scale-95 transition-transform" size="lg">선택하기</Button>
+                  <Link href="/select-booking-type?session=1:1&service=center" className="w-full">
+                    <Button className="w-full h-16 md:h-12 text-xl md:text-base font-bold bg-green-600 hover:bg-green-700 active:scale-95 transition-transform" size="lg">선택하기</Button>
+                  </Link>
                 </CardFooter>
               </Card>
 
@@ -322,7 +330,9 @@ export default function Home() {
                   </ul>
                 </CardContent>
                 <CardFooter className="pt-6">
-                  <Button variant="outline" className="w-full h-16 md:h-12 text-xl md:text-base font-bold border-orange-600 text-orange-600 hover:bg-orange-50 active:scale-95 transition-transform" size="lg">선택하기</Button>
+                  <Link href="/select-booking-type?session=2:1&service=center" className="w-full">
+                    <Button variant="outline" className="w-full h-16 md:h-12 text-xl md:text-base font-bold border-orange-600 text-orange-600 hover:bg-orange-50 active:scale-95 transition-transform" size="lg">선택하기</Button>
+                  </Link>
                 </CardFooter>
               </Card>
 
@@ -353,7 +363,9 @@ export default function Home() {
                   </ul>
                 </CardContent>
                 <CardFooter className="pt-6">
-                  <Button variant="outline" className="w-full h-16 md:h-12 text-xl md:text-base font-bold border-green-600 text-green-600 hover:bg-green-50 active:scale-95 transition-transform" size="lg">선택하기</Button>
+                  <Link href="/select-booking-type?session=3:1&service=center" className="w-full">
+                    <Button variant="outline" className="w-full h-16 md:h-12 text-xl md:text-base font-bold border-green-600 text-green-600 hover:bg-green-50 active:scale-95 transition-transform" size="lg">선택하기</Button>
+                  </Link>
                 </CardFooter>
               </Card>
             </div>

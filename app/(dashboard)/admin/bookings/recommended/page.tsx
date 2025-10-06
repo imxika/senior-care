@@ -4,6 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { RecommendedBookingCard } from "./recommended-booking-card"
 
+// Force dynamic rendering - no caching
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export default async function AdminRecommendedBookingsPage() {
   const supabase = await createClient()
 

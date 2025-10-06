@@ -151,7 +151,7 @@ export function BookingParticipantsManager({
   }
 
   // 참가자 정보 수정
-  const handleUpdateParticipant = (id: string, field: string, value: any) => {
+  const handleUpdateParticipant = (id: string, field: keyof Participant, value: string) => {
     const updatedParticipants = participants.map(p =>
       p.id === id ? { ...p, [field]: value } : p
     )

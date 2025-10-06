@@ -281,7 +281,30 @@ function StatCard({ title, count, variant }: { title: string; count: number; var
   )
 }
 
-function BookingTableRow({ booking }: { booking: any }) {
+interface BookingTableRowProps {
+  booking: {
+    id: string
+    status: string
+    booking_date: string
+    start_time: string
+    created_at: string
+    booking_type: string
+    trainer_id?: string
+    customer?: {
+      profiles?: {
+        full_name?: string
+        email?: string
+      }
+    }
+    trainer?: {
+      profiles?: {
+        full_name?: string
+      }
+    }
+  }
+}
+
+function BookingTableRow({ booking }: BookingTableRowProps) {
   const statusConfig = BOOKING_STATUS_CONFIG[booking.status as keyof typeof BOOKING_STATUS_CONFIG] || BOOKING_STATUS_CONFIG.pending
   const isPending = booking.status === 'pending'
   const isRecommendedUnmatched = booking.booking_type === 'recommended' && !booking.trainer_id

@@ -1,23 +1,53 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
-import { MapPin, Home, Building } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { MapPin, Home, Building, Users } from 'lucide-react'
 import { BookingCalendar } from '@/components/booking-calendar'
+import { BookingParticipantsManager } from '@/components/booking-participants-manager'
+import { AddressSelector } from '@/components/address-selector'
 import { createBooking } from '@/app/(public)/trainers/[id]/booking/actions'
+
+interface Participant {
+  id: string
+  customer_id?: string
+  customer_name?: string
+  customer_email?: string
+  guest_name?: string
+  guest_phone?: string
+  guest_email?: string
+  guest_birth_date?: string
+  guest_gender?: string
+  payment_amount: number
+  payment_status: 'pending' | 'paid' | 'refunded' | 'cancelled'
+  is_primary: boolean
+}
 
 interface BookingFormProps {
   trainerId: string
+  customerId: string
   homeVisitAvailable: boolean
   centerVisitAvailable: boolean
+  initialSessionType?: '1:1' | '2:1' | '3:1'
+  initialServiceType?: 'home' | 'center' | 'all'
+  hourlyRate?: number
 }
 
-export function BookingForm({ trainerId, homeVisitAvailable, centerVisitAvailable }: BookingFormProps) {
+export function BookingForm({
+  trainerId,
+  customerId,
+  homeVisitAvailable,
+  centerVisitAvailable,
+  initialSessionType = '1:1',
+  initialServiceType,
+  hourlyRate = 100000
+}: BookingFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -25,8 +55,19 @@ export function BookingForm({ trainerId, homeVisitAvailable, centerVisitAvailabl
   // Form state
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
-  const [serviceType, setServiceType] = useState('')
+  const [sessionType, setSessionType] = useState<string>(initialSessionType)
+  const [serviceType, setServiceType] = useState(
+    initialServiceType && initialServiceType !== 'all' ? initialServiceType : ''
+  )
   const [duration, setDuration] = useState('')
+  const [participants, setParticipants] = useState<Participant[]>([])
+
+  // Calculate total price based on duration and hourly rate
+  const totalPrice = duration ? Math.round((parseInt(duration) / 60) * hourlyRate) : 0
+
+  // Get max participants based on session type
+  const maxParticipants = sessionType === '1:1' ? 1 : sessionType === '2:1' ? 2 : 3
+  const isGroupSession = sessionType !== '1:1'
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -40,13 +81,26 @@ export function BookingForm({ trainerId, homeVisitAvailable, centerVisitAvailabl
       return
     }
 
+    // 그룹 세션 참가자 검증
+    if (isGroupSession && participants.length === 0) {
+      setError('참가자를 추가해주세요.')
+      setLoading(false)
+      return
+    }
+
     const formData = new FormData(e.currentTarget)
 
     // Add date, time and select values to formData
     formData.set('date', selectedDate.toISOString().split('T')[0])
     formData.set('time', selectedTime)
+    formData.set('session_type', sessionType)
     formData.set('service_type', serviceType)
     formData.set('duration', duration)
+
+    // Add participants data as JSON string
+    if (isGroupSession) {
+      formData.set('participants', JSON.stringify(participants))
+    }
 
     try {
       const result = await createBooking(formData)
@@ -96,6 +150,24 @@ export function BookingForm({ trainerId, homeVisitAvailable, centerVisitAvailabl
         />
       </div>
 
+      {/* Session Type */}
+      <div className="space-y-2">
+        <Label htmlFor="session-type">세션 유형</Label>
+        <Select name="session_type" required value={sessionType} onValueChange={setSessionType}>
+          <SelectTrigger>
+            <SelectValue placeholder="세션 유형 선택" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="1:1">1:1 개인 세션</SelectItem>
+            <SelectItem value="2:1">2:1 소그룹 (2명)</SelectItem>
+            <SelectItem value="3:1">3:1 소그룹 (3명)</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-sm text-muted-foreground">
+          소그룹 세션은 함께 운동할 분과 비용을 나눌 수 있습니다.
+        </p>
+      </div>
+
       {/* Service Type */}
       <div className="space-y-2">
         <Label htmlFor="service-type">
@@ -127,6 +199,14 @@ export function BookingForm({ trainerId, homeVisitAvailable, centerVisitAvailabl
         </Select>
       </div>
 
+      {/* Address Selector - Only show for home visit */}
+      {serviceType === 'home' && (
+        <AddressSelector
+          customerId={customerId}
+          serviceType={serviceType}
+        />
+      )}
+
       {/* Duration */}
       <div className="space-y-2">
         <Label htmlFor="duration">예상 시간</Label>
@@ -141,6 +221,46 @@ export function BookingForm({ trainerId, homeVisitAvailable, centerVisitAvailabl
           </SelectContent>
         </Select>
       </div>
+
+      {/* Group Session Participants - Only show for 2:1 and 3:1 */}
+      {isGroupSession && totalPrice > 0 && (
+        <>
+          <Separator />
+          <Card className="border-primary/20 bg-primary/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Users className="h-5 w-5" />
+                참가자 관리
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                함께 운동할 분들을 추가하세요. 예약 시 호스트(본인)가 전액 결제하고,
+                참가자가 수락하면 부분 환급됩니다.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-4 p-3 bg-background rounded-lg border">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm font-medium">총 예상 금액</span>
+                  <span className="text-lg font-bold text-primary">
+                    {totalPrice.toLocaleString()}원
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  참가자당 약 {Math.round(totalPrice / maxParticipants).toLocaleString()}원
+                </p>
+              </div>
+
+              <BookingParticipantsManager
+                sessionType={sessionType as '1:1' | '2:1' | '3:1'}
+                maxParticipants={maxParticipants}
+                totalPrice={totalPrice}
+                participants={participants}
+                onParticipantsChange={setParticipants}
+              />
+            </CardContent>
+          </Card>
+        </>
+      )}
 
       <Separator />
 

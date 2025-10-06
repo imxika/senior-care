@@ -19,7 +19,12 @@ interface TimeSlot {
 
 interface AvailabilityFormProps {
   trainerId: string
-  existingAvailabilities: any[]
+  existingAvailabilities: {
+    id: string
+    day_of_week: number
+    start_time: string
+    end_time: string
+  }[]
   daysOfWeek: { value: number; label: string }[]
 }
 

@@ -7,11 +7,26 @@ import { useEffect, useState } from 'react'
 
 export default function DebugPage() {
   const supabase = createClient()
-  const [info, setInfo] = useState<any>(null)
 
-  useEffect(() => {
-    checkAuth()
-  }, [])
+  interface DebugInfo {
+    session?: {
+      user?: {
+        id: string
+        email?: string
+      }
+    }
+    profile?: {
+      id: string
+      user_type?: string
+      full_name?: string
+    }
+    customer?: {
+      id: string
+      profile_id: string
+    }
+  }
+
+  const [info, setInfo] = useState<DebugInfo | null>(null)
 
   const checkAuth = async () => {
     console.log('🔍 Debug checkAuth called')
@@ -32,19 +47,15 @@ export default function DebugPage() {
     }
 
     setInfo({
-      user: user ? {
-        id: user.id,
-        email: user.email,
-        created_at: user.created_at
-      } : null,
-      session: session ? {
-        access_token: session.access_token.substring(0, 20) + '...',
-        expires_at: new Date(session.expires_at! * 1000).toLocaleString()
-      } : null,
-      profile
+      session: session ? { user: session.user } : undefined,
+      profile: profile || undefined
     })
     console.log('🔍 Info set:', { user: user?.email, profile: profile?.user_type })
   }
+
+  useEffect(() => {
+    checkAuth()
+  }, [])
 
   const forceLogout = async () => {
     await supabase.auth.signOut()

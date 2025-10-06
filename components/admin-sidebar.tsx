@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import dynamic from "next/dynamic"
 import {
   Users,
   Calendar,
@@ -12,7 +13,6 @@ import {
 
 import { NavMain } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
-import { NotificationsDropdown } from "@/components/notifications-dropdown"
 import {
   Sidebar,
   SidebarContent,
@@ -20,6 +20,11 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar"
+
+const NotificationsDropdown = dynamic(
+  () => import("@/components/notifications-dropdown").then(mod => ({ default: mod.NotificationsDropdown })),
+  { ssr: false }
+)
 
 const data = {
   navMain: [

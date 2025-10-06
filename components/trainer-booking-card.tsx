@@ -78,7 +78,7 @@ export function TrainerBookingCard({
     const result = await updateBookingStatus(
       booking.id,
       'cancelled',
-      rejectionReason as any,
+      rejectionReason as 'personal_emergency' | 'health_issue' | 'schedule_conflict' | 'distance_too_far' | 'customer_requirements' | 'other',
       rejectionNote
     )
     setIsLoading(false)

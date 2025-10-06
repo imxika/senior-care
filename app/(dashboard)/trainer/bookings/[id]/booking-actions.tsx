@@ -95,7 +95,7 @@ export function BookingActions({ bookingId, status, adminMatchedAt }: BookingAct
     const result = await updateBookingStatus(
       bookingId,
       'cancelled',
-      rejectionReason as any,
+      rejectionReason as 'personal_emergency' | 'health_issue' | 'schedule_conflict' | 'distance_too_far' | 'customer_requirements' | 'other',
       rejectionNote
     )
     setIsLoading(false)

@@ -20,6 +20,14 @@ export const sanityWriteClient = createClient({
 // 이미지 URL 빌더
 const builder = imageUrlBuilder(sanityClient)
 
-export function urlFor(source: any) {
+interface SanityImageSource {
+  _type?: string
+  asset?: {
+    _ref?: string
+    _type?: string
+  }
+}
+
+export function urlFor(source: SanityImageSource) {
   return builder.image(source)
 }

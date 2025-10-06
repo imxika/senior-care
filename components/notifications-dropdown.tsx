@@ -40,7 +40,8 @@ export function NotificationsDropdown() {
       // AudioContext 재사용 또는 생성
       let ctx = audioContext
       if (!ctx) {
-        ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+        const AudioContextConstructor = window.AudioContext || (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+        ctx = new AudioContextConstructor()
         setAudioContext(ctx)
       }
 
@@ -95,7 +96,12 @@ export function NotificationsDropdown() {
 
           // 브라우저 알림 표시
           if ('Notification' in window && Notification.permission === 'granted') {
-            const newNotif = payload.new as any
+            interface NewNotification {
+              id?: string
+              title?: string
+              message?: string
+            }
+            const newNotif = payload.new as NewNotification
             new Notification(newNotif.title || '새 알림', {
               body: newNotif.message || '',
               icon: '/favicon.ico',
@@ -161,7 +167,8 @@ export function NotificationsDropdown() {
   const handleDropdownOpen = (open: boolean) => {
     setIsOpen(open)
     if (open && !audioContext) {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const AudioContextConstructor = window.AudioContext || (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      const ctx = new AudioContextConstructor()
       setAudioContext(ctx)
     }
   }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { getVerifiedTrainers } from '@/lib/supabase/queries'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -40,10 +41,16 @@ interface Trainer {
 }
 
 export default function TrainersPage() {
+  const searchParams = useSearchParams()
+  const sessionType = searchParams.get('session') || '1:1' // '1:1', '2:1', '3:1'
+  const serviceType = searchParams.get('service') || 'all' // 'home', 'center', 'all'
+
   const [trainers, setTrainers] = useState<Trainer[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [serviceFilter, setServiceFilter] = useState<'all' | 'home' | 'center'>('all')
+  const [serviceFilter, setServiceFilter] = useState<'all' | 'home' | 'center'>(
+    serviceType as 'all' | 'home' | 'center'
+  )
   const [currentUserTrainerId, setCurrentUserTrainerId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -284,9 +291,9 @@ export default function TrainersPage() {
                       </p>
                     </div>
                   ) : (
-                    <Link href={`/trainers/${trainer.id}`} className="w-full">
+                    <Link href={`/trainers/${trainer.id}/booking?session=${sessionType}&service=${serviceType}`} className="w-full">
                       <Button className="w-full h-12 text-base">
-                        상세보기
+                        예약하기
                       </Button>
                     </Link>
                   )}

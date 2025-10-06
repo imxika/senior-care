@@ -5,8 +5,19 @@ import { Button } from "@/components/ui/button"
 import { RecommendedBookingForm } from "./recommended-booking-form"
 import Link from "next/link"
 
-export default async function RecommendedBookingPage() {
+interface PageProps {
+  searchParams: Promise<{
+    session?: string
+    service?: string
+  }>
+}
+
+export default async function RecommendedBookingPage({ searchParams }: PageProps) {
   const supabase = await createClient()
+  const search = await searchParams
+
+  const sessionType = search.session || '1:1'
+  const serviceType = search.service
 
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -142,7 +153,11 @@ export default async function RecommendedBookingPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <RecommendedBookingForm customerId={customer.id} />
+          <RecommendedBookingForm
+            customerId={customer.id}
+            initialSessionType={sessionType}
+            initialServiceType={serviceType}
+          />
         </CardContent>
       </Card>
 

@@ -71,7 +71,12 @@ export async function GET(request: NextRequest) {
     }
 
     const customer = customers[0]
-    const customerProfile = customer.profiles as any
+    interface CustomerProfile {
+      full_name?: string
+      email?: string
+      phone?: string
+    }
+    const customerProfile = customer.profiles as CustomerProfile
 
     return NextResponse.json({
       customer: {

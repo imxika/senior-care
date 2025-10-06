@@ -17,8 +17,20 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { updateCustomerProfile } from '@/app/(dashboard)/customer/settings/actions'
 
 interface CustomerProfileFormProps {
-  profile: any
-  customer: any
+  profile: {
+    full_name?: string
+    phone?: string
+  }
+  customer: {
+    age?: number
+    gender?: string
+    address?: string
+    address_detail?: string
+    emergency_contact?: string
+    emergency_phone?: string
+    mobility_level?: string
+    notes?: string
+  }
 }
 
 export function CustomerProfileForm({ profile, customer }: CustomerProfileFormProps) {

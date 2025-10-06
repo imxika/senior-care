@@ -50,55 +50,55 @@ export function BookingCalendar({
 
   return (
     <Card className="gap-0 p-0">
-      <CardContent className="relative p-0 md:pr-48">
-        <div className="p-6">
-          <Calendar
-            mode="single"
-            selected={date}
-            onSelect={handleDateSelect}
-            defaultMonth={date || minDate}
-            disabled={(date) => {
-              // 과거 날짜 비활성화
-              if (date < minDate) return true
-              // 최대 날짜 이후 비활성화
-              if (maxDate && date > maxDate) return true
-              // 예약된 날짜 비활성화
-              return bookedDates.some(
-                (bookedDate) =>
-                  bookedDate.getDate() === date.getDate() &&
-                  bookedDate.getMonth() === date.getMonth() &&
-                  bookedDate.getFullYear() === date.getFullYear()
-              )
-            }}
-            showOutsideDays={false}
-            modifiers={{
-              booked: bookedDates
-            }}
-            modifiersClassNames={{
-              booked: '[&>button]:line-through opacity-100'
-            }}
-            className="bg-transparent p-0 [--cell-size:2.5rem] md:[--cell-size:3rem]"
-            formatters={{
-              formatWeekdayName: (date) => {
-                return date.toLocaleString('ko-KR', { weekday: 'short' })
-              }
-            }}
-          />
-        </div>
-        <div className="no-scrollbar inset-y-0 right-0 flex max-h-72 w-full scroll-pb-6 flex-col gap-4 overflow-y-auto border-t p-6 md:absolute md:max-h-none md:w-48 md:border-l md:border-t-0">
-          <div className="grid gap-2">
-            {timeSlots.map((time) => (
-              <Button
-                key={time}
-                type="button"
-                variant={selectedTime === time ? 'default' : 'outline'}
-                onClick={() => handleTimeSelect(time)}
-                className="w-full shadow-none"
-                disabled={!date}
-              >
-                {time}
-              </Button>
-            ))}
+      <CardContent className="p-0">
+        <div className="flex flex-col lg:flex-row">
+          {/* Calendar Section */}
+          <div className="w-full flex justify-center items-center px-4 py-6 lg:px-6 border-b lg:border-b-0 lg:border-r">
+            <Calendar
+              mode="single"
+              selected={date}
+              onSelect={handleDateSelect}
+              defaultMonth={date || minDate}
+              disabled={(date) => {
+                // 과거 날짜 비활성화
+                if (date < minDate) return true
+                // 최대 날짜 이후 비활성화
+                if (maxDate && date > maxDate) return true
+                // 예약된 날짜 비활성화
+                return bookedDates.some(
+                  (bookedDate) =>
+                    bookedDate.getDate() === date.getDate() &&
+                    bookedDate.getMonth() === date.getMonth() &&
+                    bookedDate.getFullYear() === date.getFullYear()
+                )
+              }}
+              showOutsideDays={false}
+              modifiers={{
+                booked: bookedDates
+              }}
+              modifiersClassNames={{
+                booked: '[&>button]:line-through opacity-100'
+              }}
+              className="bg-transparent p-0 mx-auto [--cell-size:2.5rem] md:[--cell-size:2.75rem]"
+            />
+          </div>
+
+          {/* Time Slots Section */}
+          <div className="w-full lg:w-80 p-6">
+            <div className="grid gap-2 max-h-80 overflow-y-auto">
+              {timeSlots.map((time) => (
+                <Button
+                  key={time}
+                  type="button"
+                  variant={selectedTime === time ? 'default' : 'outline'}
+                  onClick={() => handleTimeSelect(time)}
+                  className="w-full shadow-none"
+                  disabled={!date}
+                >
+                  {time}
+                </Button>
+              ))}
+            </div>
           </div>
         </div>
       </CardContent>

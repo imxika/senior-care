@@ -95,7 +95,32 @@ export default async function TrainerBookingsPage({ searchParams }: PageProps) {
   }
 
   // 데이터 구조 변환: customers -> customer로 rename
-  const bookings = rawBookings?.map((booking: any) => ({
+  interface RawBooking {
+    id: string
+    status: string
+    booking_date: string
+    start_time: string
+    created_at: string
+    booking_type?: string
+    customers?: {
+      id: string
+      profiles?: {
+        full_name?: string
+        email?: string
+        phone?: string
+      }
+    }
+    customer?: {
+      id: string
+      profiles?: {
+        full_name?: string
+        email?: string
+        phone?: string
+      }
+    }
+  }
+
+  const bookings = rawBookings?.map((booking: RawBooking) => ({
     ...booking,
     customer: booking.customers
   }))
@@ -183,7 +208,7 @@ export default async function TrainerBookingsPage({ searchParams }: PageProps) {
   }
 
   // 타입 표시 함수
-  const getTypeBadge = (type: string) => {
+  const getTypeBadge = (type: string | undefined) => {
     return type === 'direct' ? '지정' : '추천'
   }
 

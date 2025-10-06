@@ -59,7 +59,14 @@ export async function updateBookingStatus(
   }
 
   // Update booking status
-  const updateData: any = {
+  interface BookingUpdateData {
+    status: string
+    updated_at: string
+    rejection_reason?: string
+    rejection_note?: string
+  }
+
+  const updateData: BookingUpdateData = {
     status,
     updated_at: new Date().toISOString()
   }

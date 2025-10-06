@@ -184,11 +184,11 @@ export function TrainerMatchList({
       setError(result.error)
       setMatchingId(null)
     } else {
-      // 성공 - 피드백 표시 후 이동
+      // 성공 - 피드백 표시 후 매칭된 예약 상세 페이지로 이동
       setSuccess(true)
       setTimeout(() => {
-        router.push('/admin/bookings/recommended')
-        router.refresh()
+        // Navigate to the matched booking detail page
+        window.location.href = `/admin/bookings/${bookingId}`
       }, 1500)
     }
   }
@@ -214,8 +214,12 @@ export function TrainerMatchList({
       {success && (
         <Alert className="border-green-200 bg-green-50">
           <CheckCircle2 className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-800 font-medium">
-            트레이너 매칭이 완료되었습니다! 추천 예약 목록으로 이동합니다...
+          <AlertDescription className="text-green-800">
+            <div className="space-y-1">
+              <p className="font-bold">✓ 트레이너 매칭 완료</p>
+              <p className="text-sm">트레이너에게 승인 요청을 보냈습니다.</p>
+              <p className="text-sm text-green-600">예약 상세 페이지로 이동합니다...</p>
+            </div>
           </AlertDescription>
         </Alert>
       )}

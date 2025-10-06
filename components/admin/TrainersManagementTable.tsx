@@ -91,8 +91,9 @@ export default function TrainersManagementTable({ trainers }: Props) {
           window.open(`http://localhost:3333/structure/trainerProfile;${data.sanityId}`, '_blank')
         }
       }, 1000)
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message })
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '작업 중 오류가 발생했습니다'
+      setMessage({ type: 'error', text: errorMessage })
     } finally {
       setLoading(null)
     }
@@ -139,8 +140,9 @@ export default function TrainersManagementTable({ trainers }: Props) {
           window.location.reload()
         }
       }, 1000)
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message })
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '작업 중 오류가 발생했습니다'
+      setMessage({ type: 'error', text: errorMessage })
     } finally {
       setLoading(null)
     }

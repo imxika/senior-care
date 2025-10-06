@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/sidebar"
 import { CaretSortIcon, ComponentPlaceholderIcon } from "@radix-ui/react-icons"
 import { signOut } from "@/app/actions/auth"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 export function NavUser({
   user,
@@ -42,12 +42,20 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar()
   const [isLoading, setIsLoading] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   const handleSignOut = async () => {
     setIsLoading(true)
     await signOut()
     // redirect는 signOut 함수에서 처리
   }
+
+  // Prevent hydration mismatch - use default side until mounted
+  const dropdownSide = isMounted ? (isMobile ? "bottom" : "right") : "right"
 
   return (
     <SidebarMenu>
@@ -71,7 +79,7 @@ export function NavUser({
           </DropdownMenuTrigger>
           <DropdownMenuContent
             className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-            side={isMobile ? "bottom" : "right"}
+            side={dropdownSide}
             align="start"
             sideOffset={4}
           >

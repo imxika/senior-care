@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { SERVICE_TYPES, BOOKING_TYPE_CONFIG, type ServiceType, type BookingType } from './constants'
+import { SERVICE_TYPES, BOOKING_TYPE_CONFIG, CANCELLATION_POLICY, type ServiceType, type BookingType } from './constants'
 import type { DateTimeInfo, PricingInfo } from './types'
 
 export function cn(...inputs: ClassValue[]) {
@@ -57,6 +57,69 @@ export function getHoursUntilBooking(dateTime: DateTimeInfo): number {
 export function isBookingPast(dateTime: DateTimeInfo): boolean {
   const scheduledTime = combineDateTime(dateTime.booking_date, dateTime.start_time)
   return scheduledTime < new Date()
+}
+
+/**
+ * 취소 가능 여부 확인
+ * @returns { canCancel: boolean, hoursUntil: number }
+ */
+export function canCancelBooking(dateTime: DateTimeInfo): {
+  canCancel: boolean
+  hoursUntil: number
+} {
+  const hoursUntil = getHoursUntilBooking(dateTime)
+  const canCancel = hoursUntil >= CANCELLATION_POLICY.MIN_CANCELLATION_HOURS
+  return { canCancel, hoursUntil }
+}
+
+/**
+ * 취소 수수료 계산
+ * @param totalPrice - 총 결제 금액
+ * @param booking_date - 예약 날짜 (YYYY-MM-DD)
+ * @param start_time - 시작 시간 (HH:MM:SS)
+ * @returns { feeRate: number, feeAmount: number, refundAmount: number, timeCategory: string }
+ */
+export function calculateCancellationFee(
+  totalPrice: number,
+  booking_date: string,
+  start_time: string
+): {
+  feeRate: number
+  feeAmount: number
+  refundAmount: number
+  timeCategory: string
+} {
+  const scheduledTime = combineDateTime(booking_date, start_time)
+  const now = new Date()
+  const hoursUntil = (scheduledTime.getTime() - now.getTime()) / (1000 * 60 * 60)
+  const daysUntil = hoursUntil / 24
+
+  let feeRate: number
+  let timeCategory: string
+
+  if (daysUntil >= 7) {
+    feeRate = CANCELLATION_POLICY.FEES.DAYS_7_PLUS
+    timeCategory = '7일 이상 전'
+  } else if (daysUntil >= 3) {
+    feeRate = CANCELLATION_POLICY.FEES.DAYS_3_TO_7
+    timeCategory = '3-7일 전'
+  } else if (daysUntil >= 1) {
+    feeRate = CANCELLATION_POLICY.FEES.DAYS_1_TO_3
+    timeCategory = '1-3일 전'
+  } else {
+    feeRate = CANCELLATION_POLICY.FEES.HOURS_24
+    timeCategory = '24시간 이내'
+  }
+
+  const feeAmount = Math.round(totalPrice * feeRate)
+  const refundAmount = totalPrice - feeAmount
+
+  return {
+    feeRate,
+    feeAmount,
+    refundAmount,
+    timeCategory
+  }
 }
 
 // ====================================

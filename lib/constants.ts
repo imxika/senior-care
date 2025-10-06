@@ -119,6 +119,43 @@ export const BOOKING_CONFIG = {
 } as const
 
 // ====================================
+// 취소 정책 (Cancellation Policy)
+// ====================================
+export const CANCELLATION_POLICY = {
+  // 취소 수수료율 (예약일 기준)
+  FEES: {
+    DAYS_7_PLUS: 0,      // 7일 전: 무료 취소
+    DAYS_3_TO_7: 0.3,    // 3-7일 전: 30% 수수료
+    DAYS_1_TO_3: 0.5,    // 1-3일 전: 50% 수수료
+    HOURS_24: 0.8,       // 24시간 이내: 80% 수수료
+    NO_SHOW: 1.0         // 노쇼: 100% 수수료
+  },
+  // 최소 취소 가능 시간 (24시간 전까지만 취소 가능)
+  MIN_CANCELLATION_HOURS: 24
+} as const
+
+// 취소 사유 (Cancellation Reasons)
+export const CANCELLATION_REASONS = {
+  SCHEDULE_CHANGE: "schedule_change",
+  HEALTH_ISSUE: "health_issue",
+  WEATHER: "weather",
+  PERSONAL: "personal",
+  TRAINER_ISSUE: "trainer_issue",
+  OTHER: "other"
+} as const
+
+export type CancellationReason = typeof CANCELLATION_REASONS[keyof typeof CANCELLATION_REASONS]
+
+export const CANCELLATION_REASON_LABELS: Record<CancellationReason, string> = {
+  [CANCELLATION_REASONS.SCHEDULE_CHANGE]: "일정 변경",
+  [CANCELLATION_REASONS.HEALTH_ISSUE]: "건강 문제",
+  [CANCELLATION_REASONS.WEATHER]: "날씨/교통",
+  [CANCELLATION_REASONS.PERSONAL]: "개인 사정",
+  [CANCELLATION_REASONS.TRAINER_ISSUE]: "트레이너 문제",
+  [CANCELLATION_REASONS.OTHER]: "기타"
+}
+
+// ====================================
 // 가격 설정 (Pricing Configuration)
 // ====================================
 export const PRICING = {

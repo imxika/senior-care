@@ -11,7 +11,22 @@ import { ko } from "date-fns/locale"
 import { SERVICE_TYPE_LABELS } from "@/lib/constants"
 
 interface RecommendedBookingCardProps {
-  booking: any
+  booking: {
+    id: string
+    booking_date: string
+    start_time: string
+    end_time: string
+    service_type: string
+    customer_notes?: string
+    created_at: string
+    customer?: {
+      profiles?: {
+        full_name?: string
+        email?: string
+        phone?: string
+      }
+    }
+  }
 }
 
 export function RecommendedBookingCard({ booking }: RecommendedBookingCardProps) {

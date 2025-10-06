@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, Clock, MapPin, FileText } from "lucide-react"
+import { Calendar, Clock, MapPin, FileText, Users } from "lucide-react"
 import { formatDate } from "date-fns"
 import { ko } from "date-fns/locale"
 import { SERVICE_TYPE_LABELS } from "@/lib/constants"
@@ -47,6 +47,12 @@ export default async function MatchTrainerPage({ params }: PageProps) {
           email,
           phone
         )
+      ),
+      booking_address:customer_addresses(
+        id,
+        address,
+        address_detail,
+        address_label
       )
     `)
     .eq('id', bookingId)
@@ -135,13 +141,28 @@ export default async function MatchTrainerPage({ params }: PageProps) {
   const customerName = booking.customer?.profiles?.full_name || booking.customer?.profiles?.email?.split('@')[0] || '고객'
   const date = new Date(booking.booking_date)
 
-  // 요청사항에서 주소와 전문분야 추출
-  const notes = booking.customer_notes || booking.notes || ''
-  const addressMatch = notes.match(/주소:\s*([^\n]+)/)
-  const specialtyMatch = notes.match(/필요 전문분야:\s*([^\n]+)/)
+  // 주소 정보 (booking_address 우선, 없으면 notes에서 파싱)
+  let address = ''
+  let addressLabel = ''
+  if (booking.booking_address) {
+    address = `${booking.booking_address.address}${booking.booking_address.address_detail ? ' ' + booking.booking_address.address_detail : ''}`
+    addressLabel = booking.booking_address.address_label || ''
+  } else {
+    // Fallback: notes에서 주소 추출
+    const notes = booking.customer_notes || booking.notes || ''
+    const addressMatch = notes.match(/주소:\s*([^\n]+)/)
+    address = addressMatch ? addressMatch[1].trim() : ''
+  }
 
-  const address = addressMatch ? addressMatch[1].trim() : ''
+  // 요청사항에서 전문분야 추출
+  const notes = booking.customer_notes || booking.notes || ''
+  const specialtyMatch = notes.match(/필요 전문분야:\s*([^\n]+)/)
   const specialty = specialtyMatch ? specialtyMatch[1].trim() : ''
+
+  // 세션 유형 라벨
+  const getSessionTypeLabel = (type: string) => {
+    return type === '1:1' ? '1:1 개인 세션' : type === '2:1' ? '2:1 소그룹 (2명)' : '3:1 소그룹 (3명)'
+  }
 
   return (
     <div className="container mx-auto p-6 max-w-6xl">
@@ -172,6 +193,12 @@ export default async function MatchTrainerPage({ params }: PageProps) {
                 <div className="flex items-center gap-2 text-sm">
                   <Clock className="h-4 w-4 text-gray-500" />
                   <span>{booking.start_time?.slice(0, 5)} - {booking.end_time?.slice(0, 5)}</span>
+                  <span className="text-xs text-gray-500">({booking.duration_minutes}분)</span>
+                </div>
+
+                <div className="flex items-center gap-2 text-sm">
+                  <Users className="h-4 w-4 text-gray-500" />
+                  <span>{getSessionTypeLabel(booking.session_type || '1:1')}</span>
                 </div>
 
                 <div className="flex items-center gap-2 text-sm">
@@ -182,7 +209,14 @@ export default async function MatchTrainerPage({ params }: PageProps) {
                 {address && (
                   <div className="flex items-start gap-2 text-sm">
                     <MapPin className="h-4 w-4 text-gray-500 mt-0.5" />
-                    <span className="flex-1">{address}</span>
+                    <div className="flex-1">
+                      {addressLabel && (
+                        <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded mr-2">
+                          {addressLabel}
+                        </span>
+                      )}
+                      <span>{address}</span>
+                    </div>
                   </div>
                 )}
               </div>

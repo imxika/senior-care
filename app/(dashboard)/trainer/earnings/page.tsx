@@ -98,7 +98,30 @@ export default async function TrainerEarningsPage({ searchParams }: PageProps) {
     .order('booking_date', { ascending: false })
 
   // 데이터 구조 변환
-  const bookings = completedBookings?.map((booking: any) => ({
+  interface CompletedBooking {
+    id: string
+    booking_date: string
+    start_time: string
+    end_time: string
+    price?: number
+    booking_type?: string
+    customers?: {
+      id: string
+      profiles?: {
+        full_name?: string
+        email?: string
+      }
+    }
+    customer?: {
+      id: string
+      profiles?: {
+        full_name?: string
+        email?: string
+      }
+    }
+  }
+
+  const bookings = completedBookings?.map((booking: CompletedBooking) => ({
     ...booking,
     customer: booking.customers
   })) || []

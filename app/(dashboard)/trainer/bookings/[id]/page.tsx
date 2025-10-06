@@ -52,6 +52,12 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
           phone,
           email
         )
+      ),
+      booking_address:customer_addresses(
+        id,
+        address,
+        address_detail,
+        address_label
       )
     `)
     .eq('id', id)
@@ -95,6 +101,10 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
 
   const getBookingTypeLabel = (type: string) => {
     return type === 'recommended' ? '추천 예약' : '지정 예약'
+  }
+
+  const getSessionTypeLabel = (type: string) => {
+    return type === '1:1' ? '1:1 개인 세션' : type === '2:1' ? '2:1 소그룹 (2명)' : '3:1 소그룹 (3명)'
   }
 
   const getMobilityLevelLabel = (level: string) => {
@@ -165,12 +175,59 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
                   <p className="font-medium">{getBookingTypeLabel(booking.booking_type)}</p>
                 </div>
               </div>
+
+              <div className="flex items-center gap-3">
+                <User className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-muted-foreground">세션 유형</p>
+                  <p className="font-medium">{getSessionTypeLabel(booking.session_type)}</p>
+                </div>
+              </div>
+
+              {booking.group_size > 1 && (
+                <div className="flex items-center gap-3">
+                  <User className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">참가 인원</p>
+                    <p className="font-medium">{booking.group_size}명</p>
+                  </div>
+                </div>
+              )}
+
+              {booking.service_type === 'home_visit' && (
+                <div className="flex items-start gap-3 md:col-span-2">
+                  <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">방문 주소</p>
+                    {booking.booking_address ? (
+                      <>
+                        {booking.booking_address.address_label && (
+                          <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded mr-2">
+                            {booking.booking_address.address_label}
+                          </span>
+                        )}
+                        <p className="font-medium">{booking.booking_address.address}</p>
+                        {booking.booking_address.address_detail && (
+                          <p className="text-sm text-muted-foreground">{booking.booking_address.address_detail}</p>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <p className="font-medium">{booking.customer?.address || '주소 정보 없음'}</p>
+                        {booking.customer?.address_detail && (
+                          <p className="text-sm text-muted-foreground">{booking.customer.address_detail}</p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
-            {booking.customer_notes && (
+            {booking.customer_notes && booking.customer_notes.split('[요청 정보]')[0].trim() && (
               <div className="pt-4 border-t">
                 <p className="text-sm text-muted-foreground mb-2">고객 요청사항</p>
-                <p className="whitespace-pre-wrap">{booking.customer_notes}</p>
+                <p className="whitespace-pre-wrap">{booking.customer_notes.split('[요청 정보]')[0].trim()}</p>
               </div>
             )}
           </CardContent>
@@ -297,14 +354,12 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">인당 가격</span>
-                  <span>{booking.price_per_person.toLocaleString()}원</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">인원</span>
-                  <span>{booking.group_size}명</span>
-                </div>
+                {booking.group_size > 1 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">인당 가격</span>
+                    <span>{booking.price_per_person.toLocaleString()}원</span>
+                  </div>
+                )}
                 <div className="flex justify-between font-bold text-lg pt-2 border-t">
                   <span>총 금액</span>
                   <span>{booking.total_price.toLocaleString()}원</span>

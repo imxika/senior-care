@@ -44,9 +44,15 @@ export function createClient() {
 
   console.log('✨ Creating NEW Supabase client (cookie-based)')
 
+  interface CookieStorage {
+    getItem: (key: string) => string | null | Promise<string | null>
+    setItem: (key: string, value: string) => void | Promise<void>
+    removeItem: (key: string) => void | Promise<void>
+  }
+
   supabaseInstance = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
     auth: {
-      storage: cookieStorage as any,
+      storage: cookieStorage as CookieStorage,
       storageKey: 'sb-dwyfxngmkhrqffnxdbcj-auth-token',
       autoRefreshToken: true,
       persistSession: true,

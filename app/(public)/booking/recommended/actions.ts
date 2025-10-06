@@ -20,11 +20,18 @@ export async function createRecommendedBooking(formData: FormData): Promise<Acti
   // 폼 데이터 추출
   const date = formData.get('date') as string
   const time = formData.get('time') as string
+  const session_type = (formData.get('session_type') as string) || '1:1'
   const service_type = formData.get('service_type') as 'home' | 'center'
   const duration = parseInt(formData.get('duration') as string)
   const notes = formData.get('notes') as string || ''
-  const address = formData.get('address') as string || ''
   const specialty_needed = formData.get('specialty_needed') as string || ''
+
+  // Extract address data
+  const addressMode = formData.get('address_mode') as string
+  const addressId = formData.get('address_id') as string | null
+  const newAddress = formData.get('new_address') as string | null
+  const newAddressDetail = formData.get('new_address_detail') as string | null
+  const newAddressLabel = formData.get('new_address_label') as string | null
 
   // 고객 ID 조회
   let { data: customerData } = await supabase
@@ -61,6 +68,44 @@ export async function createRecommendedBooking(formData: FormData): Promise<Acti
   // 서비스 타입 변환
   const db_service_type = mapFormServiceTypeToDb(service_type)
 
+  // 세션 타입에 따른 max_participants 설정
+  const max_participants = session_type === '1:1' ? 1 : session_type === '2:1' ? 2 : 3
+
+  // Handle address for home visit
+  let finalAddressId: string | null = null
+  if (service_type === 'home') {
+    if (addressMode === 'existing' && addressId) {
+      // Use existing address
+      finalAddressId = addressId
+    } else if (addressMode === 'new' && newAddress) {
+      // Create new address and save it
+      const { data: savedAddress, error: addressError } = await supabase
+        .from('customer_addresses')
+        .insert({
+          customer_id: customerData.id,
+          address: newAddress,
+          address_detail: newAddressDetail || null,
+          address_label: newAddressLabel || '새 주소',
+          is_default: false
+        })
+        .select('id')
+        .single()
+
+      if (addressError) {
+        console.error('Address save error:', addressError)
+        // Continue without address_id (주소 저장 실패해도 예약은 진행)
+      } else {
+        finalAddressId = savedAddress.id
+      }
+    }
+  }
+
+  // Build customer notes (remove address from notes since it's in address_id now)
+  let customerNotes = notes
+  if (specialty_needed) {
+    customerNotes += `\n\n[요청 정보]\n필요 전문분야: ${specialty_needed}`
+  }
+
   // 추천 예약 생성 (trainer_id는 NULL, 관리자가 나중에 매칭)
   const bookingData = {
     customer_id: customerData.id,
@@ -72,11 +117,15 @@ export async function createRecommendedBooking(formData: FormData): Promise<Acti
     end_time,
     duration_minutes: duration,
     service_type: db_service_type,
-    group_size: 1, // 추천 예약은 기본 1:1
+    session_type,
+    max_participants,
+    current_participants: 1, // 예약자 본인
+    group_size: 1, // 추천 예약은 기본 1:1 (deprecated, session_type 사용)
     status: 'pending',
     price_per_person: 0, // 매칭 후 설정
     total_price: 0, // 매칭 후 설정
-    customer_notes: `${notes}\n\n[요청 정보]\n주소: ${address}\n필요 전문분야: ${specialty_needed}`,
+    customer_notes: customerNotes,
+    address_id: finalAddressId,
   }
 
   console.log('[DEBUG] Creating booking with data:', bookingData)
@@ -93,6 +142,24 @@ export async function createRecommendedBooking(formData: FormData): Promise<Acti
       error: `예약 생성에 실패했습니다. ${bookingError.message || ''}`,
       details: bookingError
     }
+  }
+
+  // Primary participant 생성 (예약자 본인)
+  const { error: participantError } = await supabase
+    .from('booking_participants')
+    .insert({
+      booking_id: booking.id,
+      customer_id: customerData.id,
+      payment_amount: 0, // 매칭 후 설정
+      payment_status: 'pending',
+      is_primary: true,
+      attendance_status: 'confirmed',
+    })
+
+  if (participantError) {
+    console.error('Participant creation error:', participantError)
+    // 예약은 생성되었지만 participant 생성 실패 - 일단 진행
+    console.warn('[WARN] Booking created but participant creation failed')
   }
 
   // 관리자에게 알림 전송 (user_type이 'admin'인 모든 사용자)

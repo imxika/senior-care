@@ -76,9 +76,21 @@ export async function getVerifiedTrainers() {
       )
 
       // Supabase와 Sanity 데이터 병합
+      interface SanityProfile {
+        supabaseId: string
+        profileImage?: {
+          asset?: {
+            url?: string
+          }
+        }
+        shortBio?: string
+        specializations?: string[]
+        featured?: boolean
+      }
+
       const enrichedTrainers = data?.map(trainer => {
-        const sanityProfile = sanityProfiles?.find(
-          (profile: any) => profile.supabaseId === trainer.id
+        const sanityProfile = (sanityProfiles as SanityProfile[])?.find(
+          (profile) => profile.supabaseId === trainer.id
         )
         return {
           ...trainer,

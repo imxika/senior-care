@@ -10,10 +10,18 @@ import { BookingForm } from '@/components/booking-form'
 
 interface PageProps {
   params: Promise<{ id: string }>
+  searchParams: Promise<{
+    session?: string
+    service?: string
+  }>
 }
 
-export default async function TrainerBookingPage({ params }: PageProps) {
+export default async function TrainerBookingPage({ params, searchParams }: PageProps) {
   const { id } = await params
+  const search = await searchParams
+  const sessionType = (search.session as '1:1' | '2:1' | '3:1') || '1:1'
+  const serviceType = search.service as 'home' | 'center' | 'all' | undefined
+
   const supabase = await createClient()
 
   // 인증 확인
@@ -36,6 +44,27 @@ export default async function TrainerBookingPage({ params }: PageProps) {
           <CardContent className="pt-6">
             <p className="text-center text-muted-foreground">
               예약은 고객 계정으로만 가능합니다.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // 고객 정보 가져오기
+  const { data: customer } = await supabase
+    .from('customers')
+    .select('id')
+    .eq('profile_id', user.id)
+    .single()
+
+  if (!customer) {
+    return (
+      <div className="container mx-auto px-4 py-12">
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-center text-muted-foreground">
+              고객 정보를 찾을 수 없습니다.
             </p>
           </CardContent>
         </Card>
@@ -88,8 +117,12 @@ export default async function TrainerBookingPage({ params }: PageProps) {
             <CardContent>
               <BookingForm
                 trainerId={trainer.id}
+                customerId={customer.id}
                 homeVisitAvailable={trainer.home_visit_available}
                 centerVisitAvailable={trainer.center_visit_available}
+                initialSessionType={sessionType}
+                initialServiceType={serviceType}
+                hourlyRate={trainer.hourly_rate || 100000}
               />
             </CardContent>
           </Card>
