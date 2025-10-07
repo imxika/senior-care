@@ -9,6 +9,8 @@ import {
   Settings,
   FileText,
   Home,
+  Star,
+  UserCog,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -32,6 +34,11 @@ const data = {
       title: "대시보드",
       url: "/admin/dashboard",
       icon: Home,
+    },
+    {
+      title: "사용자 관리",
+      url: "/admin/users",
+      icon: UserCog,
     },
     {
       title: "트레이너 관리",
@@ -64,9 +71,19 @@ const data = {
       ],
     },
     {
+      title: "리뷰 관리",
+      url: "/admin/reviews",
+      icon: Star,
+    },
+    {
       title: "통계",
       url: "/admin/stats",
       icon: BarChart3,
+    },
+    {
+      title: "정산 관리",
+      url: "/admin/settlements",
+      icon: FileText,
     },
     {
       title: "설정",
