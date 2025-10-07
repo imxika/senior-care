@@ -10,6 +10,18 @@ export type NotificationType =
   | 'booking_matched'
   | 'system'
 
+// 알림용 시간 포맷 (초 제외)
+function formatScheduledTime(date: Date): string {
+  return date.toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  })
+}
+
 interface CreateNotificationParams {
   userId: string
   title: string
@@ -62,7 +74,7 @@ export const notificationTemplates = {
   // 트레이너가 예약 승인했을 때 (고객에게)
   bookingConfirmed: (trainerName: string, scheduledAt: Date) => ({
     title: '예약이 확정되었습니다',
-    message: `${trainerName} 트레이너가 예약을 승인했습니다. 예약 일시: ${scheduledAt.toLocaleString('ko-KR')}`,
+    message: `${trainerName} 트레이너가 예약을 승인했습니다. 예약 일시: ${formatScheduledTime(scheduledAt)}`,
     type: 'booking_confirmed' as NotificationType
   }),
 
@@ -76,14 +88,14 @@ export const notificationTemplates = {
   // 고객이 예약 취소했을 때 (트레이너에게)
   bookingCancelledByCustomer: (customerName: string, scheduledAt: Date) => ({
     title: '예약이 취소되었습니다',
-    message: `${customerName} 고객이 ${scheduledAt.toLocaleString('ko-KR')} 예약을 취소했습니다.`,
+    message: `${customerName} 고객이 ${formatScheduledTime(scheduledAt)} 예약을 취소했습니다.`,
     type: 'booking_cancelled' as NotificationType
   }),
 
   // 새 예약 요청이 들어왔을 때 (트레이너에게)
   bookingPending: (customerName: string, scheduledAt: Date) => ({
     title: '새로운 예약 요청',
-    message: `${customerName} 고객이 ${scheduledAt.toLocaleString('ko-KR')} 예약을 요청했습니다.`,
+    message: `${customerName} 고객이 ${formatScheduledTime(scheduledAt)} 예약을 요청했습니다.`,
     type: 'booking_pending' as NotificationType
   }),
 
@@ -97,21 +109,21 @@ export const notificationTemplates = {
   // 예약 시간 1시간 전 리마인더 (양쪽 모두)
   bookingReminder: (otherName: string, scheduledAt: Date) => ({
     title: '곧 예약 시간입니다',
-    message: `${otherName}님과의 예약이 1시간 후입니다. (${scheduledAt.toLocaleString('ko-KR')})`,
+    message: `${otherName}님과의 예약이 1시간 후입니다. (${formatScheduledTime(scheduledAt)})`,
     type: 'system' as NotificationType
   }),
 
   // 추천 예약 트레이너 매칭 완료 (고객에게)
   trainerMatchedToCustomer: (trainerName: string, scheduledAt: Date) => ({
     title: '트레이너 매칭 완료',
-    message: `${trainerName} 트레이너가 회원님의 예약에 배정되었습니다. 예약 일시: ${scheduledAt.toLocaleString('ko-KR')}`,
+    message: `${trainerName} 트레이너가 회원님의 예약에 배정되었습니다. 예약 일시: ${formatScheduledTime(scheduledAt)}`,
     type: 'booking_matched' as NotificationType
   }),
 
   // 추천 예약 매칭 (트레이너에게)
   matchedToTrainer: (customerName: string, scheduledAt: Date) => ({
     title: '새 예약 배정',
-    message: `${customerName}님의 예약이 배정되었습니다. 예약 일시: ${scheduledAt.toLocaleString('ko-KR')}`,
+    message: `${customerName}님의 예약이 배정되었습니다. 예약 일시: ${formatScheduledTime(scheduledAt)}`,
     type: 'booking_matched' as NotificationType
   })
 }

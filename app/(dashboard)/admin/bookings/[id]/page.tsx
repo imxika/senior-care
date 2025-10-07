@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { redirect, notFound } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -53,26 +54,39 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
     redirect('/')
   }
 
-  // 예약 상세 정보 조회 (page.tsx와 동일한 쿼리 구조 사용)
-  const { data: bookingData, error } = await supabase
+  // Service Role client for RLS bypass (admin access)
+  const serviceSupabase = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  )
+
+  // 예약 상세 정보 조회 (Service Role로 RLS 우회)
+  const { data: bookingData, error } = await serviceSupabase
     .from('bookings')
     .select(`
       *,
-      customer:customers!bookings_customer_id_fkey(
+      customer:customers!customer_id(
         id,
-        profiles!customers_profile_id_fkey(
+        profile:profiles!profile_id(
           full_name,
           email,
           phone
         )
       ),
-      trainer:trainers(
+      trainer:trainers!trainer_id(
         id,
         hourly_rate,
         specialties,
-        profiles!trainers_profile_id_fkey(
+        profile:profiles!profile_id(
           full_name,
-          email
+          email,
+          phone
         )
       )
     `)
@@ -157,17 +171,17 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
               <InfoRow
                 icon={<User className="h-4 w-4" />}
                 label="이름"
-                value={booking.customer?.profiles?.full_name || '정보 없음'}
+                value={booking.customer?.profile?.full_name || '정보 없음'}
               />
               <InfoRow
                 icon={<Mail className="h-4 w-4" />}
                 label="이메일"
-                value={booking.customer?.profiles?.email || '정보 없음'}
+                value={booking.customer?.profile?.email || '정보 없음'}
               />
               <InfoRow
                 icon={<Phone className="h-4 w-4" />}
                 label="전화번호"
-                value={booking.customer?.profiles?.phone || '정보 없음'}
+                value={booking.customer?.profile?.phone || '정보 없음'}
               />
             </CardContent>
           </Card>
@@ -186,17 +200,17 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
                   <InfoRow
                     icon={<User className="h-4 w-4" />}
                     label="이름"
-                    value={booking.trainer.profiles?.full_name || '정보 없음'}
+                    value={booking.trainer.profile?.full_name || '정보 없음'}
                   />
                   <InfoRow
                     icon={<Mail className="h-4 w-4" />}
                     label="이메일"
-                    value={booking.trainer.profiles?.email || '정보 없음'}
+                    value={booking.trainer.profile?.email || '정보 없음'}
                   />
                   <InfoRow
                     icon={<Phone className="h-4 w-4" />}
                     label="전화번호"
-                    value={booking.trainer.profiles?.phone || '정보 없음'}
+                    value={booking.trainer.profile?.phone || '정보 없음'}
                   />
                   <InfoRow
                     icon={<DollarSign className="h-4 w-4" />}

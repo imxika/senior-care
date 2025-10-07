@@ -12,6 +12,7 @@ import {
   Bell,
   CreditCard,
   Shield,
+  Star,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -60,6 +61,11 @@ const data = {
       title: "클래스 (클래스용)",
       url: "/trainer/programs",
       icon: ClipboardList,
+    },
+    {
+      title: "리뷰 관리",
+      url: "/trainer/reviews",
+      icon: Star,
     },
     {
       title: "수입 관리",

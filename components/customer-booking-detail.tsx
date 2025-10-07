@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -8,6 +8,7 @@ import { Calendar, Clock, MapPin, User, DollarSign, Users, AlertCircle } from 'l
 import Link from 'next/link'
 import { BookingProgressTracker } from '@/components/booking-progress-tracker'
 import { CancelBookingDialog } from '@/components/cancel-booking-dialog'
+import { ReviewForm } from '@/components/review-form'
 import { cancelBooking } from '@/app/(dashboard)/customer/bookings/[id]/actions'
 import { canCancelBooking } from '@/lib/utils'
 import type { CancellationReason } from '@/lib/constants'
@@ -45,14 +46,25 @@ interface CustomerBookingDetailProps {
       }
     }
   }
+  existingReview?: {
+    id: string
+    rating: number
+    comment: string
+  } | null
 }
 
-export function CustomerBookingDetail({ booking }: CustomerBookingDetailProps) {
+export function CustomerBookingDetail({ booking, existingReview }: CustomerBookingDetailProps) {
   const router = useRouter()
   const [cancelSuccess, setCancelSuccess] = useState<{ refundAmount: number; feeAmount: number } | null>(null)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const formatDate = (date: string) => {
-    const d = new Date(date)
+    // Force KST interpretation by appending timezone
+    const d = new Date(date + 'T00:00:00+09:00')
     const month = d.getMonth() + 1
     const day = d.getDate()
     const weekday = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()]
@@ -342,6 +354,15 @@ export function CustomerBookingDetail({ booking }: CustomerBookingDetailProps) {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* 리뷰 섹션 - 완료된 예약만 */}
+        {booking.status === 'completed' && booking.trainer?.id && (
+          <ReviewForm
+            bookingId={booking.id}
+            trainerId={booking.trainer.id}
+            existingReview={existingReview}
+          />
         )}
       </div>
     </div>

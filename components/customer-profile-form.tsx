@@ -123,6 +123,7 @@ export function CustomerProfileForm({ profile, customer }: CustomerProfileFormPr
   }
 
   return (
+    <>
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* 기본 정보 */}
       <div className="grid gap-4 md:grid-cols-2">
@@ -308,15 +309,20 @@ export function CustomerProfileForm({ profile, customer }: CustomerProfileFormPr
         </Alert>
       )}
 
-      {/* 제출 버튼 */}
-      <div className="flex gap-2 w-full md:w-auto">
-        <Button type="button" variant="outline" onClick={handleCancel} disabled={loading} className="flex-1 md:flex-none">
+      {/* Sticky 버튼 - form 외부로 이동 */}
+    </form>
+
+    {/* Sticky 제출 버튼 */}
+    <div className="fixed bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 md:pl-[--sidebar-width]">
+      <div className="flex gap-2 justify-end max-w-4xl mx-auto">
+        <Button type="button" variant="outline" onClick={handleCancel} disabled={loading}>
           초기화
         </Button>
-        <Button type="submit" disabled={loading} className="flex-1 md:flex-none">
+        <Button onClick={handleSubmit} disabled={loading}>
           {loading ? '저장 중...' : '저장하기'}
         </Button>
       </div>
-    </form>
+    </div>
+  </>
   )
 }

@@ -22,12 +22,19 @@ export async function updateTrainerProfile(formData: FormData) {
   const certificationsInput = formData.get('certifications') as string
   const serviceAreasInput = formData.get('service_areas') as string
   const maxGroupSize = parseInt(formData.get('max_group_size') as string) || 1
+  const homeVisitAvailable = formData.get('home_visit_available') === 'true'
+  const centerVisitAvailable = formData.get('center_visit_available') === 'true'
   const centerName = formData.get('center_name') as string
   const centerAddress = formData.get('center_address') as string
 
   // 최대 그룹 인원 검증 (1-3명: 1:1, 1:2, 1:3 세션만 지원)
   if (maxGroupSize < 1 || maxGroupSize > 3) {
     return { error: '최대 그룹 인원은 1명에서 3명 사이여야 합니다' }
+  }
+
+  // 최소 1개 이상의 서비스 선택 검증
+  if (!homeVisitAvailable && !centerVisitAvailable) {
+    return { error: '최소 1개 이상의 서비스를 선택해주세요' }
   }
 
   // 배열로 변환 (쉼표로 구분된 문자열을 배열로)
@@ -60,13 +67,15 @@ export async function updateTrainerProfile(formData: FormData) {
     const { error: trainerError } = await supabase
       .from('trainers')
       .update({
-        years_experience: yearsExperience,
+        experience_years: yearsExperience,
         hourly_rate: hourlyRate,
         bio: bio,
         specialties: specialties,
         certifications: certifications,
         service_areas: serviceAreas,
         max_group_size: maxGroupSize,
+        home_visit_available: homeVisitAvailable,
+        center_visit_available: centerVisitAvailable,
         center_name: centerName || null,
         center_address: centerAddress || null,
       })

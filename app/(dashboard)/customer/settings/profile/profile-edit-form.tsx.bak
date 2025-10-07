@@ -1,0 +1,434 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { ChevronDown, ChevronUp } from 'lucide-react'
+import { updateCustomerProfile } from './actions'
+
+interface ProfileEditFormProps {
+  profile: any
+  customer: any
+  isEditing: boolean
+  setIsEditing: (value: boolean) => void
+}
+
+export function ProfileEditForm({ profile, customer, isEditing, setIsEditing }: ProfileEditFormProps) {
+  const router = useRouter()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // 기본 정보
+  const [fullName, setFullName] = useState(profile?.full_name || '')
+  const [phone, setPhone] = useState(profile?.phone || '')
+  const [birthDate, setBirthDate] = useState(customer?.birth_date || '')
+  const [gender, setGender] = useState(customer?.gender || '')
+  const [address, setAddress] = useState(customer?.address || '')
+  const [addressDetail, setAddressDetail] = useState(customer?.address_detail || '')
+  const [guardianName, setGuardianName] = useState(customer?.guardian_name || '')
+  const [guardianRelationship, setGuardianRelationship] = useState(customer?.guardian_relationship || '')
+  const [guardianPhone, setGuardianPhone] = useState(customer?.guardian_phone || '')
+  const [mobilityLevel, setMobilityLevel] = useState(customer?.mobility_level || '')
+  const [notes, setNotes] = useState(customer?.notes || '')
+
+  // Collapsible state
+  const [isGuardianOpen, setIsGuardianOpen] = useState(
+    !!(customer?.guardian_name || customer?.guardian_relationship || customer?.guardian_phone)
+  )
+
+  // Calculate age from birth_date
+  const calculateAge = (birthDate: string) => {
+    if (!birthDate) return ''
+    const today = new Date()
+    const birth = new Date(birthDate)
+    let age = today.getFullYear() - birth.getFullYear()
+    const monthDiff = today.getMonth() - birth.getMonth()
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--
+    }
+    return age.toString()
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+
+    const formData = new FormData()
+    formData.set('full_name', fullName)
+    formData.set('phone', phone)
+    formData.set('birth_date', birthDate)
+    formData.set('gender', gender)
+    formData.set('address', address)
+    formData.set('address_detail', addressDetail)
+    formData.set('guardian_name', guardianName)
+    formData.set('guardian_relationship', guardianRelationship)
+    formData.set('guardian_phone', guardianPhone)
+    formData.set('mobility_level', mobilityLevel)
+    formData.set('notes', notes)
+
+    const result = await updateCustomerProfile(formData)
+
+    if (result.error) {
+      setError(result.error)
+      setLoading(false)
+    } else {
+      setLoading(false)
+      setIsEditing(false)
+      router.refresh()
+    }
+  }
+
+  const handleCancel = () => {
+    // 원래 값으로 되돌리기
+    setFullName(profile?.full_name || '')
+    setPhone(profile?.phone || '')
+    setBirthDate(customer?.birth_date || '')
+    setGender(customer?.gender || '')
+    setAddress(customer?.address || '')
+    setAddressDetail(customer?.address_detail || '')
+    setGuardianName(customer?.guardian_name || '')
+    setGuardianRelationship(customer?.guardian_relationship || '')
+    setGuardianPhone(customer?.guardian_phone || '')
+    setMobilityLevel(customer?.mobility_level || '')
+    setNotes(customer?.notes || '')
+    setError(null)
+  }
+
+  console.log('ProfileEditForm isEditing:', isEditing)
+
+  return (
+    <form id="profile-form" onSubmit={handleSubmit}>
+      <div className="grid gap-3 md:gap-6 md:grid-cols-3">
+        {/* 기본 정보 */}
+        <Card className="md:col-span-3 bg-muted/30">
+        <CardHeader className="px-4 md:px-6 pt-4 md:pt-6">
+          <CardTitle className="text-base md:text-lg">기본 정보</CardTitle>
+          <CardDescription className="text-xs md:text-sm">
+            이름, 연락처 등 기본 정보를 수정할 수 있습니다
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="px-4 md:px-6 pb-4 md:pb-6">
+          {isEditing ? (
+            <div className="grid gap-3 md:gap-4 md:grid-cols-2">
+              <div className="space-y-1.5 md:space-y-2">
+                <Label htmlFor="full_name" className="text-sm md:text-base">이름 *</Label>
+                <Input
+                  id="full_name"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                  className="h-9 md:h-10"
+                />
+              </div>
+
+              <div className="space-y-1.5 md:space-y-2">
+                <Label htmlFor="phone" className="text-sm md:text-base">전화번호 *</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="010-1234-5678"
+                  required
+                  className="h-9 md:h-10"
+                />
+              </div>
+
+              <div className="space-y-1.5 md:space-y-2">
+                <Label htmlFor="birth_date" className="text-sm md:text-base">생년월일</Label>
+                <Input
+                  id="birth_date"
+                  type="date"
+                  value={birthDate}
+                  onChange={(e) => setBirthDate(e.target.value)}
+                  className="h-9 md:h-10"
+                />
+              </div>
+
+              <div className="space-y-1.5 md:space-y-2">
+                <Label htmlFor="gender" className="text-sm md:text-base">성별</Label>
+                <Select value={gender} onValueChange={setGender}>
+                  <SelectTrigger className="h-9 md:h-10">
+                    <SelectValue placeholder="선택하세요" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">남성</SelectItem>
+                    <SelectItem value="female">여성</SelectItem>
+                    <SelectItem value="other">기타</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          ) : (
+            <div className="grid gap-3 md:gap-4 md:grid-cols-2">
+              <div className="space-y-1 md:space-y-1.5">
+                <p className="text-xs md:text-sm text-muted-foreground">이름</p>
+                <p className="font-medium text-sm md:text-base">{fullName || '이름 없음'}</p>
+              </div>
+
+              <div className="space-y-1 md:space-y-1.5">
+                <p className="text-xs md:text-sm text-muted-foreground">전화번호</p>
+                <p className="font-medium text-sm md:text-base">{phone || '전화번호 없음'}</p>
+              </div>
+
+              <div className="space-y-1 md:space-y-1.5">
+                <p className="text-xs md:text-sm text-muted-foreground">나이</p>
+                <p className="font-medium text-sm md:text-base">
+                  {birthDate ? `${calculateAge(birthDate)}세` : '생년월일 없음'}
+                </p>
+              </div>
+
+              <div className="space-y-1 md:space-y-1.5">
+                <p className="text-xs md:text-sm text-muted-foreground">성별</p>
+                <p className="font-medium text-sm md:text-base">
+                  {gender === 'male' ? '남성' : gender === 'female' ? '여성' : gender === 'other' ? '기타' : '성별 없음'}
+                </p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 주소 정보 */}
+      <Card>
+        <CardHeader className="px-4 md:px-6 pt-4 md:pt-6">
+          <CardTitle className="text-base md:text-lg">주소 정보</CardTitle>
+        </CardHeader>
+        <CardContent className="px-4 md:px-6 pb-4 md:pb-6">
+          {isEditing ? (
+            <div className="space-y-3 md:space-y-4">
+              <div className="space-y-1.5 md:space-y-2">
+                <Label htmlFor="address" className="text-sm md:text-base">주소</Label>
+                <Input
+                  id="address"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="서울시 강남구 테헤란로 123"
+                  className="h-9 md:h-10"
+                />
+              </div>
+
+              <div className="space-y-1.5 md:space-y-2">
+                <Label htmlFor="address_detail" className="text-sm md:text-base">상세 주소</Label>
+                <Input
+                  id="address_detail"
+                  value={addressDetail}
+                  onChange={(e) => setAddressDetail(e.target.value)}
+                  placeholder="101동 1001호"
+                  className="h-9 md:h-10"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2 md:space-y-3">
+              {address || addressDetail ? (
+                <div className="space-y-1 md:space-y-1.5">
+                  <p className="text-xs md:text-sm text-muted-foreground">주소</p>
+                  <p className="font-medium text-sm md:text-base">
+                    {address && addressDetail ? `${address}, ${addressDetail}` : address || addressDetail}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm md:text-base text-muted-foreground">주소 정보가 없습니다</p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 건강 정보 */}
+      <Card className="md:col-span-1 bg-muted/30">
+        <CardHeader className="px-4 md:px-6 pt-4 md:pt-6">
+          <CardTitle className="text-base md:text-lg">건강 정보</CardTitle>
+        </CardHeader>
+        <CardContent className="px-4 md:px-6 pb-4 md:pb-6">
+          {isEditing ? (
+            <div className="space-y-3 md:space-y-4">
+              <div className="space-y-1.5 md:space-y-2">
+                <Label htmlFor="mobility_level" className="text-sm md:text-base">거동 수준</Label>
+                <Select value={mobilityLevel} onValueChange={setMobilityLevel}>
+                  <SelectTrigger className="h-9 md:h-10">
+                    <SelectValue placeholder="선택하세요" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="independent">독립적</SelectItem>
+                    <SelectItem value="assisted">보조 필요</SelectItem>
+                    <SelectItem value="wheelchair">휠체어 사용</SelectItem>
+                    <SelectItem value="bedridden">와상 상태</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2 md:space-y-3">
+              {mobilityLevel ? (
+                <div className="space-y-1 md:space-y-1.5">
+                  <p className="text-xs md:text-sm text-muted-foreground">거동 수준</p>
+                  <p className="font-medium text-sm md:text-base">
+                    {mobilityLevel === 'independent' ? '독립적' :
+                     mobilityLevel === 'assisted' ? '보조 필요' :
+                     mobilityLevel === 'wheelchair' ? '휠체어 사용' :
+                     mobilityLevel === 'bedridden' ? '와상 상태' : mobilityLevel}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm md:text-base text-muted-foreground">건강 정보가 없습니다</p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 보호자 정보 (접기 가능) */}
+      <Card className="md:col-span-3 bg-muted/30">
+        <CardHeader className="px-4 md:px-6 pt-4 md:pt-6">
+          <Collapsible open={isGuardianOpen} onOpenChange={setIsGuardianOpen}>
+            <CollapsibleTrigger className="flex items-center justify-between w-full">
+              <CardTitle className="text-base md:text-lg">보호자 정보 (선택)</CardTitle>
+              {isGuardianOpen ? (
+                <ChevronUp className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
+              ) : (
+                <ChevronDown className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
+              )}
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="px-4 md:px-6 pb-4 md:pb-6 pt-3 md:pt-4">
+                {isEditing ? (
+                  <div className="grid gap-3 md:gap-4 md:grid-cols-2">
+                    <div className="space-y-1.5 md:space-y-2">
+                      <Label htmlFor="guardian_name" className="text-sm md:text-base">보호자 이름</Label>
+                      <Input
+                        id="guardian_name"
+                        value={guardianName}
+                        onChange={(e) => setGuardianName(e.target.value)}
+                        className="h-9 md:h-10"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 md:space-y-2">
+                      <Label htmlFor="guardian_relationship" className="text-sm md:text-base">관계</Label>
+                      <Select value={guardianRelationship} onValueChange={setGuardianRelationship}>
+                        <SelectTrigger className="h-9 md:h-10">
+                          <SelectValue placeholder="선택하세요" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="spouse">배우자</SelectItem>
+                          <SelectItem value="child">자녀</SelectItem>
+                          <SelectItem value="parent">부모</SelectItem>
+                          <SelectItem value="sibling">형제/자매</SelectItem>
+                          <SelectItem value="relative">친척</SelectItem>
+                          <SelectItem value="friend">지인</SelectItem>
+                          <SelectItem value="other">기타</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5 md:space-y-2 md:col-span-2">
+                      <Label htmlFor="guardian_phone" className="text-sm md:text-base">보호자 연락처</Label>
+                      <Input
+                        id="guardian_phone"
+                        type="tel"
+                        value={guardianPhone}
+                        onChange={(e) => setGuardianPhone(e.target.value)}
+                        placeholder="010-1234-5678"
+                        className="h-9 md:h-10"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid gap-3 md:gap-4 md:grid-cols-2">
+                    {guardianName || guardianRelationship || guardianPhone ? (
+                      <>
+                        {guardianName && (
+                          <div className="space-y-1 md:space-y-1.5">
+                            <p className="text-xs md:text-sm text-muted-foreground">이름</p>
+                            <p className="font-medium text-sm md:text-base">{guardianName}</p>
+                          </div>
+                        )}
+                        {guardianRelationship && (
+                          <div className="space-y-1 md:space-y-1.5">
+                            <p className="text-xs md:text-sm text-muted-foreground">관계</p>
+                            <p className="font-medium text-sm md:text-base">
+                              {guardianRelationship === 'spouse' ? '배우자' :
+                               guardianRelationship === 'child' ? '자녀' :
+                               guardianRelationship === 'parent' ? '부모' :
+                               guardianRelationship === 'sibling' ? '형제/자매' :
+                               guardianRelationship === 'relative' ? '친척' :
+                               guardianRelationship === 'friend' ? '지인' :
+                               guardianRelationship === 'other' ? '기타' : guardianRelationship}
+                            </p>
+                          </div>
+                        )}
+                        {guardianPhone && (
+                          <div className="space-y-1 md:space-y-1.5 md:col-span-2">
+                            <p className="text-xs md:text-sm text-muted-foreground">연락처</p>
+                            <p className="font-medium text-sm md:text-base">{guardianPhone}</p>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-sm md:text-base text-muted-foreground md:col-span-2">
+                        보호자 정보가 없습니다
+                      </p>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </CardHeader>
+      </Card>
+
+      {/* 기타 메모 */}
+      <Card className="md:col-span-3 bg-muted/30">
+        <CardHeader className="px-4 md:px-6 pt-4 md:pt-6">
+          <CardTitle className="text-base md:text-lg">기타 메모</CardTitle>
+        </CardHeader>
+        <CardContent className="px-4 md:px-6 pb-4 md:pb-6">
+          {isEditing ? (
+            <Textarea
+              id="notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="건강 상태, 특이사항 등을 자유롭게 작성하세요"
+              rows={4}
+              className="resize-none text-sm md:text-base"
+            />
+          ) : (
+            <div>
+              {notes ? (
+                <p className="text-sm md:text-base break-words whitespace-pre-wrap">{notes}</p>
+              ) : (
+                <p className="text-sm md:text-base text-muted-foreground">기타 메모가 없습니다</p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+        {/* 에러 메시지 */}
+        {error && (
+          <Card className="md:col-span-3 border-destructive">
+            <CardContent className="pt-4 md:pt-6">
+              <p className="text-xs md:text-sm text-destructive">{error}</p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </form>
+  )
+}

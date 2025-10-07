@@ -60,5 +60,12 @@ export default async function CustomerBookingDetailPage({ params }: PageProps) {
     notFound()
   }
 
-  return <CustomerBookingDetail booking={booking} />
+  // 리뷰 정보 조회
+  const { data: review } = await supabase
+    .from('reviews')
+    .select('*')
+    .eq('booking_id', id)
+    .single()
+
+  return <CustomerBookingDetail booking={booking} existingReview={review} />
 }

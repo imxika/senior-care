@@ -43,6 +43,25 @@ export function calculateTimeRange(date: Date, durationMinutes: number): {
 }
 
 /**
+ * 생년월일로부터 만 나이 계산
+ * @param birthDate - 생년월일 (Date 객체 또는 YYYY-MM-DD 형식 문자열)
+ */
+export function calculateAge(birthDate: string | Date | null | undefined): number | null {
+  if (!birthDate) return null
+
+  const birth = typeof birthDate === 'string' ? new Date(birthDate) : birthDate
+  const today = new Date()
+  let age = today.getFullYear() - birth.getFullYear()
+  const monthDiff = today.getMonth() - birth.getMonth()
+
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--
+  }
+
+  return age
+}
+
+/**
  * 현재 시간으로부터 예약까지 남은 시간 (시간 단위)
  */
 export function getHoursUntilBooking(dateTime: DateTimeInfo): number {

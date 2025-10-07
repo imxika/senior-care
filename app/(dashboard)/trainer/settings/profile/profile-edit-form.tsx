@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Loader2, Save, X } from 'lucide-react'
 import { updateTrainerProfile } from './actions'
 
@@ -29,7 +30,7 @@ export function ProfileEditForm({ profile, trainer, isEditing, setIsEditing }: P
   const [phone, setPhone] = useState(profile?.phone || '')
 
   // 트레이너 정보 - 숫자는 문자열로 관리
-  const [yearsExperience, setYearsExperience] = useState(trainer?.years_experience?.toString() || '')
+  const [yearsExperience, setYearsExperience] = useState(trainer?.experience_years?.toString() || '')
   const [hourlyRate, setHourlyRate] = useState(trainer?.hourly_rate?.toString() || '')
   const [bio, setBio] = useState(trainer?.bio || '')
   const [specialtiesInput, setSpecialtiesInput] = useState(
@@ -42,6 +43,8 @@ export function ProfileEditForm({ profile, trainer, isEditing, setIsEditing }: P
     trainer?.service_areas?.join(', ') || ''
   )
   const [maxGroupSize, setMaxGroupSize] = useState(trainer?.max_group_size?.toString() || '')
+  const [homeVisitAvailable, setHomeVisitAvailable] = useState(trainer?.home_visit_available ?? true)
+  const [centerVisitAvailable, setCenterVisitAvailable] = useState(trainer?.center_visit_available ?? true)
   const [centerName, setCenterName] = useState(trainer?.center_name || '')
   const [centerAddress, setCenterAddress] = useState(trainer?.center_address || '')
 
@@ -59,6 +62,13 @@ export function ProfileEditForm({ profile, trainer, isEditing, setIsEditing }: P
       return
     }
 
+    // 최소 1개 이상의 서비스 선택 검증
+    if (!homeVisitAvailable && !centerVisitAvailable) {
+      setError('최소 1개 이상의 서비스를 선택해주세요')
+      setLoading(false)
+      return
+    }
+
     const formData = new FormData()
     formData.append('full_name', fullName)
     formData.append('phone', phone)
@@ -69,6 +79,8 @@ export function ProfileEditForm({ profile, trainer, isEditing, setIsEditing }: P
     formData.append('certifications', certificationsInput)
     formData.append('service_areas', serviceAreasInput)
     formData.append('max_group_size', maxGroupSize || '1')
+    formData.append('home_visit_available', homeVisitAvailable.toString())
+    formData.append('center_visit_available', centerVisitAvailable.toString())
     formData.append('center_name', centerName)
     formData.append('center_address', centerAddress)
 
@@ -88,13 +100,15 @@ export function ProfileEditForm({ profile, trainer, isEditing, setIsEditing }: P
     // 원래 값으로 되돌리기
     setFullName(profile?.full_name || '')
     setPhone(profile?.phone || '')
-    setYearsExperience(trainer?.years_experience?.toString() || '')
+    setYearsExperience(trainer?.experience_years?.toString() || '')
     setHourlyRate(trainer?.hourly_rate?.toString() || '')
     setBio(trainer?.bio || '')
     setSpecialtiesInput(trainer?.specialties?.join(', ') || '')
     setCertificationsInput(trainer?.certifications?.join(', ') || '')
     setServiceAreasInput(trainer?.service_areas?.join(', ') || '')
     setMaxGroupSize(trainer?.max_group_size?.toString() || '')
+    setHomeVisitAvailable(trainer?.home_visit_available ?? true)
+    setCenterVisitAvailable(trainer?.center_visit_available ?? true)
     setCenterName(trainer?.center_name || '')
     setCenterAddress(trainer?.center_address || '')
     setIsEditing(false)
@@ -333,6 +347,59 @@ export function ProfileEditForm({ profile, trainer, isEditing, setIsEditing }: P
                       ))
                     ) : (
                       <p className="text-sm text-muted-foreground">서비스 지역 없음</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3 pt-2 border-t">
+                <Label className="text-sm">제공 가능한 서비스</Label>
+                {isEditing ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-3">
+                      <Checkbox
+                        id="home_visit"
+                        checked={homeVisitAvailable}
+                        onCheckedChange={(checked) => setHomeVisitAvailable(checked as boolean)}
+                      />
+                      <Label
+                        htmlFor="home_visit"
+                        className="text-sm font-normal cursor-pointer"
+                      >
+                        방문 서비스 (고객의 집/시설 방문)
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <Checkbox
+                        id="center_visit"
+                        checked={centerVisitAvailable}
+                        onCheckedChange={(checked) => setCenterVisitAvailable(checked as boolean)}
+                      />
+                      <Label
+                        htmlFor="center_visit"
+                        className="text-sm font-normal cursor-pointer"
+                      >
+                        센터 방문 (트레이너의 센터에서 진행)
+                      </Label>
+                    </div>
+                    {!homeVisitAvailable && !centerVisitAvailable && (
+                      <p className="text-xs text-destructive">최소 1개 이상 선택해주세요</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {homeVisitAvailable && (
+                      <Badge variant="secondary" className="text-xs md:text-sm">
+                        방문 서비스
+                      </Badge>
+                    )}
+                    {centerVisitAvailable && (
+                      <Badge variant="secondary" className="text-xs md:text-sm">
+                        센터 방문
+                      </Badge>
+                    )}
+                    {!homeVisitAvailable && !centerVisitAvailable && (
+                      <p className="text-sm text-muted-foreground">서비스 없음</p>
                     )}
                   </div>
                 )}

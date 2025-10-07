@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/breadcrumb'
 import { AvatarUpload } from '@/components/avatar-upload'
 import { Badge } from '@/components/ui/badge'
+import { calculateAge } from '@/lib/utils'
 
 export default async function CustomerProfilePage() {
   const supabase = await createClient()
@@ -42,6 +43,11 @@ export default async function CustomerProfilePage() {
     .eq('profile_id', user.id)
     .single()
 
+  // Debug log
+  console.log('Customer data:', customer)
+  console.log('Birth date:', customer?.birth_date)
+  console.log('Age:', customer?.age)
+
   return (
     <>
       <header className="flex h-16 shrink-0 items-center gap-2 border-b">
@@ -62,19 +68,19 @@ export default async function CustomerProfilePage() {
         </div>
       </header>
 
-      <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">내 프로필</h1>
-          <p className="text-sm md:text-base text-muted-foreground mt-1">프로필 정보를 확인하고 수정하세요</p>
+      <div className="flex flex-1 flex-col gap-6 p-6 md:gap-8 md:p-8">
+        <div className="space-y-2">
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">내 프로필</h1>
+          <p className="text-xl md:text-2xl text-muted-foreground">프로필 정보를 확인하고 수정하세요</p>
         </div>
 
-        <div className="grid gap-4 md:gap-6 md:grid-cols-3">
-          {/* 프로필 사진 */}
-          <Card className="md:col-span-1">
-            <CardHeader>
-              <CardTitle className="text-lg md:text-xl">프로필 사진</CardTitle>
+        <div className="grid gap-5 md:gap-6 md:grid-cols-3">
+          {/* 프로필 사진 - 시니어 친화적 */}
+          <Card className="md:col-span-1 border-2">
+            <CardHeader className="p-6">
+              <CardTitle className="text-xl md:text-2xl">프로필 사진</CardTitle>
             </CardHeader>
-            <CardContent className="flex justify-center">
+            <CardContent className="flex justify-center p-6 pt-0">
               <AvatarUpload
                 currentAvatarUrl={profile?.avatar_url}
                 userId={user.id}
@@ -83,43 +89,43 @@ export default async function CustomerProfilePage() {
             </CardContent>
           </Card>
 
-          {/* 기본 정보 */}
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-lg md:text-xl">기본 정보</CardTitle>
+          {/* 기본 정보 - 시니어 친화적 */}
+          <Card className="md:col-span-2 border-2">
+            <CardHeader className="p-6">
+              <CardTitle className="text-xl md:text-2xl">기본 정보</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 md:space-y-4">
-              <div className="grid gap-3 md:gap-4 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <User className="h-4 w-4" />
+            <CardContent className="space-y-5 p-6 pt-0">
+              <div className="grid gap-5 md:grid-cols-2">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3 text-base md:text-lg text-muted-foreground">
+                    <User className="h-5 w-5" />
                     <span>이름</span>
                   </div>
-                  <p className="font-medium text-base">{profile?.full_name || '이름 없음'}</p>
+                  <p className="font-medium text-lg md:text-xl">{profile?.full_name || '이름 없음'}</p>
                 </div>
 
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Mail className="h-4 w-4" />
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3 text-base md:text-lg text-muted-foreground">
+                    <Mail className="h-5 w-5" />
                     <span>이메일</span>
                   </div>
-                  <p className="font-medium text-base break-all">{profile?.email || '이메일 없음'}</p>
+                  <p className="font-medium text-lg md:text-xl break-all">{profile?.email || '이메일 없음'}</p>
                 </div>
 
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Phone className="h-4 w-4" />
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3 text-base md:text-lg text-muted-foreground">
+                    <Phone className="h-5 w-5" />
                     <span>전화번호</span>
                   </div>
-                  <p className="font-medium text-base">{profile?.phone || '등록된 전화번호 없음'}</p>
+                  <p className="font-medium text-lg md:text-xl">{profile?.phone || '등록된 전화번호 없음'}</p>
                 </div>
 
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3 text-base md:text-lg text-muted-foreground">
+                    <Calendar className="h-5 w-5" />
                     <span>가입일</span>
                   </div>
-                  <p className="font-medium text-base">
+                  <p className="font-medium text-lg md:text-xl">
                     {new Date(profile?.created_at || '').toLocaleDateString('ko-KR')}
                   </p>
                 </div>
@@ -127,42 +133,46 @@ export default async function CustomerProfilePage() {
             </CardContent>
           </Card>
 
-          {/* 고객 상세 정보 */}
+          {/* 고객 상세 정보 - 시니어 친화적 */}
           {customer && (
-            <Card className="md:col-span-3">
-              <CardHeader>
-                <CardTitle className="text-lg md:text-xl">상세 정보</CardTitle>
+            <Card className="md:col-span-3 border-2">
+              <CardHeader className="p-6">
+                <CardTitle className="text-xl md:text-2xl">상세 정보</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 md:space-y-4">
-                <div className="grid gap-3 md:gap-4 md:grid-cols-3">
-                  <div className="space-y-1.5">
-                    <p className="text-sm text-muted-foreground">생년월일 (나이)</p>
-                    <p className="font-medium text-base">
+              <CardContent className="space-y-5 p-6 pt-0">
+                <div className="grid gap-5 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <p className="text-base md:text-lg text-muted-foreground">생년월일</p>
+                    <p className="font-medium text-lg md:text-xl">
                       {customer.birth_date
-                        ? (() => {
-                            const birth = new Date(customer.birth_date)
-                            const today = new Date()
-                            let age = today.getFullYear() - birth.getFullYear()
-                            const monthDiff = today.getMonth() - birth.getMonth()
-                            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-                              age--
-                            }
-                            return `${birth.toLocaleDateString('ko-KR')} (만 ${age}세)`
-                          })()
+                        ? new Date(customer.birth_date).toLocaleDateString('ko-KR')
                         : '미등록'}
                     </p>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <p className="text-sm text-muted-foreground">성별</p>
-                    <p className="font-medium text-base">
-                      {customer.gender === 'male' ? '남성' : customer.gender === 'female' ? '여성' : '기타'}
+                  <div className="space-y-2">
+                    <p className="text-base md:text-lg text-muted-foreground">나이</p>
+                    <p className="font-medium text-lg md:text-xl">
+                      {calculateAge(customer.birth_date)
+                        ? `만 ${calculateAge(customer.birth_date)}세`
+                        : customer.age
+                        ? `만 ${customer.age}세`
+                        : '미등록'}
                     </p>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <p className="text-sm text-muted-foreground">거동 수준</p>
-                    <Badge variant="outline">
+                  <div className="space-y-2">
+                    <p className="text-base md:text-lg text-muted-foreground">성별</p>
+                    <p className="font-medium text-lg md:text-xl">
+                      {customer.gender === 'male' ? '남성' :
+                       customer.gender === 'female' ? '여성' :
+                       customer.gender === 'other' ? '기타' : '미등록'}
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-base md:text-lg text-muted-foreground">거동 수준</p>
+                    <Badge variant="outline" className="text-base px-3 py-1">
                       {customer.mobility_level === 'independent' ? '독립적' :
                        customer.mobility_level === 'assisted' ? '보조 필요' :
                        customer.mobility_level === 'wheelchair' ? '휠체어' :
@@ -172,12 +182,12 @@ export default async function CustomerProfilePage() {
                 </div>
 
                 {customer.address && (
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <MapPin className="h-4 w-4" />
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3 text-base md:text-lg text-muted-foreground">
+                      <MapPin className="h-5 w-5" />
                       <span>주소</span>
                     </div>
-                    <p className="font-medium text-base break-words">
+                    <p className="font-medium text-lg md:text-xl break-words">
                       {customer.address}
                       {customer.address_detail && ` ${customer.address_detail}`}
                     </p>
@@ -185,31 +195,31 @@ export default async function CustomerProfilePage() {
                 )}
 
                 {customer.guardian_name && (
-                  <div className="space-y-3 md:space-y-4">
-                    <p className="text-sm font-semibold text-muted-foreground">보호자 정보</p>
-                    <div className="grid gap-3 md:gap-4 md:grid-cols-3">
-                      <div className="space-y-1.5">
-                        <p className="text-sm text-muted-foreground">이름</p>
-                        <p className="font-medium text-base">{customer.guardian_name}</p>
+                  <div className="space-y-4">
+                    <p className="text-base md:text-lg font-semibold text-muted-foreground">보호자 정보</p>
+                    <div className="grid gap-5 md:grid-cols-3">
+                      <div className="space-y-2">
+                        <p className="text-base md:text-lg text-muted-foreground">이름</p>
+                        <p className="font-medium text-lg md:text-xl">{customer.guardian_name}</p>
                       </div>
-                      <div className="space-y-1.5">
-                        <p className="text-sm text-muted-foreground">관계</p>
-                        <p className="font-medium text-base">{customer.guardian_relationship}</p>
+                      <div className="space-y-2">
+                        <p className="text-base md:text-lg text-muted-foreground">관계</p>
+                        <p className="font-medium text-lg md:text-xl">{customer.guardian_relationship}</p>
                       </div>
-                      <div className="space-y-1.5">
-                        <p className="text-sm text-muted-foreground">연락처</p>
-                        <p className="font-medium text-base">{customer.guardian_phone}</p>
+                      <div className="space-y-2">
+                        <p className="text-base md:text-lg text-muted-foreground">연락처</p>
+                        <p className="font-medium text-lg md:text-xl">{customer.guardian_phone}</p>
                       </div>
                     </div>
                   </div>
                 )}
 
                 {customer.medical_conditions && customer.medical_conditions.length > 0 && (
-                  <div className="space-y-1.5">
-                    <p className="text-sm text-muted-foreground">건강 상태</p>
+                  <div className="space-y-2">
+                    <p className="text-base md:text-lg text-muted-foreground">건강 상태</p>
                     <div className="flex flex-wrap gap-2">
                       {customer.medical_conditions.map((condition, idx) => (
-                        <Badge key={idx} variant="secondary">
+                        <Badge key={idx} variant="secondary" className="text-base px-3 py-1">
                           {condition}
                         </Badge>
                       ))}
@@ -218,9 +228,9 @@ export default async function CustomerProfilePage() {
                 )}
 
                 {customer.notes && (
-                  <div className="space-y-1.5">
-                    <p className="text-sm text-muted-foreground">특이사항</p>
-                    <p className="text-sm md:text-base break-words">{customer.notes}</p>
+                  <div className="space-y-2">
+                    <p className="text-base md:text-lg text-muted-foreground">특이사항</p>
+                    <p className="text-base md:text-lg break-words">{customer.notes}</p>
                   </div>
                 )}
               </CardContent>

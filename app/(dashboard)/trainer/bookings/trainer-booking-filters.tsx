@@ -19,7 +19,6 @@ export function TrainerBookingFilters() {
 
   const currentStatus = searchParams.get('status') || 'all'
   const currentType = searchParams.get('type') || 'all'
-  const currentSort = searchParams.get('sort') || 'booking_date'
   const currentSearch = searchParams.get('search') || ''
 
   const updateFilter = (key: string, value: string) => {
@@ -74,8 +73,8 @@ export function TrainerBookingFilters() {
         />
       </div>
 
-      {/* 필터 그룹 - 모바일에서 3열 그리드 */}
-      <div className="grid grid-cols-3 gap-2 md:flex md:gap-2">
+      {/* 필터 그룹 - 모바일에서 2열 그리드 */}
+      <div className="grid grid-cols-2 gap-2 md:flex md:gap-2">
         {/* 상태 필터 */}
         <Select value={currentStatus} onValueChange={(value) => updateFilter('status', value)}>
           <SelectTrigger className="w-full md:w-28">
@@ -109,22 +108,6 @@ export function TrainerBookingFilters() {
             <SelectItem value="all">전체</SelectItem>
             <SelectItem value="direct">지정</SelectItem>
             <SelectItem value="recommended">추천</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {/* 정렬 */}
-        <Select value={currentSort} onValueChange={(value) => updateFilter('sort', value)}>
-          <SelectTrigger className="w-full md:w-32">
-            <SelectValue>
-              {currentSort === 'booking_date' ? '정렬: 예약일' :
-               currentSort === 'created_at' ? '정렬: 생성일' :
-               currentSort === 'status' ? '정렬: 상태' : '정렬'}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="booking_date">예약일</SelectItem>
-            <SelectItem value="created_at">생성일</SelectItem>
-            <SelectItem value="status">상태</SelectItem>
           </SelectContent>
         </Select>
       </div>

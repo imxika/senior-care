@@ -13,6 +13,7 @@ import { BookingCalendar } from '@/components/booking-calendar'
 import { BookingParticipantsManager } from '@/components/booking-participants-manager'
 import { AddressSelector } from '@/components/address-selector'
 import { createBooking } from '@/app/(public)/trainers/[id]/booking/actions'
+import { formatKSTDate } from '@/lib/date-utils'
 
 interface Participant {
   id: string
@@ -34,6 +35,7 @@ interface BookingFormProps {
   customerId: string
   homeVisitAvailable: boolean
   centerVisitAvailable: boolean
+  trainerMaxGroupSize: number
   initialSessionType?: '1:1' | '2:1' | '3:1'
   initialServiceType?: 'home' | 'center' | 'all'
   hourlyRate?: number
@@ -44,6 +46,7 @@ export function BookingForm({
   customerId,
   homeVisitAvailable,
   centerVisitAvailable,
+  trainerMaxGroupSize,
   initialSessionType = '1:1',
   initialServiceType,
   hourlyRate = 100000
@@ -65,9 +68,13 @@ export function BookingForm({
   // Calculate total price based on duration and hourly rate
   const totalPrice = duration ? Math.round((parseInt(duration) / 60) * hourlyRate) : 0
 
-  // Get max participants based on session type
-  const maxParticipants = sessionType === '1:1' ? 1 : sessionType === '2:1' ? 2 : 3
+  // Get max participants based on session type and trainer's max group size
+  const sessionTypeMaxParticipants = sessionType === '1:1' ? 1 : sessionType === '2:1' ? 2 : 3
+  const maxParticipants = Math.min(sessionTypeMaxParticipants, trainerMaxGroupSize)
   const isGroupSession = sessionType !== '1:1'
+
+  // Check if selected session type exceeds trainer's max group size
+  const sessionTypeExceedsLimit = sessionTypeMaxParticipants > trainerMaxGroupSize
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -81,6 +88,13 @@ export function BookingForm({
       return
     }
 
+    // 트레이너 최대 인원 검증
+    if (sessionTypeExceedsLimit) {
+      setError(`이 트레이너는 최대 ${trainerMaxGroupSize}명까지만 그룹 세션을 제공합니다. 다른 세션 유형을 선택해주세요.`)
+      setLoading(false)
+      return
+    }
+
     // 그룹 세션 참가자 검증
     if (isGroupSession && participants.length === 0) {
       setError('참가자를 추가해주세요.')
@@ -88,10 +102,18 @@ export function BookingForm({
       return
     }
 
+    // 그룹 세션 참가자 수 검증
+    if (isGroupSession && participants.length > maxParticipants) {
+      setError(`최대 ${maxParticipants}명까지만 참가할 수 있습니다.`)
+      setLoading(false)
+      return
+    }
+
     const formData = new FormData(e.currentTarget)
 
     // Add date, time and select values to formData
-    formData.set('date', selectedDate.toISOString().split('T')[0])
+    // Use formatKSTDate to ensure correct KST date format
+    formData.set('date', formatKSTDate(selectedDate))
     formData.set('time', selectedTime)
     formData.set('session_type', sessionType)
     formData.set('service_type', serviceType)
@@ -159,13 +181,26 @@ export function BookingForm({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="1:1">1:1 개인 세션</SelectItem>
-            <SelectItem value="2:1">2:1 소그룹 (2명)</SelectItem>
-            <SelectItem value="3:1">3:1 소그룹 (3명)</SelectItem>
+            <SelectItem value="2:1" disabled={trainerMaxGroupSize < 2}>
+              2:1 소그룹 (2명) {trainerMaxGroupSize < 2 && '(제공 불가)'}
+            </SelectItem>
+            <SelectItem value="3:1" disabled={trainerMaxGroupSize < 3}>
+              3:1 소그룹 (3명) {trainerMaxGroupSize < 3 && '(제공 불가)'}
+            </SelectItem>
           </SelectContent>
         </Select>
-        <p className="text-sm text-muted-foreground">
-          소그룹 세션은 함께 운동할 분과 비용을 나눌 수 있습니다.
-        </p>
+        {sessionTypeExceedsLimit && (
+          <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+            <p className="text-sm text-destructive font-medium">
+              ⚠️ 이 트레이너는 최대 {trainerMaxGroupSize}명까지만 그룹 세션을 제공합니다.
+            </p>
+          </div>
+        )}
+        {!sessionTypeExceedsLimit && (
+          <p className="text-sm text-muted-foreground">
+            소그룹 세션은 함께 운동할 분과 비용을 나눌 수 있습니다.
+          </p>
+        )}
       </div>
 
       {/* Service Type */}

@@ -63,7 +63,11 @@ export default async function TrainerProfilePage() {
         </div>
       </header>
 
-      <ProfileContent profile={profile} trainer={trainer} userId={user.id} />
+      <ProfileContent
+        profile={profile}
+        trainer={trainer}
+        userId={user.id}
+      />
     </>
   )
 }

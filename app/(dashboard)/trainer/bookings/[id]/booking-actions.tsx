@@ -17,6 +17,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { updateBookingStatus } from '../actions'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle, Clock } from 'lucide-react'
+import { toast } from 'sonner'
 
 const REJECTION_REASONS = [
   { value: 'personal_emergency', label: '개인 사정' },
@@ -70,10 +71,18 @@ export function BookingActions({ bookingId, status, adminMatchedAt }: BookingAct
     setIsLoading(false)
 
     if (result.error) {
-      alert(result.error)
+      toast.error('예약 승인 실패', {
+        description: result.error
+      })
     } else {
-      router.refresh()
-      router.push('/trainer/bookings')
+      toast.success('예약이 승인되었습니다', {
+        description: '고객에게 알림이 전송되었습니다.'
+      })
+
+      // 토스트를 보여준 후 리다이렉트
+      setTimeout(() => {
+        router.push('/trainer/bookings')
+      }, 1000)
     }
   }
 

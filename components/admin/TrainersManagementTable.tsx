@@ -6,7 +6,17 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { ExternalLink, CheckCircle2, Clock, Sparkles } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
+import { ExternalLink, CheckCircle2, Clock, Sparkles, XCircle } from 'lucide-react'
 
 interface Trainer {
   id: string
@@ -33,11 +43,18 @@ interface Trainer {
 
 interface Props {
   trainers: Trainer[]
+  initialStatus?: string
 }
 
-export default function TrainersManagementTable({ trainers }: Props) {
+export default function TrainersManagementTable({ trainers, initialStatus }: Props) {
   const [loading, setLoading] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+  const [rejectDialog, setRejectDialog] = useState<{ open: boolean; trainerId: string | null }>({
+    open: false,
+    trainerId: null,
+  })
+  const [rejectionReason, setRejectionReason] = useState('')
+  const [statusFilter, setStatusFilter] = useState(initialStatus || 'all')
 
   const handleVerifyTrainer = async (trainerId: string) => {
     setLoading(trainerId)
@@ -99,6 +116,40 @@ export default function TrainersManagementTable({ trainers }: Props) {
     }
   }
 
+  const handleRejectTrainer = async () => {
+    if (!rejectDialog.trainerId || !rejectionReason.trim()) {
+      setMessage({ type: 'error', text: '거절 사유를 입력해주세요' })
+      return
+    }
+
+    setLoading(`reject-${rejectDialog.trainerId}`)
+    setMessage(null)
+
+    try {
+      const response = await fetch('/api/trainers/reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          trainerId: rejectDialog.trainerId,
+          rejectionReason: rejectionReason,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to reject trainer')
+      }
+
+      setMessage({ type: 'success', text: '트레이너 승인이 거절되었습니다' })
+      setRejectDialog({ open: false, trainerId: null })
+      setRejectionReason('')
+      setTimeout(() => window.location.reload(), 1500)
+    } catch (error) {
+      setMessage({ type: 'error', text: '거절 처리 중 오류가 발생했습니다' })
+    } finally {
+      setLoading(null)
+    }
+  }
+
   const handleApproveAndPublish = async (trainerId: string) => {
     setLoading(`both-${trainerId}`)
     setMessage(null)
@@ -148,8 +199,13 @@ export default function TrainersManagementTable({ trainers }: Props) {
     }
   }
 
-  const pendingTrainers = trainers.filter(t => !t.is_verified)
-  const verifiedTrainers = trainers.filter(t => t.is_verified)
+  // 상태 필터링
+  let pendingTrainers = trainers.filter(t => !t.is_verified)
+  let verifiedTrainers = trainers.filter(t => t.is_verified)
+
+  // URL 파라미터에 따라 표시 조정
+  const shouldShowPending = statusFilter === 'all' || statusFilter === 'pending'
+  const shouldShowVerified = statusFilter === 'all' || statusFilter === 'verified'
 
   return (
     <div className="space-y-4">
@@ -160,7 +216,7 @@ export default function TrainersManagementTable({ trainers }: Props) {
       )}
 
       {/* Pending Trainers Section */}
-      {pendingTrainers.length > 0 && (
+      {pendingTrainers.length > 0 && shouldShowPending && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Clock className="h-5 w-5 text-yellow-600" />
@@ -172,20 +228,20 @@ export default function TrainersManagementTable({ trainers }: Props) {
                 <CardContent className="pt-6">
                   <div className="flex items-start gap-4">
                     <Avatar className="h-12 w-12">
-                      <AvatarImage src={trainer.profiles.avatar_url || undefined} alt={trainer.profiles.full_name} />
+                      <AvatarImage src={trainer.profiles?.avatar_url || undefined} alt={trainer.profiles?.full_name || 'Trainer'} />
                       <AvatarFallback className="text-lg font-bold">
-                        {trainer.profiles.full_name.charAt(0)}
+                        {trainer.profiles?.full_name?.charAt(0) || 'T'}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 space-y-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-semibold truncate">{trainer.profiles.full_name}</h3>
+                        <h3 className="font-semibold truncate">{trainer.profiles?.full_name}</h3>
                         <Badge variant="outline" className="shrink-0">
                           <Clock className="h-3 w-3 mr-1" />
                           대기중
                         </Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground truncate">{trainer.profiles.email}</p>
+                      <p className="text-sm text-muted-foreground truncate">{trainer.profiles?.email}</p>
                       <p className="text-xs text-muted-foreground">{trainer.experience_years || 0}년 경력</p>
                     </div>
                   </div>
@@ -211,6 +267,15 @@ export default function TrainersManagementTable({ trainers }: Props) {
                         </>
                       )}
                     </Button>
+                    <Button
+                      onClick={() => setRejectDialog({ open: true, trainerId: trainer.id })}
+                      disabled={!!loading}
+                      variant="destructive"
+                      className="w-full"
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      거절
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -220,7 +285,7 @@ export default function TrainersManagementTable({ trainers }: Props) {
       )}
 
       {/* Verified Trainers Section */}
-      {verifiedTrainers.length > 0 && (
+      {verifiedTrainers.length > 0 && shouldShowVerified && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5 text-green-600" />
@@ -232,20 +297,20 @@ export default function TrainersManagementTable({ trainers }: Props) {
                 <CardContent className="pt-6">
                   <div className="flex items-start gap-4">
                     <Avatar className="h-12 w-12">
-                      <AvatarImage src={trainer.profiles.avatar_url || undefined} alt={trainer.profiles.full_name} />
+                      <AvatarImage src={trainer.profiles?.avatar_url || undefined} alt={trainer.profiles?.full_name || 'Trainer'} />
                       <AvatarFallback className="text-lg font-bold">
-                        {trainer.profiles.full_name.charAt(0)}
+                        {trainer.profiles?.full_name?.charAt(0) || 'T'}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 space-y-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-semibold truncate">{trainer.profiles.full_name}</h3>
+                        <h3 className="font-semibold truncate">{trainer.profiles?.full_name}</h3>
                         <Badge variant="outline" className="shrink-0 border-green-200 text-green-700">
                           <CheckCircle2 className="h-3 w-3 mr-1" />
                           승인됨
                         </Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground truncate">{trainer.profiles.email}</p>
+                      <p className="text-sm text-muted-foreground truncate">{trainer.profiles?.email}</p>
                       <p className="text-xs text-muted-foreground">{trainer.experience_years || 0}년 경력</p>
                     </div>
                   </div>
@@ -302,6 +367,52 @@ export default function TrainersManagementTable({ trainers }: Props) {
           </CardContent>
         </Card>
       )}
+
+      {/* 거절 Dialog */}
+      <Dialog open={rejectDialog.open} onOpenChange={(open) => {
+        setRejectDialog({ open, trainerId: rejectDialog.trainerId })
+        if (!open) setRejectionReason('')
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>트레이너 승인 거절</DialogTitle>
+            <DialogDescription>
+              트레이너 승인을 거절하는 사유를 입력해주세요. 트레이너에게 알림이 전송됩니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="rejection-reason">거절 사유 *</Label>
+              <Textarea
+                id="rejection-reason"
+                placeholder="예: 자격증이 확인되지 않습니다."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                rows={4}
+                className="resize-none"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRejectDialog({ open: false, trainerId: null })
+                setRejectionReason('')
+              }}
+            >
+              취소
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRejectTrainer}
+              disabled={!rejectionReason.trim() || loading === `reject-${rejectDialog.trainerId}`}
+            >
+              {loading === `reject-${rejectDialog.trainerId}` ? '처리중...' : '거절'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

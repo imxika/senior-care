@@ -81,6 +81,7 @@ export function CustomerBookingFilters() {
           <SelectTrigger className="w-full md:w-28">
             <SelectValue>
               {currentStatus === 'all' ? '상태: 전체' :
+               currentStatus === 'upcoming' ? '상태: 예정' :
                currentStatus === 'pending' ? '상태: 대기' :
                currentStatus === 'confirmed' ? '상태: 확정' :
                currentStatus === 'completed' ? '상태: 완료' :
@@ -89,6 +90,7 @@ export function CustomerBookingFilters() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체</SelectItem>
+            <SelectItem value="upcoming">예정</SelectItem>
             <SelectItem value="pending">대기</SelectItem>
             <SelectItem value="confirmed">확정</SelectItem>
             <SelectItem value="completed">완료</SelectItem>

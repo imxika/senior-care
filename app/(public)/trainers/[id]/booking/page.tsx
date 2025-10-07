@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
-import { Star, Home, Building, ArrowLeft } from 'lucide-react'
+import { Star, Home, Building, ArrowLeft, Users } from 'lucide-react'
 import Link from 'next/link'
 import { BookingForm } from '@/components/booking-form'
 
@@ -89,9 +89,16 @@ export default async function TrainerBookingPage({ params, searchParams }: PageP
     .eq('is_active', true)
     .single()
 
+  console.log('Trainer max_group_size:', trainer?.max_group_size)
+  console.log('Trainer experience_years:', trainer?.experience_years)
+  console.log('Trainer years_experience:', trainer?.years_experience)
+
   if (error || !trainer) {
     notFound()
   }
+
+  // 경력 계산 (fallback 지원)
+  const experienceYears = trainer.years_experience || trainer.experience_years || 0
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -120,6 +127,7 @@ export default async function TrainerBookingPage({ params, searchParams }: PageP
                 customerId={customer.id}
                 homeVisitAvailable={trainer.home_visit_available}
                 centerVisitAvailable={trainer.center_visit_available}
+                trainerMaxGroupSize={trainer.max_group_size || 1}
                 initialSessionType={sessionType}
                 initialServiceType={serviceType}
                 hourlyRate={trainer.hourly_rate || 100000}
@@ -137,22 +145,53 @@ export default async function TrainerBookingPage({ params, searchParams }: PageP
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-start gap-3">
-                <Avatar className="h-16 w-16">
-                  <AvatarImage src={trainer.profiles?.avatar_url || undefined} alt={trainer.profiles?.full_name} />
-                  <AvatarFallback className="text-xl font-bold">
-                    {trainer.profiles?.full_name?.charAt(0) || 'T'}
-                  </AvatarFallback>
-                </Avatar>
+                <Link href={`/trainers/${id}`}>
+                  <Avatar className="h-16 w-16 cursor-pointer hover:opacity-80 transition-opacity">
+                    <AvatarImage src={trainer.profiles?.avatar_url || undefined} alt={trainer.profiles?.full_name} />
+                    <AvatarFallback className="text-xl font-bold">
+                      {trainer.profiles?.full_name?.charAt(0) || 'T'}
+                    </AvatarFallback>
+                  </Avatar>
+                </Link>
                 <div className="flex-1">
-                  <h3 className="font-semibold">{trainer.profiles?.full_name}</h3>
-                  <div className="flex items-center gap-1 mt-1">
+                  <Link href={`/trainers/${id}`}>
+                    <h3 className="font-semibold hover:text-primary transition-colors cursor-pointer">
+                      {trainer.profiles?.full_name}
+                    </h3>
+                  </Link>
+                  <Link
+                    href={`/trainers/${id}#reviews`}
+                    className="flex items-center gap-1 mt-1 hover:text-primary transition-colors w-fit"
+                  >
                     <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                     <span className="text-sm font-medium">{trainer.rating?.toFixed(1) || '0.0'}</span>
-                    <span className="text-sm text-muted-foreground">({trainer.total_reviews || 0})</span>
-                  </div>
+                    <span className="text-sm text-muted-foreground hover:text-primary">
+                      ({trainer.total_reviews || 0}개 리뷰)
+                    </span>
+                  </Link>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {trainer.experience_years || 0}년 경력
+                    {experienceYears}년 경력
                   </p>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Session Types */}
+              <div>
+                <p className="text-sm font-medium mb-2">제공 가능한 세션</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">최대 <strong>{trainer.max_group_size || 1}명</strong></span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="outline">1:1 개인</Badge>
+                  {(trainer.max_group_size || 1) >= 2 && (
+                    <Badge variant="outline">2:1 소그룹</Badge>
+                  )}
+                  {(trainer.max_group_size || 1) >= 3 && (
+                    <Badge variant="outline">3:1 소그룹</Badge>
+                  )}
                 </div>
               </div>
 

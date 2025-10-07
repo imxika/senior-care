@@ -6,9 +6,9 @@ import { createNotification, notificationTemplates } from '@/lib/notifications'
 import { BOOKING_STATUS, PRICING } from '@/lib/constants'
 import {
   mapFormServiceTypeToDb,
-  calculateTimeRange,
   calculatePricingInfo
 } from '@/lib/utils'
+import { formatKSTDate, calculateKSTTimeRange } from '@/lib/date-utils'
 
 export async function createBooking(formData: FormData) {
   const supabase = await createClient()
@@ -94,11 +94,8 @@ export async function createBooking(formData: FormData) {
     return { error: '예상 시간을 선택해주세요.' }
   }
 
-  // Calculate start and end times (utils 사용)
-  const [hours, minutes] = time.split(':').map(Number)
-  const tempDate = new Date()
-  tempDate.setHours(hours, minutes, 0, 0)
-  const { start_time: startTime, end_time: endTime } = calculateTimeRange(tempDate, duration)
+  // Calculate start and end times in KST
+  const { start_time: startTime, end_time: endTime } = calculateKSTTimeRange(time, duration)
 
   // Get trainer info for notification and pricing
   const { data: trainer } = await supabase
@@ -120,6 +117,13 @@ export async function createBooking(formData: FormData) {
 
   // Calculate max_participants based on session_type
   const maxParticipants = sessionType === '1:1' ? 1 : sessionType === '2:1' ? 2 : 3
+
+  // DEBUG: Log date before and after formatting
+  console.log('=== BOOKING DATE DEBUG ===')
+  console.log('Original date from form:', date)
+  console.log('After formatKSTDate:', formatKSTDate(date))
+  console.log('Start time:', startTime)
+  console.log('End time:', endTime)
 
   // Handle address for home visit
   let finalAddressId: string | null = null
@@ -150,7 +154,7 @@ export async function createBooking(formData: FormData) {
     }
   }
 
-  // Insert booking (constants 사용)
+  // Insert booking with KST date handling
   const { data: booking, error: insertError } = await supabase
     .from('bookings')
     .insert({
@@ -161,7 +165,7 @@ export async function createBooking(formData: FormData) {
       max_participants: maxParticipants,
       current_participants: 1, // 예약자 본인만
       group_size: 1, // deprecated, session_type 사용
-      booking_date: date,
+      booking_date: formatKSTDate(date), // Ensure KST date format
       start_time: startTime,
       end_time: endTime,
       duration_minutes: duration,
@@ -254,7 +258,7 @@ export async function createBooking(formData: FormData) {
     await createNotification({
       userId: trainer.profile_id,
       ...notification,
-      relatedId: booking.id
+      link: `/trainer/bookings/${booking.id}`
     })
   }
 

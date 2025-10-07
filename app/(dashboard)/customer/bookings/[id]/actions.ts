@@ -19,13 +19,14 @@ export async function cancelBooking(
   }
 
   // 고객 정보 확인
-  const { data: customer } = await supabase
+  const { data: customer, error: customerError } = await supabase
     .from('customers')
     .select('id')
     .eq('profile_id', user.id)
     .single()
 
-  if (!customer) {
+  if (!customer || customerError) {
+    console.error('Customer lookup error:', customerError)
     return { error: '고객 정보를 찾을 수 없습니다.' }
   }
 
@@ -38,6 +39,13 @@ export async function cancelBooking(
     .single()
 
   if (bookingError || !booking) {
+    console.error('Booking lookup error:', {
+      error: bookingError,
+      message: bookingError?.message,
+      details: bookingError?.details,
+      bookingId,
+      customerId: customer.id
+    })
     return { error: '예약 정보를 찾을 수 없습니다.' }
   }
 
@@ -83,8 +91,15 @@ ${notes ? `상세 사유: ${notes}\n` : ''}취소 시기: ${cancellationInfo.tim
     .eq('id', bookingId)
 
   if (updateError) {
-    console.error('Failed to cancel booking:', updateError)
-    return { error: '예약 취소에 실패했습니다.' }
+    console.error('Failed to cancel booking:', {
+      error: updateError,
+      message: updateError?.message,
+      details: updateError?.details,
+      hint: updateError?.hint,
+      code: updateError?.code,
+      bookingId
+    })
+    return { error: `예약 취소에 실패했습니다: ${updateError?.message || '알 수 없는 오류'}` }
   }
 
   // 트레이너에게 알림 전송 (트레이너가 배정된 경우만)

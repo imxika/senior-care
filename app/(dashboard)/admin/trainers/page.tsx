@@ -12,7 +12,14 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
 
-export default async function AdminTrainersPage() {
+interface PageProps {
+  searchParams: Promise<{
+    status?: string
+  }>
+}
+
+export default async function AdminTrainersPage({ searchParams }: PageProps) {
+  const params = await searchParams
   const supabase = await createClient()
 
   // 관리자 권한 확인
@@ -81,7 +88,7 @@ export default async function AdminTrainersPage() {
           </p>
         </div>
 
-        <TrainersManagementTable trainers={trainers || []} />
+        <TrainersManagementTable trainers={trainers || []} initialStatus={params.status} />
       </div>
     </>
   )

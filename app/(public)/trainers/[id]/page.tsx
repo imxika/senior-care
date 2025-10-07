@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
-import { Star, MapPin, Award, Calendar, Home, Building, Mail, Phone, CheckCircle2 } from 'lucide-react'
+import { Star, MapPin, Award, Calendar, Home, Building, Mail, Phone, CheckCircle2, Users } from 'lucide-react'
 import Link from 'next/link'
 import { FavoriteToggleButton } from '@/components/favorite-toggle-button'
 
@@ -70,6 +70,29 @@ export default async function TrainerDetailPage({ params }: PageProps) {
     notFound()
   }
 
+  // Use years_experience as it's the actual column in DB
+  const experienceYears = trainer.years_experience || trainer.experience_years || 0
+
+  // 리뷰 목록 조회
+  const { data: reviews } = await supabase
+    .from('reviews')
+    .select(`
+      *,
+      customer:customers(
+        profiles!customers_profile_id_fkey(
+          full_name,
+          avatar_url
+        )
+      ),
+      booking:bookings(
+        booking_date,
+        service_type
+      )
+    `)
+    .eq('trainer_id', id)
+    .order('created_at', { ascending: false })
+    .limit(10)
+
   return (
     <div className="container mx-auto px-4 py-4 md:py-8 max-w-6xl">
       {/* Header Section */}
@@ -106,7 +129,7 @@ export default async function TrainerDetailPage({ params }: PageProps) {
                   </div>
                   <div className="flex items-center justify-center md:justify-start gap-2 text-muted-foreground text-base">
                     <Award className="h-4 w-4" />
-                    <span>{trainer.experience_years || 0}년 경력</span>
+                    <span>{experienceYears}년 경력</span>
                   </div>
                 </div>
 
@@ -236,20 +259,121 @@ export default async function TrainerDetailPage({ params }: PageProps) {
           )}
 
           {/* Reviews Section */}
-          <Card>
+          <Card id="reviews">
             <CardHeader>
-              <CardTitle className="text-lg">리뷰</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">리뷰 ({trainer.total_reviews || 0})</CardTitle>
+                <div className="flex items-center gap-1">
+                  <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                  <span className="font-bold text-lg">{trainer.rating?.toFixed(1) || '0.0'}</span>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-6 md:py-8 text-base text-muted-foreground">
-                리뷰가 없습니다.
-              </div>
+              {reviews && reviews.length > 0 ? (
+                <div className="space-y-4">
+                  {reviews.map((review: any) => (
+                    <div key={review.id} className="border-b last:border-0 pb-4 last:pb-0">
+                      <div className="flex items-start gap-3 mb-2">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={review.customer?.profiles?.avatar_url || undefined} />
+                          <AvatarFallback>
+                            {review.customer?.profiles?.full_name?.charAt(0) || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="font-medium">
+                              {review.customer?.profiles?.full_name || '익명'}
+                            </p>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(review.created_at).toLocaleDateString('ko-KR', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                              })}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 mb-2">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`h-4 w-4 ${
+                                  star <= review.rating
+                                    ? 'fill-yellow-400 text-yellow-400'
+                                    : 'text-gray-300'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          {review.comment && (
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                              {review.comment}
+                            </p>
+                          )}
+                          {review.trainer_response && (
+                            <div className="mt-3 pl-3 border-l-2 border-primary/20">
+                              <p className="text-xs font-medium text-primary mb-1">트레이너 답글</p>
+                              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                                {review.trainer_response}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 md:py-8 text-base text-muted-foreground">
+                  아직 리뷰가 없습니다.
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
 
         {/* Right Column - Sidebar */}
         <div className="space-y-4 md:space-y-6">
+          {/* Maximum Group Size */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Users className="h-5 w-5" />
+                제공 가능한 세션
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">최대 인원</span>
+                  <span className="font-semibold text-lg">
+                    {trainer.max_group_size || 1}명
+                  </span>
+                </div>
+                <Separator />
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground mb-2">가능한 세션 유형:</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline" className="bg-primary/5">
+                      1:1 개인
+                    </Badge>
+                    {(trainer.max_group_size || 1) >= 2 && (
+                      <Badge variant="outline" className="bg-primary/5">
+                        2:1 소그룹
+                      </Badge>
+                    )}
+                    {(trainer.max_group_size || 1) >= 3 && (
+                      <Badge variant="outline" className="bg-primary/5">
+                        3:1 소그룹
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Service Areas */}
           {trainer.service_areas && trainer.service_areas.length > 0 && (
             <Card>
@@ -330,7 +454,7 @@ export default async function TrainerDetailPage({ params }: PageProps) {
             <CardContent className="space-y-3">
               <div className="flex justify-between text-base">
                 <span className="text-muted-foreground">경력</span>
-                <span className="font-medium">{trainer.experience_years || 0}년</span>
+                <span className="font-medium">{experienceYears}년</span>
               </div>
               <Separator />
               <div className="flex justify-between text-base">

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
 import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, Eye } from 'lucide-react'
 import Link from 'next/link'
@@ -17,6 +18,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
 import { TrainerBookingFilters } from './trainer-booking-filters'
+import { SortableTableHeader } from '@/components/sortable-table-header'
 
 interface PageProps {
   searchParams: Promise<{
@@ -24,6 +26,7 @@ interface PageProps {
     status?: string
     type?: string
     sort?: string
+    direction?: string
     search?: string
   }>
 }
@@ -73,14 +76,26 @@ export default async function TrainerBookingsPage({ searchParams }: PageProps) {
     )
   }
 
-  // 예약 목록 가져오기 (고객 정보 포함)
-  const { data: rawBookings, error } = await supabase
+  // Service Role 클라이언트로 RLS 우회
+  const serviceSupabase = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  )
+
+  // 예약 목록 가져오기 (Service Role로 RLS 우회)
+  const { data: rawBookings, error } = await serviceSupabase
     .from('bookings')
     .select(`
       *,
-      customers!bookings_customer_id_fkey(
+      customer:customers!customer_id(
         id,
-        profiles!customers_profile_id_fkey(
+        profile:profiles!profile_id(
           full_name,
           email,
           phone
@@ -92,38 +107,20 @@ export default async function TrainerBookingsPage({ searchParams }: PageProps) {
 
   if (error) {
     console.error('Error fetching bookings:', error)
+    console.error('Error details:', JSON.stringify(error, null, 2))
   }
 
-  // 데이터 구조 변환: customers -> customer로 rename
-  interface RawBooking {
-    id: string
-    status: string
-    booking_date: string
-    start_time: string
-    created_at: string
-    booking_type?: string
-    customers?: {
-      id: string
-      profiles?: {
-        full_name?: string
-        email?: string
-        phone?: string
-      }
-    }
-    customer?: {
-      id: string
-      profiles?: {
-        full_name?: string
-        email?: string
-        phone?: string
-      }
-    }
+  // 데이터 구조 확인용 로그
+  if (rawBookings && rawBookings.length > 0) {
+    console.log('First booking with customer data:', {
+      id: rawBookings[0].id,
+      customer: rawBookings[0].customer,
+      hasCustomer: !!rawBookings[0].customer,
+      customerProfile: rawBookings[0].customer?.profile
+    })
   }
 
-  const bookings = rawBookings?.map((booking: RawBooking) => ({
-    ...booking,
-    customer: booking.customers
-  }))
+  const bookings = rawBookings
 
   // 통계 계산
   const now = new Date()
@@ -165,26 +162,45 @@ export default async function TrainerBookingsPage({ searchParams }: PageProps) {
   if (params.search) {
     const search = params.search.toLowerCase()
     filteredBookings = filteredBookings.filter(b =>
-      b.customer?.profiles?.full_name?.toLowerCase().includes(search) ||
-      b.customer?.profiles?.email?.toLowerCase().includes(search) ||
-      b.customer?.profiles?.phone?.toLowerCase().includes(search) ||
+      b.customer?.profile?.full_name?.toLowerCase().includes(search) ||
+      b.customer?.profile?.email?.toLowerCase().includes(search) ||
+      b.customer?.profile?.phone?.toLowerCase().includes(search) ||
       b.id.toLowerCase().includes(search)
     )
   }
 
-  // 정렬
-  const sortBy = params.sort || 'booking_date'
+  // 정렬 (기본값: 최근 활동 순)
+  const sortBy = params.sort || 'updated_at'
+  const sortDirection = params.direction || 'desc'
+
   filteredBookings.sort((a, b) => {
+    let comparison = 0
+
     switch (sortBy) {
       case 'booking_date':
-        return new Date(b.booking_date).getTime() - new Date(a.booking_date).getTime()
+        comparison = new Date(a.booking_date).getTime() - new Date(b.booking_date).getTime()
+        break
       case 'created_at':
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        break
+      case 'updated_at':
+        // updated_at이 없으면 created_at 사용
+        comparison = new Date(a.updated_at || a.created_at).getTime() - new Date(b.updated_at || b.created_at).getTime()
+        break
       case 'status':
-        return a.status.localeCompare(b.status)
+        comparison = a.status.localeCompare(b.status)
+        break
+      case 'customer_name':
+        const nameA = a.customer?.profile?.full_name || ''
+        const nameB = b.customer?.profile?.full_name || ''
+        comparison = nameA.localeCompare(nameB, 'ko')
+        break
       default:
-        return 0
+        comparison = 0
     }
+
+    // 정렬 방향 적용
+    return sortDirection === 'asc' ? comparison : -comparison
   })
 
   // 페이지네이션
@@ -212,9 +228,16 @@ export default async function TrainerBookingsPage({ searchParams }: PageProps) {
     return type === 'direct' ? '지정' : '추천'
   }
 
-  // 날짜 포맷 함수 (서버에서 미리 포맷팅)
+  // KST 변환 헬퍼 함수
+  const toKST = (date: Date) => {
+    const utc = date.getTime() + date.getTimezoneOffset() * 60000
+    return new Date(utc + 9 * 3600000)
+  }
+
+  // 날짜 포맷 함수 (KST 적용)
   const formatBookingDate = (dateString: string, time: string) => {
-    const date = new Date(dateString)
+    // booking_date는 날짜만 (YYYY-MM-DD) 있으므로 KST 명시
+    const date = new Date(dateString + 'T00:00:00+09:00')
     const year = String(date.getFullYear()).slice(2) // 2025 -> 25
     const month = String(date.getMonth() + 1).padStart(2, '0')
     const day = String(date.getDate()).padStart(2, '0')
@@ -225,27 +248,34 @@ export default async function TrainerBookingsPage({ searchParams }: PageProps) {
   }
 
   const formatCreatedDate = (dateString: string) => {
-    const date = new Date(dateString)
+    // created_at은 timestamp이므로 KST 변환 필요
+    const date = toKST(new Date(dateString))
     const year = String(date.getFullYear()).slice(2)
     const month = String(date.getMonth() + 1).padStart(2, '0')
     const day = String(date.getDate()).padStart(2, '0')
-    return `${year}.${month}.${day}`
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    return `${year}.${month}.${day} ${hours}:${minutes}`
   }
 
   const formatFullDate = (dateString: string, time: string) => {
-    const date = new Date(dateString)
+    // booking_date는 날짜만이므로 KST 명시
+    const date = new Date(dateString + 'T00:00:00+09:00')
     const year = date.getFullYear()
     const month = String(date.getMonth() + 1).padStart(2, '0')
     const day = String(date.getDate()).padStart(2, '0')
-    return `${year}.${month}.${day} ${time}`
+    return `${year}.${month}.${day} ${time.substring(0, 5)}`
   }
 
   const formatDateOnly = (dateString: string) => {
-    const date = new Date(dateString)
+    // created_at은 timestamp이므로 KST 변환 필요
+    const date = toKST(new Date(dateString))
     const year = date.getFullYear()
     const month = String(date.getMonth() + 1).padStart(2, '0')
     const day = String(date.getDate()).padStart(2, '0')
-    return `${year}.${month}.${day}`
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    return `${year}.${month}.${day} ${hours}:${minutes}`
   }
 
   return (
@@ -372,7 +402,7 @@ export default async function TrainerBookingsPage({ searchParams }: PageProps) {
                           <div>
                             <div className="flex items-center gap-2 mb-1 flex-wrap">
                               <p className="font-semibold">
-                                {booking.customer?.profiles?.full_name || '고객 정보 없음'}
+                                {booking.customer?.profile?.full_name || '고객 정보 없음'}
                               </p>
                               <Badge variant={statusBadge.variant} className="shrink-0">
                                 {statusBadge.label}
@@ -420,10 +450,10 @@ export default async function TrainerBookingsPage({ searchParams }: PageProps) {
                     <tr className="border-b bg-muted/50">
                       <th className="text-left p-3 font-semibold">예약번호</th>
                       <th className="text-left p-3 font-semibold">타입</th>
-                      <th className="text-left p-3 font-semibold">고객</th>
-                      <th className="text-left p-3 font-semibold">예약일시</th>
-                      <th className="text-left p-3 font-semibold">생성일</th>
-                      <th className="text-left p-3 font-semibold">상태</th>
+                      <SortableTableHeader label="고객" sortKey="customer_name" />
+                      <SortableTableHeader label="예약일시" sortKey="booking_date" />
+                      <SortableTableHeader label="최근 활동" sortKey="updated_at" />
+                      <SortableTableHeader label="상태" sortKey="status" />
                       <th className="text-left p-3 font-semibold">액션</th>
                     </tr>
                   </thead>
@@ -438,17 +468,17 @@ export default async function TrainerBookingsPage({ searchParams }: PageProps) {
                           </td>
                           <td className="p-3">
                             <div className="text-sm font-medium">
-                              {booking.customer?.profiles?.full_name || '고객 정보 없음'}
+                              {booking.customer?.profile?.full_name || '고객 정보 없음'}
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              {booking.customer?.profiles?.phone || booking.customer?.profiles?.email}
+                              {booking.customer?.profile?.phone || booking.customer?.profile?.email}
                             </div>
                           </td>
                           <td className="p-3">
                             {formatFullDate(booking.booking_date, booking.start_time)}
                           </td>
                           <td className="p-3 text-sm text-muted-foreground">
-                            {formatDateOnly(booking.created_at)}
+                            {formatDateOnly(booking.updated_at || booking.created_at)}
                           </td>
                           <td className="p-3">
                             <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>

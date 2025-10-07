@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import { createNotification, notificationTemplates } from '@/lib/notifications'
 import { BOOKING_STATUS } from '@/lib/constants'
@@ -32,18 +33,30 @@ export async function updateBookingStatus(
     return { error: '트레이너 정보를 찾을 수 없습니다.' }
   }
 
+  // RLS를 우회하기 위해 Service Role 사용 (고객 정보 조회용)
+  const serviceSupabase = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  )
+
   // Get booking with customer and trainer info (올바른 FK 참조)
-  const { data: booking, error: fetchError } = await supabase
+  const { data: booking, error: fetchError } = await serviceSupabase
     .from('bookings')
     .select(`
       *,
       customer:customers!bookings_customer_id_fkey(
         id,
-        profiles!customers_profile_id_fkey(id, full_name)
+        profile:profiles!customers_profile_id_fkey(id, full_name)
       ),
       trainer:trainers!bookings_trainer_id_fkey(
         id,
-        profiles!trainers_profile_id_fkey(full_name)
+        profile:profiles!trainers_profile_id_fkey(full_name)
       )
     `)
     .eq('id', bookingId)
@@ -96,39 +109,53 @@ export async function updateBookingStatus(
   }
 
   // Create notification for customer (utils 사용)
-  const trainerName = booking.trainer?.profiles?.full_name || '트레이너'
+  const trainerName = booking.trainer?.profile?.full_name || '트레이너'
   const scheduledAt = combineDateTime(booking.booking_date, booking.start_time)
-  const customerProfileId = booking.customer?.profiles?.id
+  const customerProfileId = booking.customer?.profile?.id
+
+  console.log('📤 Sending notification to customer:', customerProfileId)
+  console.log('📤 Trainer name:', trainerName)
+  console.log('📤 Scheduled at:', scheduledAt)
+  console.log('📤 Status:', status)
 
   if (!customerProfileId) {
-    console.error('Customer profile_id not found for notification')
+    console.error('❌ Customer profile_id not found for notification')
   } else {
-    if (status === 'confirmed') {
-      const notification = notificationTemplates.bookingConfirmed(trainerName, scheduledAt)
-      await createNotification({
-        userId: customerProfileId,
-        ...notification,
-        relatedId: bookingId
-      })
-    } else if (status === 'cancelled') {
-      const notification = notificationTemplates.bookingRejected(trainerName)
-      await createNotification({
-        userId: customerProfileId,
-        ...notification,
-        relatedId: bookingId
-      })
-    } else if (status === 'completed') {
-      const notification = notificationTemplates.bookingCompleted(trainerName)
-      await createNotification({
-        userId: customerProfileId,
-        ...notification,
-        relatedId: bookingId
-      })
+    try {
+      if (status === 'confirmed') {
+        const notification = notificationTemplates.bookingConfirmed(trainerName, scheduledAt)
+        console.log('📤 Creating notification:', notification)
+        const result = await createNotification({
+          userId: customerProfileId,
+          ...notification,
+          link: `/customer/bookings/${bookingId}`
+        })
+        console.log('✅ Notification created:', result)
+      } else if (status === 'cancelled') {
+        const notification = notificationTemplates.bookingRejected(trainerName)
+        const result = await createNotification({
+          userId: customerProfileId,
+          ...notification,
+          link: `/customer/bookings/${bookingId}`
+        })
+        console.log('✅ Notification created:', result)
+      } else if (status === 'completed') {
+        const notification = notificationTemplates.bookingCompleted(trainerName)
+        const result = await createNotification({
+          userId: customerProfileId,
+          ...notification,
+          link: `/customer/bookings/${bookingId}`
+        })
+        console.log('✅ Notification created:', result)
+      }
+    } catch (error) {
+      console.error('❌ Failed to create notification:', error)
     }
   }
 
-  // Revalidate the page
+  // 페이지 갱신
   revalidatePath('/trainer/bookings')
+  revalidatePath(`/trainer/bookings/${bookingId}`)
 
   return { success: true }
 }

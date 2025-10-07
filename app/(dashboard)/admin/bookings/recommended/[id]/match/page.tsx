@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { redirect } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -35,14 +36,26 @@ export default async function MatchTrainerPage({ params }: PageProps) {
     redirect("/")
   }
 
-  // 예약 정보 조회
-  const { data: booking, error: bookingError } = await supabase
+  // Service Role client for RLS bypass (admin access)
+  const serviceSupabase = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  )
+
+  // 예약 정보 조회 (Service Role로 RLS 우회)
+  const { data: booking, error: bookingError } = await serviceSupabase
     .from('bookings')
     .select(`
       *,
-      customer:customers!bookings_customer_id_fkey(
+      customer:customers!customer_id(
         id,
-        profiles!customers_profile_id_fkey(
+        profile:profiles!profile_id(
           full_name,
           email,
           phone
@@ -77,8 +90,8 @@ export default async function MatchTrainerPage({ params }: PageProps) {
     redirect(`/admin/bookings/${bookingId}`)
   }
 
-  // 모든 활성 트레이너 조회
-  const { data: trainers, error: trainersError } = await supabase
+  // 모든 활성 트레이너 조회 (Service Role로 RLS 우회)
+  const { data: trainers, error: trainersError } = await serviceSupabase
     .from('trainers')
     .select(`
       id,
@@ -93,7 +106,7 @@ export default async function MatchTrainerPage({ params }: PageProps) {
       service_areas,
       is_verified,
       is_active,
-      profiles!trainers_profile_id_fkey(
+      profile:profiles!profile_id(
         full_name,
         avatar_url,
         phone,
@@ -112,7 +125,7 @@ export default async function MatchTrainerPage({ params }: PageProps) {
     count: trainers?.length || 0,
     trainers: trainers?.map(t => ({
       id: t.id,
-      name: t.profiles?.full_name,
+      name: t.profile?.full_name,
       hourly_rate: t.hourly_rate,
       is_verified: t.is_verified,
       is_active: t.is_active
@@ -121,9 +134,9 @@ export default async function MatchTrainerPage({ params }: PageProps) {
 
   console.log('Full trainers data:', trainers)
 
-  // 각 트레이너의 예약 수 조회 (부하 분산용)
+  // 각 트레이너의 예약 수 조회 (부하 분산용) (Service Role로 RLS 우회)
   const trainerIds = trainers?.map(t => t.id) || []
-  const { data: trainerBookingCounts } = await supabase
+  const { data: trainerBookingCounts } = await serviceSupabase
     .from('bookings')
     .select('trainer_id')
     .in('trainer_id', trainerIds)
@@ -138,7 +151,7 @@ export default async function MatchTrainerPage({ params }: PageProps) {
 
   console.log('Trainer booking counts:', bookingCountByTrainer)
 
-  const customerName = booking.customer?.profiles?.full_name || booking.customer?.profiles?.email?.split('@')[0] || '고객'
+  const customerName = booking.customer?.profile?.full_name || booking.customer?.profile?.email?.split('@')[0] || '고객'
   const date = new Date(booking.booking_date)
 
   // 주소 정보 (booking_address 우선, 없으면 notes에서 파싱)
@@ -241,11 +254,11 @@ export default async function MatchTrainerPage({ params }: PageProps) {
                 <p className="text-xs text-gray-500">고객 정보</p>
                 <p className="text-sm font-medium">{customerName}</p>
                 <p className="text-sm text-gray-600">
-                  {booking.customer?.profiles?.email}
+                  {booking.customer?.profile?.email}
                 </p>
-                {booking.customer?.profiles?.phone && (
+                {booking.customer?.profile?.phone && (
                   <p className="text-sm text-gray-600">
-                    {booking.customer?.profiles?.phone}
+                    {booking.customer?.profile?.phone}
                   </p>
                 )}
               </div>

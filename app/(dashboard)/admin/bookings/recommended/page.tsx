@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { redirect } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -28,14 +29,26 @@ export default async function AdminRecommendedBookingsPage() {
     redirect("/")
   }
 
-  // 매칭 대기 중인 추천 예약 목록 조회
-  const { data: pendingBookings, error } = await supabase
+  // Service Role client for RLS bypass (admin access)
+  const serviceSupabase = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  )
+
+  // 매칭 대기 중인 추천 예약 목록 조회 (Service Role로 RLS 우회)
+  const { data: pendingBookings, error } = await serviceSupabase
     .from('bookings')
     .select(`
       *,
-      customer:customers!bookings_customer_id_fkey(
+      customer:customers!customer_id(
         id,
-        profiles!customers_profile_id_fkey(
+        profile:profiles!profile_id(
           full_name,
           email,
           phone

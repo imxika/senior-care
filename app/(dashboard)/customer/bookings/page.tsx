@@ -18,6 +18,7 @@ import {
 import { SuccessMessage } from '@/components/success-message'
 import { CustomerBookingFilters } from './customer-booking-filters'
 import { BookingDateDisplay } from '@/components/booking-date-display'
+import { SortableTableHeader } from '@/components/sortable-table-header'
 
 interface PageProps {
   searchParams: Promise<{
@@ -26,6 +27,7 @@ interface PageProps {
     status?: string
     type?: string
     sort?: string
+    direction?: string
     search?: string
   }>
 }
@@ -52,13 +54,15 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
   }
 
   // 고객 ID 조회
-  const { data: customer } = await supabase
+  const { data: customer, error: customerError } = await supabase
     .from('customers')
     .select('id')
     .eq('profile_id', user.id)
     .single()
 
+  // Customer 레코드가 없으면 대시보드로 (프로필 설정 필요)
   if (!customer) {
+    console.log('No customer record found, redirecting to dashboard')
     redirect('/customer/dashboard')
   }
 
@@ -66,8 +70,17 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
   const { data: bookings, error } = await supabase
     .from('bookings')
     .select(`
-      *,
+      id,
+      customer_id,
+      trainer_id,
       booking_type,
+      service_type,
+      booking_date,
+      start_time,
+      end_time,
+      status,
+      created_at,
+      updated_at,
       trainer:trainers(
         id,
         profiles!trainers_profile_id_fkey(
@@ -79,25 +92,41 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
     `)
     .eq('customer_id', customer.id)
     .order('booking_date', { ascending: false })
+    .limit(100)
 
   if (error) {
     console.error('Error fetching bookings:', error)
   }
 
-  // 통계 계산
-  const upcomingCount = bookings?.filter(b =>
-    b.status === 'confirmed' && new Date(b.booking_date) > new Date()
-  ).length || 0
+  const bookingsList = bookings || []
+  const now = Date.now()
 
-  const pendingCount = bookings?.filter(b => b.status === 'pending').length || 0
-  const completedCount = bookings?.filter(b => b.status === 'completed').length || 0
-  const cancelledCount = bookings?.filter(b => b.status === 'cancelled').length || 0
+  // 통계 계산
+  const upcomingCount = bookingsList.filter(b => {
+    if (b.status !== 'confirmed') return false
+    const bookingTime = new Date(b.booking_date).getTime()
+    return bookingTime > now
+  }).length
+
+  const pendingCount = bookingsList.filter(b => b.status === 'pending').length
+  const completedCount = bookingsList.filter(b => b.status === 'completed').length
+  const cancelledCount = bookingsList.filter(b => b.status === 'cancelled').length
 
   // 필터링
   let filteredBookings = bookings || []
 
   if (params.status && params.status !== 'all') {
-    filteredBookings = filteredBookings.filter(b => b.status === params.status)
+    if (params.status === 'upcoming') {
+      // "예정된 예약": confirmed 상태 + 미래 날짜
+      filteredBookings = filteredBookings.filter(b => {
+        if (b.status !== 'confirmed') return false
+        const bookingTime = new Date(b.booking_date).getTime()
+        return bookingTime > now
+      })
+    } else {
+      // 일반 상태 필터
+      filteredBookings = filteredBookings.filter(b => b.status === params.status)
+    }
   }
 
   if (params.type && params.type !== 'all') {
@@ -113,35 +142,44 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
     )
   }
 
-  // 정렬 - 예약일시 기준 오름차순 (가까운 예약이 먼저)
-  const sortBy = params.sort || 'booking_date'
+  // 정렬 (기본값: 최근 활동 순)
+  const sortBy = params.sort || 'updated_at'
+  const sortDirection = params.direction || 'desc'
+
   filteredBookings.sort((a, b) => {
-    const now = new Date()
+    let comparison = 0
+
     switch (sortBy) {
       case 'booking_date':
-        // 예약일시 기준: 미래 예약은 가까운 순, 과거 예약은 최근 순
-        const aDate = new Date(a.booking_date)
-        const bDate = new Date(b.booking_date)
-        const aIsFuture = aDate >= now
-        const bIsFuture = bDate >= now
-
-        if (aIsFuture && bIsFuture) {
-          // 둘 다 미래: 가까운 순
-          return aDate.getTime() - bDate.getTime()
-        } else if (!aIsFuture && !bIsFuture) {
-          // 둘 다 과거: 최근 순
-          return bDate.getTime() - aDate.getTime()
-        } else {
-          // 미래 예약이 먼저
-          return aIsFuture ? -1 : 1
-        }
+        const aDate = new Date(a.booking_date).getTime()
+        const bDate = new Date(b.booking_date).getTime()
+        comparison = aDate - bDate
+        break
       case 'created_at':
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        const aCreated = new Date(a.created_at).getTime()
+        const bCreated = new Date(b.created_at).getTime()
+        comparison = aCreated - bCreated
+        break
+      case 'updated_at':
+        // updated_at이 없으면 created_at 사용
+        const aUpdated = new Date(a.updated_at || a.created_at).getTime()
+        const bUpdated = new Date(b.updated_at || b.created_at).getTime()
+        comparison = aUpdated - bUpdated
+        break
       case 'status':
-        return a.status.localeCompare(b.status)
+        comparison = a.status.localeCompare(b.status)
+        break
+      case 'trainer_name':
+        const aTrainer = a.trainer?.profiles?.full_name || ''
+        const bTrainer = b.trainer?.profiles?.full_name || ''
+        comparison = aTrainer.localeCompare(bTrainer)
+        break
       default:
-        return 0
+        comparison = 0
     }
+
+    // 정렬 방향 적용
+    return sortDirection === 'asc' ? comparison : -comparison
   })
 
   // 페이지네이션
@@ -188,10 +226,10 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
         </div>
       </header>
 
-      <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">내 예약 관리</h1>
-          <p className="text-sm md:text-base text-muted-foreground mt-1">{profile?.full_name}님의 예약 현황</p>
+      <div className="flex flex-1 flex-col gap-6 p-6 md:gap-8 md:p-8">
+        <div className="space-y-2">
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">내 예약 관리</h1>
+          <p className="text-xl md:text-2xl text-muted-foreground">{profile?.full_name}님의 예약 현황</p>
         </div>
 
         {/* Success Message */}
@@ -202,64 +240,56 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
           />
         )}
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-          <Card>
-            <CardContent className="p-3 md:p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
-                    <Calendar className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">예정된 예약</p>
-                    <p className="text-2xl font-bold">{upcomingCount}</p>
-                  </div>
+        {/* Stats - 시니어 친화적 */}
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-5">
+          <Card className="border-2">
+            <CardContent className="p-5 md:p-6">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-900">
+                  <Calendar className="h-7 w-7 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-base md:text-lg font-medium text-muted-foreground">예정된 예약</p>
+                  <p className="text-3xl md:text-4xl font-bold">{upcomingCount}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-3 md:p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-100">
-                    <Clock className="h-5 w-5 text-yellow-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">대기중</p>
-                    <p className="text-2xl font-bold">{pendingCount}</p>
-                  </div>
+          <Card className="border-2">
+            <CardContent className="p-5 md:p-6">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-yellow-100 dark:bg-yellow-900">
+                  <Clock className="h-7 w-7 text-yellow-600 dark:text-yellow-400" />
+                </div>
+                <div>
+                  <p className="text-base md:text-lg font-medium text-muted-foreground">대기중</p>
+                  <p className="text-3xl md:text-4xl font-bold">{pendingCount}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-3 md:p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">완료</p>
-                    <p className="text-2xl font-bold">{completedCount}</p>
-                  </div>
+          <Card className="border-2">
+            <CardContent className="p-5 md:p-6">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-green-100 dark:bg-green-900">
+                  <CheckCircle className="h-7 w-7 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <p className="text-base md:text-lg font-medium text-muted-foreground">완료</p>
+                  <p className="text-3xl md:text-4xl font-bold">{completedCount}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-3 md:p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100">
-                    <XCircle className="h-5 w-5 text-red-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">취소됨</p>
-                    <p className="text-2xl font-bold">{cancelledCount}</p>
-                  </div>
+          <Card className="border-2">
+            <CardContent className="p-5 md:p-6">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-red-100 dark:bg-red-900">
+                  <XCircle className="h-7 w-7 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <p className="text-base md:text-lg font-medium text-muted-foreground">취소됨</p>
+                  <p className="text-3xl md:text-4xl font-bold">{cancelledCount}</p>
                 </div>
               </div>
             </CardContent>
@@ -294,50 +324,49 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
               </div>
             </CardHeader>
             <CardContent>
-              {/* 모바일: 카드 레이아웃 */}
-              <div className="flex flex-col gap-4 md:hidden">
+              {/* 모바일: 카드 레이아웃 - 시니어 친화적 */}
+              <div className="flex flex-col gap-5 md:hidden">
                 {paginatedBookings.map((booking) => {
                   const statusBadge = getStatusBadge(booking.status)
                   return (
-                    <div key={booking.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                      <div className="flex items-stretch gap-3">
-                        <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
-                          {/* 트레이너 정보 */}
-                          <div>
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <p className="font-semibold">
-                                {booking.trainer?.profiles?.full_name || (
-                                  <span className="text-muted-foreground">매칭 대기중</span>
-                                )}
-                              </p>
-                              <Badge variant={statusBadge.variant} className="shrink-0">
-                                {statusBadge.label}
-                              </Badge>
-                              <Badge variant="outline" className="shrink-0">
-                                {getTypeBadge(booking.booking_type)}
-                              </Badge>
-                            </div>
+                    <div key={booking.id} className="border-2 rounded-xl p-5 hover:shadow-lg transition-shadow bg-card">
+                      <div className="space-y-4">
+                        {/* 트레이너 정보 */}
+                        <div>
+                          <p className="text-xl font-semibold mb-2">
+                            {booking.trainer?.profiles?.full_name || (
+                              <span className="text-muted-foreground">매칭 대기중</span>
+                            )}
+                          </p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant={statusBadge.variant} className="text-base px-3 py-1">
+                              {statusBadge.label}
+                            </Badge>
+                            <Badge variant="outline" className="text-base px-3 py-1">
+                              {getTypeBadge(booking.booking_type)}
+                            </Badge>
                           </div>
+                        </div>
 
-                          {/* 예약 정보 */}
-                          <div className="space-y-1 text-sm">
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              <Calendar className="h-3.5 w-3.5 shrink-0" />
-                              <BookingDateDisplay date={booking.booking_date} format="booking" />
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <span className="font-mono">{booking.id.slice(0, 8)}</span>
-                              <span>•</span>
-                              <BookingDateDisplay date={booking.created_at} format="created" />
-                            </div>
+                        {/* 예약 정보 */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-3 text-base text-muted-foreground">
+                            <Calendar className="h-5 w-5 shrink-0" />
+                            <BookingDateDisplay date={booking.booking_date} format="date-only" />
+                            <span className="font-semibold">{booking.start_time.slice(0, 5)}</span>
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            <span className="font-mono">{booking.id.slice(0, 8)}</span>
+                            <span className="mx-2">•</span>
+                            <BookingDateDisplay date={booking.updated_at || booking.created_at} format="created" />
                           </div>
                         </div>
 
                         {/* 상세보기 버튼 */}
-                        <Link href={`/customer/bookings/${booking.id}`} className="shrink-0">
-                          <Button variant="outline" className="h-full w-20 flex flex-col items-center justify-center gap-2">
-                            <Eye className="h-6 w-6" />
-                            <span className="text-xs font-medium">상세보기</span>
+                        <Link href={`/customer/bookings/${booking.id}`} className="block">
+                          <Button variant="outline" className="w-full h-14 text-lg border-2">
+                            <Eye className="h-5 w-5 mr-2" />
+                            상세보기
                           </Button>
                         </Link>
                       </div>
@@ -346,18 +375,18 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
                 })}
               </div>
 
-              {/* 데스크톱: 테이블 레이아웃 */}
+              {/* 데스크톱: 테이블 레이아웃 - 시니어 친화적 */}
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="text-left p-3 font-semibold">예약번호</th>
-                      <th className="text-left p-3 font-semibold">타입</th>
-                      <th className="text-left p-3 font-semibold">트레이너</th>
-                      <th className="text-left p-3 font-semibold">예약일시</th>
-                      <th className="text-left p-3 font-semibold">생성일</th>
-                      <th className="text-left p-3 font-semibold">상태</th>
-                      <th className="text-left p-3 font-semibold">액션</th>
+                    <tr className="border-b-2 bg-muted/50">
+                      <th className="text-left p-4 font-semibold text-base">예약번호</th>
+                      <th className="text-left p-4 font-semibold text-base">타입</th>
+                      <SortableTableHeader label="트레이너" sortKey="trainer_name" className="p-4 text-base" basePath="/customer/bookings" />
+                      <SortableTableHeader label="예약일시" sortKey="booking_date" className="p-4 text-base" basePath="/customer/bookings" />
+                      <SortableTableHeader label="최근 활동" sortKey="updated_at" className="p-4 text-base" basePath="/customer/bookings" />
+                      <SortableTableHeader label="상태" sortKey="status" className="p-4 text-base" basePath="/customer/bookings" />
+                      <th className="text-left p-4 font-semibold text-base">액션</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -365,28 +394,29 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
                       const statusBadge = getStatusBadge(booking.status)
                       return (
                         <tr key={booking.id} className="border-b hover:bg-muted/50">
-                          <td className="p-3 font-mono text-sm">{booking.id.slice(0, 8)}</td>
-                          <td className="p-3">
-                            <Badge variant="outline">{getTypeBadge(booking.booking_type)}</Badge>
+                          <td className="p-4 font-mono text-base">{booking.id.slice(0, 8)}</td>
+                          <td className="p-4">
+                            <Badge variant="outline" className="text-base px-3 py-1">{getTypeBadge(booking.booking_type)}</Badge>
                           </td>
-                          <td className="p-3">
+                          <td className="p-4 text-base">
                             {booking.trainer?.profiles?.full_name || (
                               <span className="text-muted-foreground">매칭 대기중</span>
                             )}
                           </td>
-                          <td className="p-3">
-                            <BookingDateDisplay date={booking.booking_date} format="full" />
+                          <td className="p-4 text-base">
+                            <BookingDateDisplay date={booking.booking_date} format="date-only" />
+                            <span className="ml-2 font-semibold">{booking.start_time.slice(0, 5)}</span>
                           </td>
-                          <td className="p-3 text-sm text-muted-foreground">
-                            <BookingDateDisplay date={booking.created_at} format="date-only" />
+                          <td className="p-4 text-base text-muted-foreground">
+                            <BookingDateDisplay date={booking.updated_at || booking.created_at} format="created" />
                           </td>
-                          <td className="p-3">
-                            <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>
+                          <td className="p-4">
+                            <Badge variant={statusBadge.variant} className="text-base px-3 py-1">{statusBadge.label}</Badge>
                           </td>
-                          <td className="p-3">
+                          <td className="p-4">
                             <Link href={`/customer/bookings/${booking.id}`}>
-                              <Button variant="ghost" size="sm">
-                                <Eye className="h-4 w-4 mr-1" />
+                              <Button variant="ghost" size="default" className="h-12 text-base">
+                                <Eye className="h-5 w-5 mr-2" />
                                 상세보기
                               </Button>
                             </Link>
@@ -398,19 +428,19 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
                 </table>
               </div>
 
-              {/* 페이지네이션 */}
+              {/* 페이지네이션 - 시니어 친화적 */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2 mt-6">
+                <div className="flex items-center justify-center gap-4 mt-8">
                   <Link href={`/customer/bookings?page=${Math.max(1, currentPage - 1)}&${new URLSearchParams(params as Record<string, string>).toString()}`}>
-                    <Button variant="outline" size="sm" disabled={currentPage === 1}>
+                    <Button variant="outline" size="lg" className="h-12 px-6 text-lg border-2" disabled={currentPage === 1}>
                       이전
                     </Button>
                   </Link>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-lg md:text-xl font-medium px-4">
                     {currentPage} / {totalPages}
                   </span>
                   <Link href={`/customer/bookings?page=${Math.min(totalPages, currentPage + 1)}&${new URLSearchParams(params as Record<string, string>).toString()}`}>
-                    <Button variant="outline" size="sm" disabled={currentPage === totalPages}>
+                    <Button variant="outline" size="lg" className="h-12 px-6 text-lg border-2" disabled={currentPage === totalPages}>
                       다음
                     </Button>
                   </Link>

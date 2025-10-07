@@ -23,7 +23,7 @@ interface Trainer {
   home_visit_available: boolean
   center_visit_available: boolean
   service_areas: string[] | null
-  profiles: {
+  profile: {
     full_name: string | null
     avatar_url: string | null
     phone: string | null
@@ -265,7 +265,7 @@ export function TrainerMatchList({
                 </div>
                 <div>
                   <CardTitle className="flex items-center gap-2">
-                    {trainer.profiles?.full_name || trainer.profiles?.email?.split('@')[0] || '트레이너'}
+                    {trainer.profile?.full_name || trainer.profile?.email?.split('@')[0] || '트레이너'}
                     {index === 0 && (
                       <Badge className="bg-blue-500">최고 매칭</Badge>
                     )}

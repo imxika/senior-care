@@ -20,7 +20,7 @@ interface RecommendedBookingCardProps {
     customer_notes?: string
     created_at: string
     customer?: {
-      profiles?: {
+      profile?: {
         full_name?: string
         email?: string
         phone?: string
@@ -30,9 +30,8 @@ interface RecommendedBookingCardProps {
 }
 
 export function RecommendedBookingCard({ booking }: RecommendedBookingCardProps) {
-  // 고객 이름 추출 (디버깅)
-  const profile = booking.customer?.profiles
-  console.log('Customer profile:', profile)
+  // 고객 이름 추출
+  const profile = booking.customer?.profile
   const customerName = profile?.full_name || profile?.email?.split('@')[0] || '고객'
 
   const date = new Date(booking.booking_date)

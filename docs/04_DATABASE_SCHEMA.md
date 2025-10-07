@@ -281,7 +281,69 @@ const { data: bookings } = await supabase
 
 ---
 
-### 5. notifications (알림)
+### 5. reviews (리뷰)
+
+```sql
+reviews
+├── id: UUID (PK)
+├── booking_id: UUID (FK → bookings.id, UNIQUE) ⭐
+├── customer_id: UUID (FK → customers.id)
+├── trainer_id: UUID (FK → trainers.id)
+├── rating: INTEGER (1-5) ⭐
+├── comment: TEXT (nullable)
+├── trainer_response: TEXT (nullable)
+├── trainer_response_at: TIMESTAMPTZ (nullable)
+├── created_at: TIMESTAMPTZ
+└── updated_at: TIMESTAMPTZ
+
+-- ⚠️ UNIQUE 제약: booking_id
+-- 한 예약당 하나의 리뷰만 작성 가능
+-- CHECK 제약: rating >= 1 AND rating <= 5
+```
+
+**용도**:
+- 완료된 예약에 대한 고객 리뷰
+- 트레이너 평균 평점 계산
+- 트레이너 답글 기능
+
+**중요 포인트**:
+- 완료된 예약(`status = 'completed'`)에만 리뷰 작성 가능
+- `booking_id`에 UNIQUE 제약으로 중복 리뷰 방지
+- 트레이너 답글은 `trainer_response` 필드 사용
+- 리뷰 작성/수정/삭제 시 자동으로 트레이너 평점 업데이트 (트리거)
+
+**리뷰 조회 패턴**:
+```typescript
+// 특정 트레이너의 리뷰 조회
+const { data: reviews } = await supabase
+  .from('reviews')
+  .select(`
+    *,
+    customer:customers(
+      profiles!customers_profile_id_fkey(
+        full_name,
+        avatar_url
+      )
+    ),
+    booking:bookings(
+      booking_date,
+      service_type
+    )
+  `)
+  .eq('trainer_id', trainerId)
+  .order('created_at', { ascending: false })
+
+// 특정 예약의 리뷰 조회
+const { data: review } = await supabase
+  .from('reviews')
+  .select('*')
+  .eq('booking_id', bookingId)
+  .single()
+```
+
+---
+
+### 6. notifications (알림)
 
 ```sql
 notifications
@@ -290,13 +352,12 @@ notifications
 ├── type: TEXT (enum)
 ├── title: TEXT
 ├── message: TEXT
-├── link: TEXT (nullable) ⭐
+├── related_id: UUID (nullable) ⭐
 ├── is_read: BOOLEAN (DEFAULT false)
 ├── read_at: TIMESTAMPTZ
 └── created_at: TIMESTAMPTZ
 
--- ⚠️ link 컬럼: related_id가 아닌 link 사용
--- 예약 상세 페이지 URL 등을 저장 (예: /customer/bookings/{id})
+-- related_id: 관련 엔티티 ID (booking_id, review_id 등)
 ```
 
 **용도**:

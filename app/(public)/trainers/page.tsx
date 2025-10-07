@@ -181,44 +181,49 @@ export default function TrainersPage() {
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredTrainers.map((trainer) => (
-              <Card key={trainer.id} className="hover:shadow-lg transition-shadow relative">
+              <Card key={trainer.id} className="hover:shadow-2xl hover:scale-[1.02] hover:border-primary/50 hover:bg-accent/10 transition-all duration-300 relative group overflow-hidden cursor-pointer">
                 {trainer.sanity?.featured && (
                   <Badge className="absolute top-4 right-4 z-10" variant="secondary">
                     ⭐ 추천
                   </Badge>
                 )}
-                <CardHeader>
-                  {/* 프로필 이미지 & 이름 */}
-                  <div className="flex items-center gap-4 mb-3">
-                    <Avatar className="w-16 h-16">
-                      <AvatarImage
-                        src={trainer.sanity?.profileImage?.asset?.url || trainer.profiles?.avatar_url || undefined}
-                        alt={trainer.profiles?.full_name || '트레이너'}
-                      />
-                      <AvatarFallback className="text-2xl font-bold">
-                        {trainer.profiles?.full_name?.charAt(0) || 'T'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <CardTitle className="text-xl">{trainer.profiles?.full_name || '이름 없음'}</CardTitle>
-                      <div className="flex items-center gap-1 mt-1">
-                        <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                        <span className="font-bold">{trainer.rating?.toFixed(1)}</span>
-                        <span className="text-sm text-muted-foreground">
-                          ({trainer.total_reviews}개 리뷰)
-                        </span>
+
+                {/* 카드 전체를 클릭 가능하게 */}
+                <Link href={`/trainers/${trainer.id}`} className="block">
+                  <CardHeader>
+                    {/* 프로필 이미지 & 이름 */}
+                    <div className="flex items-center gap-4 mb-3">
+                      <Avatar className="w-16 h-16 group-hover:scale-105 transition-transform">
+                        <AvatarImage
+                          src={trainer.sanity?.profileImage?.asset?.url || trainer.profiles?.avatar_url || undefined}
+                          alt={trainer.profiles?.full_name || '트레이너'}
+                        />
+                        <AvatarFallback className="text-2xl font-bold">
+                          {trainer.profiles?.full_name?.charAt(0) || 'T'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <CardTitle className="text-xl group-hover:text-primary transition-colors">
+                          {trainer.profiles?.full_name || '이름 없음'}
+                        </CardTitle>
+                        <div className="flex items-center gap-1 mt-1">
+                          <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                          <span className="font-bold">{trainer.rating?.toFixed(1)}</span>
+                          <span className="text-sm text-muted-foreground">
+                            ({trainer.total_reviews}개 리뷰)
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* 경력 */}
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Award className="w-4 h-4" />
-                    <span>{trainer.years_experience}년 경력</span>
-                  </div>
-                </CardHeader>
+                    {/* 경력 */}
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Award className="w-4 h-4" />
+                      <span>{trainer.years_experience}년 경력</span>
+                    </div>
+                  </CardHeader>
 
-                <CardContent className="space-y-3">
+                  <CardContent className="space-y-3">
                   {/* Sanity 소개 또는 기본 bio */}
                   {trainer.sanity?.shortBio && (
                     <p className="text-sm text-muted-foreground line-clamp-2">
@@ -269,29 +274,25 @@ export default function TrainersPage() {
                       </p>
                     </div>
                   )}
-                </CardContent>
+                  </CardContent>
+                </Link>
 
+                {/* 예약하기 버튼만 별도 액션 */}
                 <CardFooter>
                   {currentUserTrainerId === trainer.id ? (
-                    <div className="w-full">
-                      <Button disabled className="w-full h-12 text-base" variant="outline">
-                        내 프로필
-                      </Button>
-                      <p className="text-xs text-center text-muted-foreground mt-2">
-                        본인의 프로필입니다
-                      </p>
-                    </div>
+                    <Button disabled className="w-full h-12 text-base" variant="outline">
+                      내 프로필
+                    </Button>
                   ) : currentUserTrainerId ? (
-                    <div className="w-full">
-                      <Button disabled className="w-full h-12 text-base" variant="outline">
-                        예약 불가
-                      </Button>
-                      <p className="text-xs text-center text-muted-foreground mt-2">
-                        트레이너는 예약을 생성할 수 없습니다
-                      </p>
-                    </div>
+                    <Button disabled className="w-full h-12 text-base" variant="outline">
+                      예약 불가
+                    </Button>
                   ) : (
-                    <Link href={`/trainers/${trainer.id}/booking?session=${sessionType}&service=${serviceType}`} className="w-full">
+                    <Link
+                      href={`/trainers/${trainer.id}/booking?session=${sessionType}&service=${serviceType}`}
+                      className="w-full"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <Button className="w-full h-12 text-base">
                         예약하기
                       </Button>

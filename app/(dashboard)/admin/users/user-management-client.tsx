@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
-import { Trash2, Search, AlertTriangle, Edit, UserPlus } from 'lucide-react'
+import { Trash2, Search, AlertTriangle, Edit, UserPlus, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { deleteUserCompletely, updateUser, createProfile } from './actions'
 import {
   AlertDialog,
@@ -55,6 +55,8 @@ export function UserManagementClient({ users: initialUsers }: Props) {
   const [users, setUsers] = useState(initialUsers)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterType, setFilterType] = useState<string>('all')
+  const [sortColumn, setSortColumn] = useState<'email' | 'full_name' | 'user_type' | 'created_at' | 'last_sign_in_at'>('created_at')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const [deleteUser, setDeleteUser] = useState<User | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [editUser, setEditUser] = useState<User | null>(null)
@@ -64,16 +66,58 @@ export function UserManagementClient({ users: initialUsers }: Props) {
   const [createForm, setCreateForm] = useState({ full_name: '', user_type: 'customer' })
   const [isCreating, setIsCreating] = useState(false)
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch =
-      user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
+  const handleSort = (column: typeof sortColumn) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortColumn(column)
+      setSortDirection('desc')
+    }
+  }
 
-    const matchesFilter =
-      filterType === 'all' || user.user_type === filterType
+  const getSortIcon = (column: typeof sortColumn) => {
+    if (sortColumn !== column) {
+      return <ArrowUpDown className="h-4 w-4 opacity-30" />
+    }
+    return sortDirection === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
+  }
 
-    return matchesSearch && matchesFilter
-  })
+  const filteredUsers = users
+    .filter(user => {
+      const matchesSearch =
+        user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
+
+      const matchesFilter =
+        filterType === 'all' || user.user_type === filterType
+
+      return matchesSearch && matchesFilter
+    })
+    .sort((a, b) => {
+      let comparison = 0
+
+      switch (sortColumn) {
+        case 'email':
+          comparison = (a.email || '').localeCompare(b.email || '')
+          break
+        case 'full_name':
+          comparison = (a.full_name || '').localeCompare(b.full_name || '')
+          break
+        case 'user_type':
+          comparison = a.user_type.localeCompare(b.user_type)
+          break
+        case 'created_at':
+          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          break
+        case 'last_sign_in_at':
+          const aTime = a.last_sign_in_at ? new Date(a.last_sign_in_at).getTime() : 0
+          const bTime = b.last_sign_in_at ? new Date(b.last_sign_in_at).getTime() : 0
+          comparison = aTime - bTime
+          break
+      }
+
+      return sortDirection === 'asc' ? comparison : -comparison
+    })
 
   const handleDelete = async () => {
     if (!deleteUser) return
@@ -211,11 +255,51 @@ export function UserManagementClient({ users: initialUsers }: Props) {
         <table className="w-full">
           <thead className="bg-muted">
             <tr>
-              <th className="text-left p-4">이메일</th>
-              <th className="text-left p-4">이름</th>
-              <th className="text-left p-4">유형</th>
-              <th className="text-left p-4">가입일</th>
-              <th className="text-left p-4">마지막 로그인</th>
+              <th
+                className="text-left p-4 cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                onClick={() => handleSort('email')}
+              >
+                <div className="flex items-center gap-1">
+                  <span>이메일</span>
+                  {getSortIcon('email')}
+                </div>
+              </th>
+              <th
+                className="text-left p-4 cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                onClick={() => handleSort('full_name')}
+              >
+                <div className="flex items-center gap-1">
+                  <span>이름</span>
+                  {getSortIcon('full_name')}
+                </div>
+              </th>
+              <th
+                className="text-left p-4 cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                onClick={() => handleSort('user_type')}
+              >
+                <div className="flex items-center gap-1">
+                  <span>유형</span>
+                  {getSortIcon('user_type')}
+                </div>
+              </th>
+              <th
+                className="text-left p-4 cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                onClick={() => handleSort('created_at')}
+              >
+                <div className="flex items-center gap-1">
+                  <span>가입일</span>
+                  {getSortIcon('created_at')}
+                </div>
+              </th>
+              <th
+                className="text-left p-4 cursor-pointer select-none hover:bg-muted/70 transition-colors"
+                onClick={() => handleSort('last_sign_in_at')}
+              >
+                <div className="flex items-center gap-1">
+                  <span>마지막 로그인</span>
+                  {getSortIcon('last_sign_in_at')}
+                </div>
+              </th>
               <th className="text-right p-4">작업</th>
             </tr>
           </thead>

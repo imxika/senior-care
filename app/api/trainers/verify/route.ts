@@ -13,11 +13,11 @@ export async function POST(request: Request) {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('user_type')
       .eq('id', user.id)
       .single()
 
-    if (profile?.role !== 'admin') {
+    if (profile?.user_type !== 'admin') {
       return NextResponse.json({ error: 'Forbidden: Admin only' }, { status: 403 })
     }
 
@@ -30,6 +30,17 @@ export async function POST(request: Request) {
       )
     }
 
+    // 트레이너 정보 조회 (알림 발송용)
+    const { data: trainer, error: trainerError } = await supabase
+      .from('trainers')
+      .select('profile_id, profiles!trainers_profile_id_fkey(full_name)')
+      .eq('id', trainerId)
+      .single()
+
+    if (trainerError || !trainer) {
+      return NextResponse.json({ error: 'Trainer not found' }, { status: 404 })
+    }
+
     // 트레이너 승인 상태 업데이트
     const { data, error } = await supabase
       .from('trainers')
@@ -40,6 +51,17 @@ export async function POST(request: Request) {
 
     if (error) {
       throw error
+    }
+
+    // 승인 시 트레이너에게 알림 전송
+    if (isVerified) {
+      await supabase.from('notifications').insert({
+        user_id: trainer.profile_id,
+        type: 'trainer_approval_approved',
+        title: '트레이너 승인 완료',
+        message: `축하합니다! 트레이너로 승인되었습니다. 이제 예약을 받을 수 있습니다.`,
+        link: '/trainer/dashboard',
+      })
     }
 
     return NextResponse.json({

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -16,6 +17,7 @@ import {
 import Link from 'next/link'
 import { BOOKING_STATUS_CONFIG } from '@/lib/constants'
 import { BookingFilters } from './booking-filters'
+import { BookingsTable } from './bookings-table'
 import { Eye } from 'lucide-react'
 
 interface PageProps {
@@ -24,8 +26,42 @@ interface PageProps {
     type?: string
     search?: string
     sort?: string
+    direction?: string
     page?: string
   }>
+}
+
+interface BookingWithRelations {
+  id: string
+  customer_id: string
+  trainer_id?: string
+  booking_type: string
+  service_type: string
+  booking_date: string
+  start_time: string
+  end_time: string
+  status: string
+  total_price: number
+  created_at: string
+  updated_at: string
+  admin_matched_at?: string
+  customer?: {
+    id: string
+    profile?: {
+      full_name?: string
+      email?: string
+      phone?: string
+    }
+  }
+  trainer?: {
+    id: string
+    hourly_rate?: number
+    specialties?: string[]
+    profile?: {
+      full_name?: string
+      email?: string
+    }
+  }
 }
 
 const ITEMS_PER_PAGE = 10
@@ -50,30 +86,55 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
     redirect('/')
   }
 
-  // 모든 예약 목록 가져오기
-  const { data: bookings, error } = await supabase
+  // Service Role client for RLS bypass (admin access)
+  const serviceSupabase = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  )
+
+  // 모든 예약 목록 가져오기 (Service Role로 RLS 우회)
+  const { data: bookings, error} = await serviceSupabase
     .from('bookings')
     .select(`
-      *,
-      customer:customers!bookings_customer_id_fkey(
+      id,
+      customer_id,
+      trainer_id,
+      booking_type,
+      service_type,
+      booking_date,
+      start_time,
+      end_time,
+      status,
+      total_price,
+      created_at,
+      updated_at,
+      admin_matched_at,
+      customer:customers!customer_id(
         id,
-        profiles!customers_profile_id_fkey(
+        profile:profiles!profile_id(
           full_name,
           email,
           phone
         )
       ),
-      trainer:trainers(
+      trainer:trainers!trainer_id(
         id,
         hourly_rate,
         specialties,
-        profiles!trainers_profile_id_fkey(
+        profile:profiles!profile_id(
           full_name,
           email
         )
       )
     `)
     .order('created_at', { ascending: false })
+    .limit(200) as { data: BookingWithRelations[] | null; error: any }
 
   if (error) {
     console.error('Error fetching bookings:', error)
@@ -96,9 +157,9 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
   if (params.search) {
     const searchLower = params.search.toLowerCase()
     filteredBookings = filteredBookings.filter(b => {
-      const customerName = b.customer?.profiles?.full_name?.toLowerCase() || ''
-      const customerEmail = b.customer?.profiles?.email?.toLowerCase() || ''
-      const trainerName = b.trainer?.profiles?.full_name?.toLowerCase() || ''
+      const customerName = b.customer?.profile?.full_name?.toLowerCase() || ''
+      const customerEmail = b.customer?.profile?.email?.toLowerCase() || ''
+      const trainerName = b.trainer?.profile?.full_name?.toLowerCase() || ''
       const bookingId = b.id.toLowerCase()
 
       return customerName.includes(searchLower) ||
@@ -108,23 +169,37 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
     })
   }
 
-  // 정렬
-  const sortBy = params.sort || 'created_at'
+  // 정렬 (기본값: 최근 활동 순)
+  const sortBy = params.sort || 'updated_at'
+  const sortDirection = params.direction || 'desc'
+
   filteredBookings.sort((a, b) => {
+    let comparison = 0
+
     switch (sortBy) {
       case 'booking_date':
-        return new Date(b.booking_date).getTime() - new Date(a.booking_date).getTime()
+        comparison = new Date(a.booking_date).getTime() - new Date(b.booking_date).getTime()
+        break
       case 'created_at':
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        break
+      case 'updated_at':
+        // updated_at이 없으면 created_at 사용
+        comparison = new Date(a.updated_at || a.created_at).getTime() - new Date(b.updated_at || b.created_at).getTime()
+        break
       case 'customer_name':
-        const nameA = a.customer?.profiles?.full_name || ''
-        const nameB = b.customer?.profiles?.full_name || ''
-        return nameA.localeCompare(nameB)
+        const nameA = a.customer?.profile?.full_name || ''
+        const nameB = b.customer?.profile?.full_name || ''
+        comparison = nameA.localeCompare(nameB)
+        break
       case 'status':
-        return a.status.localeCompare(b.status)
+        comparison = a.status.localeCompare(b.status)
+        break
       default:
-        return 0
+        comparison = 0
     }
+
+    return sortDirection === 'asc' ? comparison : -comparison
   })
 
   // 승인대기 항목을 최상단으로
@@ -198,68 +273,12 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
         </div>
 
         {/* Bookings Table */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between gap-4">
-              <CardTitle>예약 목록 ({filteredBookings.length}건)</CardTitle>
-              <BookingFilters />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="px-4 py-3 text-left text-xs font-medium">예약번호</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium">타입</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium">고객</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium">트레이너</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium">예약일시</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium">생성일</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium">상태</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium">액션</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {paginatedBookings.map(booking => (
-                    <BookingTableRow key={booking.id} booking={booking} />
-                  ))}
-                  {paginatedBookings.length === 0 && (
-                    <tr>
-                      <td colSpan={8} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                        예약이 없습니다.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-4">
-                <p className="text-sm text-muted-foreground">
-                  {startIndex + 1}-{Math.min(endIndex, filteredBookings.length)} / {filteredBookings.length}건
-                </p>
-                <div className="flex gap-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <Link
-                      key={page}
-                      href={`/admin/bookings?page=${page}&status=${params.status || ''}&type=${params.type || ''}&search=${params.search || ''}&sort=${params.sort || ''}`}
-                    >
-                      <Button
-                        variant={page === currentPage ? 'default' : 'outline'}
-                        size="sm"
-                      >
-                        {page}
-                      </Button>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <BookingsTable
+          bookings={filteredBookings}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          params={params}
+        />
       </div>
     </>
   )
@@ -278,100 +297,5 @@ function StatCard({ title, count, variant }: { title: string; count: number; var
         <div className={`text-2xl font-bold mt-2 ${colorClass}`}>{count}</div>
       </CardContent>
     </Card>
-  )
-}
-
-interface BookingTableRowProps {
-  booking: {
-    id: string
-    status: string
-    booking_date: string
-    start_time: string
-    created_at: string
-    booking_type: string
-    trainer_id?: string
-    customer?: {
-      profiles?: {
-        full_name?: string
-        email?: string
-      }
-    }
-    trainer?: {
-      profiles?: {
-        full_name?: string
-      }
-    }
-  }
-}
-
-function BookingTableRow({ booking }: BookingTableRowProps) {
-  const statusConfig = BOOKING_STATUS_CONFIG[booking.status as keyof typeof BOOKING_STATUS_CONFIG] || BOOKING_STATUS_CONFIG.pending
-  const isPending = booking.status === 'pending'
-  const isRecommendedUnmatched = booking.booking_type === 'recommended' && !booking.trainer_id
-
-  // 예약일시
-  const bookingDate = new Date(booking.booking_date)
-  const [hours, minutes] = booking.start_time.split(':')
-  bookingDate.setHours(parseInt(hours), parseInt(minutes))
-
-  // 생성일
-  const createdDate = new Date(booking.created_at)
-
-  return (
-    <tr className={`hover:bg-muted/50 ${isPending ? 'bg-yellow-50' : ''}`}>
-      <td className="px-4 py-3 text-sm font-mono">#{booking.id.slice(0, 8)}</td>
-      <td className="px-4 py-3">
-        {booking.booking_type === 'recommended' ? (
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-            추천
-          </Badge>
-        ) : (
-          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-            지정
-          </Badge>
-        )}
-      </td>
-      <td className="px-4 py-3">
-        <div className="text-sm font-medium">
-          {booking.customer?.profiles?.full_name || '정보 없음'}
-        </div>
-        <div className="text-xs text-muted-foreground">{booking.customer?.profiles?.email}</div>
-      </td>
-      <td className="px-4 py-3">
-        <div className="text-sm">
-          {booking.trainer?.profiles?.full_name || (
-            <span className="text-muted-foreground">
-              {isRecommendedUnmatched ? '매칭 대기' : '-'}
-            </span>
-          )}
-        </div>
-      </td>
-      <td className="px-4 py-3 text-sm">
-        {bookingDate.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })} {bookingDate.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
-      </td>
-      <td className="px-4 py-3 text-sm text-muted-foreground">
-        {createdDate.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
-      </td>
-      <td className="px-4 py-3">
-        <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
-      </td>
-      <td className="px-4 py-3">
-        <div className="flex gap-1">
-          {isRecommendedUnmatched && (
-            <Link href={`/admin/bookings/recommended/${booking.id}/match`}>
-              <Button variant="default" size="sm">
-                매칭
-              </Button>
-            </Link>
-          )}
-          <Link href={`/admin/bookings/${booking.id}`}>
-            <Button variant="ghost" size="sm">
-              <Eye className="h-4 w-4 mr-1" />
-              상세보기
-            </Button>
-          </Link>
-        </div>
-      </td>
-    </tr>
   )
 }

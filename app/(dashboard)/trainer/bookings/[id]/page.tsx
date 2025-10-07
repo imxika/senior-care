@@ -1,12 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { redirect, notFound } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Calendar, Clock, MapPin, User, DollarSign, Phone, Mail } from 'lucide-react'
+import { Calendar, Clock, MapPin, User, DollarSign, Phone, Mail, Star } from 'lucide-react'
 import Link from 'next/link'
 import { BookingActions } from './booking-actions'
 import { TrainerNotesForm } from './trainer-notes-form'
+import { TrainerReviewResponse } from '@/components/trainer-review-response'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -32,8 +34,20 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
     redirect('/')
   }
 
+  // RLS를 우회하기 위해 Service Role 사용 (고객 정보 조회용)
+  const serviceSupabase = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  )
+
   // 예약 정보 조회
-  const { data: booking, error } = await supabase
+  const { data: booking, error } = await serviceSupabase
     .from('bookings')
     .select(`
       *,
@@ -47,7 +61,7 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
         emergency_phone,
         medical_conditions,
         mobility_level,
-        profiles!customers_profile_id_fkey(
+        profile:profiles!customers_profile_id_fkey(
           full_name,
           phone,
           email
@@ -65,11 +79,30 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
     .single()
 
   if (error || !booking) {
+    console.error('Booking fetch error:', error)
     notFound()
   }
 
+  // Debug: Check full booking data structure
+  console.log('Full booking data:', JSON.stringify(booking, null, 2))
+  console.log('Customer ID:', booking.customer_id)
+  console.log('Booking customer data:', JSON.stringify(booking.customer, null, 2))
+
+  // 리뷰 정보 조회 (완료된 예약만)
+  let review = null
+  if (booking.status === 'completed') {
+    const { data: reviewData } = await supabase
+      .from('reviews')
+      .select('*')
+      .eq('booking_id', id)
+      .single()
+
+    review = reviewData
+  }
+
   const formatDate = (date: string) => {
-    const d = new Date(date)
+    // KST timezone interpretation
+    const d = new Date(date + 'T00:00:00+09:00')
     const year = d.getFullYear()
     const month = d.getMonth() + 1
     const day = d.getDate()
@@ -247,7 +280,7 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
                     <div>
                       <p className="text-sm text-muted-foreground">이름</p>
                       <p className="font-medium text-base md:text-lg">
-                        {booking.customer.profiles?.full_name || '이름 없음'}
+                        {booking.customer.profile?.full_name || '이름 없음'}
                       </p>
                     </div>
                   </div>
@@ -278,22 +311,22 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
 
                 {/* 연락처 */}
                 <div className="pt-3 md:pt-4 border-t space-y-2">
-                  {booking.customer.profiles?.phone && (
+                  {booking.customer.profile?.phone && (
                     <div className="flex items-center gap-3">
                       <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
                       <div>
                         <p className="text-sm text-muted-foreground">연락처</p>
-                        <p className="font-medium text-sm md:text-base">{booking.customer.profiles.phone}</p>
+                        <p className="font-medium text-sm md:text-base">{booking.customer.profile.phone}</p>
                       </div>
                     </div>
                   )}
 
-                  {booking.customer.profiles?.email && (
+                  {booking.customer.profile?.email && (
                     <div className="flex items-center gap-3">
                       <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
                       <div className="min-w-0">
                         <p className="text-sm text-muted-foreground">이메일</p>
-                        <p className="font-medium text-sm md:text-base break-all">{booking.customer.profiles.email}</p>
+                        <p className="font-medium text-sm md:text-base break-all">{booking.customer.profile.email}</p>
                       </div>
                     </div>
                   )}
@@ -401,6 +434,86 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
             />
           </CardContent>
         </Card>
+
+        {/* 리뷰 정보 (완료된 예약만) */}
+        {booking.status === 'completed' && review && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg md:text-xl flex items-center gap-2">
+                <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                고객 리뷰
+              </CardTitle>
+              <CardDescription className="text-sm">
+                이 예약에 대한 고객의 리뷰입니다
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* 별점 */}
+              <div className="flex items-center gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    className={`h-5 w-5 md:h-6 md:w-6 ${
+                      star <= review.rating
+                        ? 'fill-yellow-400 text-yellow-400'
+                        : 'text-gray-300'
+                    }`}
+                  />
+                ))}
+                <span className="font-bold text-lg ml-2">{review.rating}.0</span>
+              </div>
+
+              {/* 리뷰 내용 */}
+              {review.comment && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">리뷰 내용</p>
+                  <p className="text-sm md:text-base whitespace-pre-wrap bg-muted/50 p-3 md:p-4 rounded-lg">
+                    {review.comment}
+                  </p>
+                </div>
+              )}
+
+              {/* 작성일 */}
+              <div className="text-xs text-muted-foreground">
+                작성일: {new Date(review.created_at).toLocaleDateString('ko-KR', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </div>
+
+              {/* 트레이너 답글 */}
+              <div className="pt-3 border-t">
+                <TrainerReviewResponse
+                  reviewId={review.id}
+                  existingResponse={review.trainer_response}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 리뷰 대기 안내 (완료됐지만 리뷰 없는 경우) */}
+        {booking.status === 'completed' && !review && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg md:text-xl flex items-center gap-2">
+                <Star className="h-5 w-5 text-muted-foreground" />
+                고객 리뷰
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-6 text-muted-foreground">
+                <Star className="h-12 w-12 md:h-16 md:w-16 text-muted-foreground/20 mx-auto mb-3" />
+                <p className="text-sm md:text-base">
+                  아직 고객이 리뷰를 작성하지 않았습니다
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   )

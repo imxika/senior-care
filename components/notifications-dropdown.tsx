@@ -234,6 +234,7 @@ export function NotificationsDropdown() {
                 onClick={() => {
                   markAsRead(notification.id)
                   const link = getNotificationLink(notification)
+                  console.log('🔗 Notification link:', link, 'notification:', notification)
                   if (link !== '#') {
                     window.location.href = link
                   }

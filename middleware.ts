@@ -65,10 +65,8 @@ export async function middleware(request: NextRequest) {
       .single()
 
     // If trying to access login page while logged in, redirect based on user type
-    if (request.nextUrl.pathname === '/login') {
-      if (!profile) {
-        return NextResponse.redirect(new URL('/auth/select-type', request.url))
-      } else if (profile.user_type === 'customer') {
+    if (request.nextUrl.pathname === '/login' && profile) {
+      if (profile.user_type === 'customer') {
         return NextResponse.redirect(new URL('/customer/dashboard', request.url))
       } else if (profile.user_type === 'trainer') {
         return NextResponse.redirect(new URL('/trainer/dashboard', request.url))

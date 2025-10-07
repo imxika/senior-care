@@ -12,11 +12,19 @@ export async function getCurrentUser() {
       return { user: null, userType: null }
     }
 
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('user_type')
       .eq('id', user.id)
       .single()
+
+    if (profileError) {
+      console.error('Profile fetch error:', {
+        error: profileError,
+        userId: user.id,
+        email: user.email
+      })
+    }
 
     return {
       user: {
