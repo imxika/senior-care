@@ -627,6 +627,92 @@ CREATE TRIGGER on_auth_user_created
 
 ---
 
+## Admin Service Role 패턴 (Day 8 추가)
+
+### Admin 페이지에서 RLS 우회
+Admin 페이지는 모든 데이터에 접근해야 하므로 Service Role 클라이언트를 사용합니다.
+
+**Service Role 클라이언트 생성**:
+```typescript
+import { createClient as createServiceClient } from '@supabase/supabase-js'
+
+// Service Role client for RLS bypass (admin access)
+const serviceSupabase = createServiceClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+)
+```
+
+**사용 예시**:
+```typescript
+// Admin 통계 대시보드
+const { data: bookings } = await serviceSupabase
+  .from('bookings')
+  .select(`
+    *,
+    trainer:trainers(id, hourly_rate)
+  `)
+  .order('created_at', { ascending: false })
+```
+
+**주의사항**:
+- Service Role 키는 절대 클라이언트에 노출하지 말 것
+- Server Component에서만 사용
+- Admin 페이지에서만 사용
+- 모든 RLS 정책을 우회함
+
+---
+
+## Supabase 관계 쿼리 구문 (Day 8 표준화)
+
+### ✅ 올바른 관계 쿼리 구문
+```typescript
+// 올바른 형식: relation:table!foreign_key
+const { data } = await supabase
+  .from('bookings')
+  .select(`
+    *,
+    customer:customers!customer_id(
+      id,
+      profile:profiles!profile_id(
+        full_name,
+        email
+      )
+    ),
+    trainer:trainers!trainer_id(
+      id,
+      profile:profiles!profile_id(
+        full_name,
+        email
+      )
+    )
+  `)
+```
+
+### ❌ 잘못된 구문 (사용 금지)
+```typescript
+// ❌ 틀림: Supabase 자동 생성 foreign key 이름 사용
+customers!bookings_customer_id_fkey(...)
+profiles!trainers_profile_id_fkey(...)
+
+// ❌ 틀림: 복수형 이름
+customers(...)
+profiles(...)  // 여러 개를 의미하게 됨
+```
+
+### 📝 네이밍 규칙
+- **테이블 별칭**: 단수형 사용 (`customer`, `trainer`, `profile`)
+- **foreign key**: 테이블명_id 형식 (`customer_id`, `trainer_id`, `profile_id`)
+- **형식**: `별칭:테이블명!foreign_key`
+
+---
+
 ## RLS (Row Level Security) 정책
 
 ### profiles 테이블
@@ -841,9 +927,10 @@ WITH CHECK (
 
 ---
 
-**마지막 업데이트**: 2025-10-05
+**마지막 업데이트**: 2025-10-08
 **작성자**: Claude Code
-**버전**: 2.1
+**버전**: 2.2
 **변경사항**:
-- notification_type `booking_pending` 사용처 명시 (어드민 알림 포함)
-- notification_settings 테이블 추가 (알림 설정 기능)
+- Admin RLS 패턴 추가 (Service Role 클라이언트)
+- Supabase 관계 쿼리 구문 표준화 (`relation:table!foreign_key`)
+- 모든 `profiles` 참조를 `profile` (단수형)로 통일
