@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/breadcrumb'
 import { SuccessMessage } from '@/components/success-message'
 import { CustomerBookingFilters } from './customer-booking-filters'
+import { BookingDateDisplay } from '@/components/booking-date-display'
 
 interface PageProps {
   searchParams: Promise<{
@@ -165,44 +166,6 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
   // 타입 표시 함수
   const getTypeBadge = (type: string) => {
     return type === 'direct' ? '지정' : '추천'
-  }
-
-  // 날짜 포맷 함수 (서버에서 미리 포맷팅)
-  const formatBookingDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const year = String(date.getFullYear()).slice(2)
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    const weekday = ['일', '월', '화', '수', '목', '금', '토'][date.getDay()]
-    const hours = String(date.getHours()).padStart(2, '0')
-    const minutes = String(date.getMinutes()).padStart(2, '0')
-    return `${year}.${month}.${day} (${weekday}) ${hours}:${minutes}`
-  }
-
-  const formatCreatedDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const year = String(date.getFullYear()).slice(2)
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    return `${year}.${month}.${day}`
-  }
-
-  const formatFullDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    const hours = String(date.getHours()).padStart(2, '0')
-    const minutes = String(date.getMinutes()).padStart(2, '0')
-    return `${year}.${month}.${day} ${hours}:${minutes}`
-  }
-
-  const formatDateOnly = (dateString: string) => {
-    const date = new Date(dateString)
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    return `${year}.${month}.${day}`
   }
 
   return (
@@ -360,12 +323,12 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
                           <div className="space-y-1 text-sm">
                             <div className="flex items-center gap-2 text-muted-foreground">
                               <Calendar className="h-3.5 w-3.5 shrink-0" />
-                              <span>{formatBookingDate(booking.booking_date)}</span>
+                              <BookingDateDisplay date={booking.booking_date} format="booking" />
                             </div>
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                               <span className="font-mono">{booking.id.slice(0, 8)}</span>
                               <span>•</span>
-                              <span>{formatCreatedDate(booking.created_at)}</span>
+                              <BookingDateDisplay date={booking.created_at} format="created" />
                             </div>
                           </div>
                         </div>
@@ -412,10 +375,10 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
                             )}
                           </td>
                           <td className="p-3">
-                            {formatFullDate(booking.booking_date)}
+                            <BookingDateDisplay date={booking.booking_date} format="full" />
                           </td>
                           <td className="p-3 text-sm text-muted-foreground">
-                            {formatDateOnly(booking.created_at)}
+                            <BookingDateDisplay date={booking.created_at} format="date-only" />
                           </td>
                           <td className="p-3">
                             <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>
