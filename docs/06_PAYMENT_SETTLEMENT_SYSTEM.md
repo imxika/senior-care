@@ -1,7 +1,7 @@
 # 💰 결제 & 정산 시스템 설계
 
 **작성일**: 2025-10-09
-**버전**: 1.0
+**버전**: 1.2
 **상태**: 설계 단계
 
 ---
@@ -12,12 +12,13 @@
 2. [결제 플로우](#결제-플로우)
 3. [환불 정책](#환불-정책)
 4. [크레딧 & 보증금 시스템](#크레딧--보증금-시스템)
-5. [동적 환불 정책 시스템](#동적-환불-정책-시스템) ⭐ NEW
-6. [데이터베이스 스키마](#데이터베이스-스키마)
-7. [정산 계산 로직](#정산-계산-로직)
-8. [API 엔드포인트](#api-엔드포인트)
-9. [Admin 환불 정책 관리 UI](#admin-환불-정책-관리-ui) ⭐ NEW
-10. [토스페이먼츠 연동](#토스페이먼츠-연동)
+5. [동적 환불 정책 시스템](#동적-환불-정책-시스템)
+6. [분할 결제 시스템 (1:N 결제)](#분할-결제-시스템-1n-결제) ⭐ NEW
+7. [데이터베이스 스키마](#데이터베이스-스키마)
+8. [정산 계산 로직](#정산-계산-로직)
+9. [API 엔드포인트](#api-엔드포인트)
+10. [Admin 환불 정책 관리 UI](#admin-환불-정책-관리-ui)
+11. [토스페이먼츠 연동](#토스페이먼츠-연동)
 
 ---
 
@@ -365,6 +366,694 @@ const calculateWithPolicy = async (booking, payment) => {
 
 ---
 
+## 👥 분할 결제 시스템 (1:N 결제)
+
+### 📋 비즈니스 요구사항
+
+**서비스 유형**:
+- 1:1, 1:2, 1:3 등 다인 서비스 제공 가능
+- **1:N = 트레이너 1명 + 고객 N명**
+
+**분할 결제 원칙**:
+1. **호스트가 초대**: 예약자(호스트)가 함께할 사람 초대
+2. **호스트가 먼저 결제**: 트레이너 승인 시 호스트가 **전액 100% 결제**
+3. **초대자 승인 시 환불 & 재결제**: 초대자가 승인하면 호스트에게 부분 환불 + 초대자에게 청구
+4. **서비스 인원 보장**: 초대자 미승인 시에도 **서비스는 신청한 인원으로 진행**
+5. **초대 기한**: 서비스 이용일 전까지 언제든 초대 및 승인 가능
+
+---
+
+### 🔄 분할 결제 프로세스
+
+#### 1️⃣ 예약 신청 (1:3 예시)
+
+```
+고객 A (호스트) → 1:3 서비스 신청
+                → 총 금액: 150,000원
+                → 예상 분할: 50,000원 × 3명
+                → bookings.group_size = 3
+                → bookings.host_customer_id = A의 customer_id
+```
+
+#### 2️⃣ 트레이너 승인 & 호스트 전액 결제
+
+```
+트레이너 승인 → bookings.status = 'confirmed'
+            → 💰 호스트 A가 전액 결제: 150,000원
+            → payments 테이블 INSERT
+              - amount: 150,000원
+              - customer_id: A
+              - payment_status: 'paid'
+            → split_payments 테이블 INSERT
+              - payment_id: {생성된 payment ID}
+              - host_customer_id: A
+              - total_participants: 3
+              - confirmed_participants: 1
+              - host_share: 150,000원 (100%)
+```
+
+#### 3️⃣ 호스트가 초대자 초대
+
+```
+호스트 A → 초대자 B, C 초대
+        → split_payment_invitations 테이블 INSERT
+          - invitation_status: 'pending'
+          - invited_customer_id: B
+          - share_amount: 50,000원 (균등 분할)
+          - invited_customer_id: C
+          - share_amount: 50,000원
+```
+
+#### 4️⃣ 초대자 승인 & 결제 (Case 1: 모두 승인)
+
+**초대자 B 승인**:
+```
+초대자 B 승인 → 💰 B에게 50,000원 청구 (토스 결제)
+            → 💸 호스트 A에게 50,000원 환불
+            → payments 테이블 INSERT (B의 결제)
+              - amount: 50,000원
+              - customer_id: B
+              - parent_payment_id: {A의 원래 payment ID}
+            → split_payments 업데이트
+              - confirmed_participants: 2
+              - host_share: 100,000원 (66.7%)
+            → split_payment_invitations 업데이트
+              - invitation_status: 'accepted'
+              - accepted_at: NOW()
+```
+
+**초대자 C 승인**:
+```
+초대자 C 승인 → 💰 C에게 50,000원 청구
+            → 💸 호스트 A에게 50,000원 환불
+            → payments 테이블 INSERT (C의 결제)
+            → split_payments 업데이트
+              - confirmed_participants: 3
+              - host_share: 50,000원 (33.3%)
+            → split_payment_invitations 업데이트
+              - invitation_status: 'accepted'
+```
+
+**최종 결과**:
+- 호스트 A: 50,000원 부담
+- 초대자 B: 50,000원 부담
+- 초대자 C: 50,000원 부담
+- **서비스는 1:3으로 진행**
+
+#### 5️⃣ 초대자 승인 & 결제 (Case 2: 일부만 승인)
+
+**초대자 B만 승인, C는 미승인**:
+```
+초대자 B 승인 → 💰 B에게 50,000원 청구
+            → 💸 호스트 A에게 50,000원 환불
+            → split_payments 업데이트
+              - confirmed_participants: 2
+              - host_share: 100,000원 (66.7%)
+
+초대자 C 미승인 → 초대 유효 (서비스 이용일까지 승인 가능)
+              → 호스트 A는 계속 100,000원 부담
+              → **서비스는 여전히 1:3으로 진행**
+```
+
+**최종 결과**:
+- 호스트 A: 100,000원 부담 (66.7%)
+- 초대자 B: 50,000원 부담 (33.3%)
+- 초대자 C: 미참여 (호스트가 부담)
+- **서비스는 1:3으로 진행** (트레이너는 150,000원의 85% 정산)
+
+#### 6️⃣ 초대자 승인 & 결제 (Case 3: 모두 미승인)
+
+**초대자 B, C 모두 미승인**:
+```
+서비스 이용일까지 미승인 → 호스트 A가 전액 150,000원 부담
+                       → split_payments
+                         - confirmed_participants: 1
+                         - host_share: 150,000원 (100%)
+                       → **서비스는 1:3으로 진행**
+```
+
+**최종 결과**:
+- 호스트 A: 150,000원 전액 부담
+- 초대자 B, C: 미참여
+- **서비스는 1:3으로 진행**
+
+---
+
+### 🔙 분할 결제 취소 & 환불 정책
+
+#### 원칙
+1. **전체 취소만 가능**: 일부 참여자만 취소 불가
+2. **환불은 개별 지급**: 각자가 실제 낸 금액에 환불율 적용
+3. **호스트가 취소 권한**: 호스트만 예약 취소 가능
+4. **인원 변경 시**: 전체 취소 → 재예약 필요
+
+#### 환불 시나리오
+
+**Case 1: 서비스 72시간 전 취소 (3명 모두 결제 완료)**
+```
+예약 총액: 150,000원
+분할 결제:
+  - 호스트 A: 50,000원
+  - 초대자 B: 50,000원
+  - 초대자 C: 50,000원
+
+환불율: 90% (72시간 이상 전 취소)
+
+환불 금액:
+  - 호스트 A: 50,000 × 0.90 = 45,000원
+  - 초대자 B: 50,000 × 0.90 = 45,000원
+  - 초대자 C: 50,000 × 0.90 = 45,000원
+  - 총 환불: 135,000원
+
+트레이너 정산:
+  - 환불 후 남은 금액: 150,000 - 135,000 = 15,000원
+  - 트레이너 정산액: 15,000 × 0.85 = 12,750원
+  - 플랫폼 수수료: 15,000 × 0.15 = 2,250원
+```
+
+**Case 2: 서비스 48시간 전 취소 (호스트만 100% 부담)**
+```
+예약 총액: 150,000원
+분할 결제:
+  - 호스트 A: 150,000원 (초대자 모두 미승인)
+
+환불율: 70% (48-72시간 전 취소)
+
+환불 금액:
+  - 호스트 A: 150,000 × 0.70 = 105,000원
+
+트레이너 정산:
+  - 환불 후 남은 금액: 150,000 - 105,000 = 45,000원
+  - 트레이너 정산액: 45,000 × 0.85 = 38,250원
+  - 플랫폼 수수료: 45,000 × 0.15 = 6,750원
+```
+
+**Case 3: 서비스 20시간 전 취소 (2명 결제 완료)**
+```
+예약 총액: 150,000원
+분할 결제:
+  - 호스트 A: 100,000원
+  - 초대자 B: 50,000원
+  - 초대자 C: 미승인
+
+환불율: 0% (24시간 이내 취소)
+
+환불 금액:
+  - 호스트 A: 0원
+  - 초대자 B: 0원
+  - 총 환불: 0원
+
+트레이너 정산:
+  - 환불 후 남은 금액: 150,000원 (전액)
+  - 트레이너 정산액: 150,000 × 0.85 = 127,500원
+  - 플랫폼 수수료: 150,000 × 0.15 = 22,500원
+```
+
+---
+
+### 🗄️ 데이터베이스 스키마
+
+#### 1. `split_payments` 테이블
+
+분할 결제 메타 정보를 관리하는 테이블입니다.
+
+```sql
+CREATE TABLE split_payments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  -- 연관 정보
+  payment_id UUID NOT NULL UNIQUE REFERENCES payments(id) ON DELETE CASCADE,
+  booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+
+  -- 호스트 정보
+  host_customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+
+  -- 참여 인원 정보
+  total_participants INTEGER NOT NULL CHECK (total_participants >= 1),
+  confirmed_participants INTEGER DEFAULT 1 CHECK (confirmed_participants >= 1),
+  -- confirmed_participants: 실제 결제 완료한 인원 수
+
+  -- 금액 분배
+  total_amount DECIMAL(10,2) NOT NULL CHECK (total_amount > 0),
+  host_share DECIMAL(10,2) NOT NULL CHECK (host_share >= 0),
+  -- host_share: 호스트가 실제로 부담하는 금액
+
+  per_person_amount DECIMAL(10,2) NOT NULL CHECK (per_person_amount > 0),
+  -- per_person_amount: 1인당 균등 분할 금액
+
+  -- 분할 결제 상태
+  split_status VARCHAR(20) NOT NULL DEFAULT 'pending',
+  -- 'pending'   : 초대 중 (일부 미승인)
+  -- 'completed' : 모든 초대자 승인 완료
+  -- 'partial'   : 일부만 승인 (서비스 진행)
+
+  -- 타임스탬프
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 인덱스
+CREATE INDEX idx_split_payments_payment_id ON split_payments(payment_id);
+CREATE INDEX idx_split_payments_booking_id ON split_payments(booking_id);
+CREATE INDEX idx_split_payments_host_customer_id ON split_payments(host_customer_id);
+CREATE INDEX idx_split_payments_split_status ON split_payments(split_status);
+
+-- updated_at 자동 업데이트
+CREATE TRIGGER update_split_payments_updated_at
+  BEFORE UPDATE ON split_payments
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- RLS 정책
+ALTER TABLE split_payments ENABLE ROW LEVEL SECURITY;
+
+-- 호스트와 참여자는 본인이 포함된 분할 결제만 조회
+CREATE POLICY "Users can view their own split payments"
+  ON split_payments FOR SELECT
+  USING (
+    host_customer_id IN (
+      SELECT id FROM customers WHERE profile_id = auth.uid()
+    )
+    OR
+    id IN (
+      SELECT split_payment_id FROM split_payment_invitations
+      WHERE invited_customer_id IN (
+        SELECT id FROM customers WHERE profile_id = auth.uid()
+      )
+    )
+  );
+
+-- Admin: 모든 분할 결제 조회
+CREATE POLICY "Admins can manage all split payments"
+  ON split_payments FOR ALL
+  USING (
+    auth.uid() IN (
+      SELECT id FROM profiles WHERE user_type = 'admin'
+    )
+  );
+```
+
+#### 2. `split_payment_invitations` 테이블
+
+초대자별 결제 정보를 관리하는 테이블입니다.
+
+```sql
+CREATE TABLE split_payment_invitations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  -- 연관 정보
+  split_payment_id UUID NOT NULL REFERENCES split_payments(id) ON DELETE CASCADE,
+  booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+
+  -- 초대 정보
+  host_customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  invited_customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+
+  -- 초대자의 분담 금액
+  share_amount DECIMAL(10,2) NOT NULL CHECK (share_amount > 0),
+
+  -- 초대 상태
+  invitation_status VARCHAR(20) NOT NULL DEFAULT 'pending',
+  -- 'pending'  : 초대 대기 중
+  -- 'accepted' : 승인 완료 (결제 완료)
+  -- 'expired'  : 기한 만료 (서비스 이용일 지남)
+
+  -- 초대자의 결제 정보
+  participant_payment_id UUID REFERENCES payments(id) ON DELETE SET NULL,
+  -- 초대자가 실제 결제한 payment 레코드
+
+  -- 타임스탬프
+  invited_at TIMESTAMPTZ DEFAULT NOW(),
+  accepted_at TIMESTAMPTZ,
+  expired_at TIMESTAMPTZ,
+
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+  -- 제약 조건
+  CONSTRAINT no_self_invitation CHECK (host_customer_id != invited_customer_id),
+  CONSTRAINT unique_invitation UNIQUE (split_payment_id, invited_customer_id)
+);
+
+-- 인덱스
+CREATE INDEX idx_split_invitations_split_payment_id ON split_payment_invitations(split_payment_id);
+CREATE INDEX idx_split_invitations_invited_customer_id ON split_payment_invitations(invited_customer_id);
+CREATE INDEX idx_split_invitations_invitation_status ON split_payment_invitations(invitation_status);
+CREATE INDEX idx_split_invitations_booking_id ON split_payment_invitations(booking_id);
+
+-- updated_at 자동 업데이트
+CREATE TRIGGER update_split_invitations_updated_at
+  BEFORE UPDATE ON split_payment_invitations
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- RLS 정책
+ALTER TABLE split_payment_invitations ENABLE ROW LEVEL SECURITY;
+
+-- 호스트는 본인이 보낸 초대만 조회/관리
+CREATE POLICY "Hosts can manage their own invitations"
+  ON split_payment_invitations FOR ALL
+  USING (
+    host_customer_id IN (
+      SELECT id FROM customers WHERE profile_id = auth.uid()
+    )
+  );
+
+-- 초대받은 사람은 본인 초대만 조회
+CREATE POLICY "Invitees can view their own invitations"
+  ON split_payment_invitations FOR SELECT
+  USING (
+    invited_customer_id IN (
+      SELECT id FROM customers WHERE profile_id = auth.uid()
+    )
+  );
+
+-- 초대받은 사람은 본인 초대만 승인 가능
+CREATE POLICY "Invitees can accept their own invitations"
+  ON split_payment_invitations FOR UPDATE
+  USING (
+    invited_customer_id IN (
+      SELECT id FROM customers WHERE profile_id = auth.uid()
+    )
+  )
+  WITH CHECK (
+    invitation_status = 'accepted' AND accepted_at IS NOT NULL
+  );
+
+-- Admin: 모든 초대 조회
+CREATE POLICY "Admins can manage all invitations"
+  ON split_payment_invitations FOR ALL
+  USING (
+    auth.uid() IN (
+      SELECT id FROM profiles WHERE user_type = 'admin'
+    )
+  );
+```
+
+---
+
+### 🧮 분할 결제 계산 로직
+
+#### 1. 초대자 승인 시 금액 재계산
+
+```typescript
+// 초대자가 승인할 때 호스트 분담금 재계산
+async function acceptSplitPaymentInvitation(
+  invitationId: string,
+  invitedCustomerId: string
+) {
+  const supabase = createServiceRoleClient();
+
+  // 1. 초대 정보 조회
+  const { data: invitation } = await supabase
+    .from('split_payment_invitations')
+    .select('*, split_payment:split_payments(*)')
+    .eq('id', invitationId)
+    .single();
+
+  if (!invitation) throw new Error('초대를 찾을 수 없습니다');
+  if (invitation.invitation_status !== 'pending') {
+    throw new Error('이미 처리된 초대입니다');
+  }
+
+  const splitPayment = invitation.split_payment;
+  const shareAmount = invitation.share_amount;
+
+  // 2. 초대자에게 결제 청구 (토스페이먼츠)
+  const participantPayment = await createTossPayment({
+    customerId: invitedCustomerId,
+    bookingId: invitation.booking_id,
+    amount: shareAmount,
+    parentPaymentId: splitPayment.payment_id,
+  });
+
+  // 3. 호스트에게 부분 환불
+  const hostRefund = await createTossRefund({
+    paymentId: splitPayment.payment_id,
+    refundAmount: shareAmount,
+    refundReason: '분할 결제 참여자 승인',
+  });
+
+  // 4. 초대 상태 업데이트
+  await supabase
+    .from('split_payment_invitations')
+    .update({
+      invitation_status: 'accepted',
+      accepted_at: new Date().toISOString(),
+      participant_payment_id: participantPayment.id,
+    })
+    .eq('id', invitationId);
+
+  // 5. split_payments 업데이트
+  const newConfirmedParticipants = splitPayment.confirmed_participants + 1;
+  const newHostShare = splitPayment.host_share - shareAmount;
+
+  await supabase
+    .from('split_payments')
+    .update({
+      confirmed_participants: newConfirmedParticipants,
+      host_share: newHostShare,
+      split_status:
+        newConfirmedParticipants === splitPayment.total_participants
+          ? 'completed'
+          : 'partial',
+    })
+    .eq('id', splitPayment.id);
+
+  return {
+    success: true,
+    newHostShare,
+    confirmedParticipants: newConfirmedParticipants,
+  };
+}
+```
+
+#### 2. 분할 결제 환불 계산
+
+```typescript
+// 분할 결제 취소 시 각 참여자별 환불 계산
+async function refundSplitPayment(
+  bookingId: string,
+  cancelledAt: Date,
+  bookingDate: Date
+) {
+  const supabase = createServiceRoleClient();
+
+  // 1. 분할 결제 정보 조회
+  const { data: splitPayment } = await supabase
+    .from('split_payments')
+    .select('*, payment:payments(*), invitations:split_payment_invitations(*)')
+    .eq('booking_id', bookingId)
+    .single();
+
+  if (!splitPayment) throw new Error('분할 결제 정보를 찾을 수 없습니다');
+
+  // 2. 활성 환불 정책 조회
+  const { data: policy } = await supabase
+    .from('refund_policies')
+    .select('*')
+    .eq('is_active', true)
+    .single();
+
+  // 3. 환불율 계산
+  const refundRate = calculateRefundRate(cancelledAt, bookingDate, policy);
+
+  const refunds = [];
+
+  // 4. 호스트 환불 처리
+  const hostRefundAmount = splitPayment.host_share * refundRate;
+  if (hostRefundAmount > 0) {
+    const hostRefund = await createTossRefund({
+      paymentId: splitPayment.payment_id,
+      refundAmount: hostRefundAmount,
+      refundReason: `예약 취소 (환불율 ${refundRate * 100}%)`,
+    });
+    refunds.push({
+      customerId: splitPayment.host_customer_id,
+      paidAmount: splitPayment.host_share,
+      refundAmount: hostRefundAmount,
+    });
+  }
+
+  // 5. 각 참여자 환불 처리
+  for (const invitation of splitPayment.invitations) {
+    if (invitation.invitation_status === 'accepted' && invitation.participant_payment_id) {
+      const participantRefundAmount = invitation.share_amount * refundRate;
+      if (participantRefundAmount > 0) {
+        const participantRefund = await createTossRefund({
+          paymentId: invitation.participant_payment_id,
+          refundAmount: participantRefundAmount,
+          refundReason: `예약 취소 (환불율 ${refundRate * 100}%)`,
+        });
+        refunds.push({
+          customerId: invitation.invited_customer_id,
+          paidAmount: invitation.share_amount,
+          refundAmount: participantRefundAmount,
+        });
+      }
+    }
+  }
+
+  // 6. 트레이너 정산 계산
+  const totalRefunded = refunds.reduce((sum, r) => sum + r.refundAmount, 0);
+  const remainingAmount = splitPayment.total_amount - totalRefunded;
+  const trainerSettlement = remainingAmount * 0.85;
+  const platformFee = remainingAmount * 0.15;
+
+  return {
+    refunds,
+    totalRefunded,
+    remainingAmount,
+    trainerSettlement,
+    platformFee,
+  };
+}
+```
+
+---
+
+### 📱 UI/UX 플로우
+
+#### 호스트 화면
+
+**1. 예약 신청 시**
+```
+[ 서비스 선택 ]
+○ 1:1 개인 트레이닝 (50,000원)
+● 1:2 듀오 트레이닝 (100,000원) ← 선택
+○ 1:3 그룹 트레이닝 (150,000원)
+
+[ 인원 구성 ]
+👤 나 (홍길동)
+👤 초대할 사람 1명 추가 +
+
+[ 예약하기 ] 버튼
+```
+
+**2. 트레이너 승인 후 결제**
+```
+💳 결제 진행
+
+총 금액: 100,000원
+예상 분담금:
+  - 내 분담금: 50,000원 (50%)
+  - 초대 대기: 50,000원 (50%)
+
+⚠️ 먼저 전액을 결제하시고,
+   초대한 분이 승인하면 부분 환불됩니다.
+
+실제 결제: 100,000원
+
+[ 결제하기 ] 버튼
+```
+
+**3. 결제 완료 후 초대**
+```
+✅ 결제 완료
+
+현재 분담 상태:
+  👤 나 (홍길동): 100,000원 (100%)
+
+[ 친구 초대하기 ] 버튼
+
+초대 링크:
+https://senior-care.com/invite/abc123
+[ 링크 복사 ] [ 카카오톡 공유 ]
+```
+
+**4. 초대자 승인 시**
+```
+🎉 김철수님이 결제를 완료했습니다!
+
+💸 50,000원이 환불되었습니다.
+
+현재 분담 상태:
+  👤 나 (홍길동): 50,000원 (50%)
+  👤 김철수: 50,000원 (50%)
+
+총 2명 / 2명 확정
+```
+
+#### 초대자 화면
+
+**1. 초대 링크 클릭**
+```
+👋 홍길동님의 초대
+
+서비스: 1:2 듀오 트레이닝
+일시: 2025년 10월 15일 오후 2시
+장소: 강남역 5번 출구
+트레이너: 박트레이너
+
+내 분담금: 50,000원
+
+[ 참여하고 결제하기 ] 버튼
+[ 거절하기 ] 버튼
+```
+
+**2. 결제 진행**
+```
+💳 결제 진행
+
+내 분담금: 50,000원
+
+⚠️ 결제 완료 시:
+   - 홍길동님에게 50,000원 환불됩니다
+   - 함께 서비스를 이용하실 수 있습니다
+
+[ 결제하기 ] 버튼
+```
+
+**3. 결제 완료**
+```
+✅ 참여 완료!
+
+홍길동님과 함께 서비스를 이용하실 수 있습니다.
+
+서비스 일시: 2025년 10월 15일 오후 2시
+내 분담금: 50,000원
+
+[ 예약 상세보기 ] 버튼
+```
+
+---
+
+### 🔧 트레이너 정산 (분할 결제)
+
+**원칙**:
+- 분할 결제 여부와 관계없이 **총 결제 금액의 85%** 정산
+- 호스트와 참여자 분담 비율은 트레이너 정산에 영향 없음
+
+**예시 1: 1:3 서비스, 모두 결제 완료**
+```
+총 결제 금액: 150,000원
+분담 내역:
+  - 호스트: 50,000원
+  - 참여자 1: 50,000원
+  - 참여자 2: 50,000원
+
+트레이너 정산:
+  - 정산액: 150,000 × 0.85 = 127,500원
+  - 플랫폼 수수료: 150,000 × 0.15 = 22,500원
+```
+
+**예시 2: 1:3 서비스, 호스트만 결제**
+```
+총 결제 금액: 150,000원
+분담 내역:
+  - 호스트: 150,000원 (100%)
+  - 참여자 1: 미승인
+  - 참여자 2: 미승인
+
+트레이너 정산:
+  - 정산액: 150,000 × 0.85 = 127,500원
+  - 플랫폼 수수료: 150,000 × 0.15 = 22,500원
+
+→ 동일한 정산 금액
+```
+
+---
+
 ## 🗄️ 데이터베이스 스키마
 
 ### 1. bookings 테이블 수정
@@ -375,12 +1064,19 @@ ALTER TABLE bookings
 ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ,
 ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ,
 ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMPTZ,
-ADD COLUMN IF NOT EXISTS cancellation_deadline TIMESTAMPTZ;
+ADD COLUMN IF NOT EXISTS cancellation_deadline TIMESTAMPTZ,
+-- 분할 결제 관련 필드 추가
+ADD COLUMN IF NOT EXISTS group_size INTEGER DEFAULT 1 CHECK (group_size >= 1 AND group_size <= 10),
+ADD COLUMN IF NOT EXISTS host_customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
+ADD COLUMN IF NOT EXISTS is_split_payment BOOLEAN DEFAULT false;
 
 COMMENT ON COLUMN bookings.confirmed_at IS '트레이너 승인 시각 (결제 시점)';
 COMMENT ON COLUMN bookings.completed_at IS '서비스 완료 시각';
 COMMENT ON COLUMN bookings.cancelled_at IS '취소 시각';
 COMMENT ON COLUMN bookings.cancellation_deadline IS '무료 취소 마감 시각 (서비스 24시간 전)';
+COMMENT ON COLUMN bookings.group_size IS '서비스 인원 수 (1:N에서 N값)';
+COMMENT ON COLUMN bookings.host_customer_id IS '분할 결제 호스트 (예약자)';
+COMMENT ON COLUMN bookings.is_split_payment IS '분할 결제 여부';
 ```
 
 #### booking_status enum 업데이트
@@ -552,6 +1248,11 @@ CREATE TABLE payments (
   -- 적용된 정책 (결제 당시의 정책 저장)
   applied_policy_id UUID REFERENCES refund_policies(id),
 
+  -- 분할 결제 관련 (추가)
+  parent_payment_id UUID REFERENCES payments(id) ON DELETE SET NULL,
+  -- 분할 결제 참여자의 경우: 호스트의 원래 payment_id
+  -- NULL: 일반 결제 또는 호스트의 원래 결제
+
   -- 결제 금액
   amount DECIMAL(10,2) NOT NULL CHECK (amount > 0),
   currency VARCHAR(3) DEFAULT 'KRW',
@@ -605,6 +1306,7 @@ CREATE INDEX idx_payments_customer_id ON payments(customer_id);
 CREATE INDEX idx_payments_payment_status ON payments(payment_status);
 CREATE INDEX idx_payments_toss_order_id ON payments(toss_order_id);
 CREATE INDEX idx_payments_paid_at ON payments(paid_at);
+CREATE INDEX idx_payments_parent_payment_id ON payments(parent_payment_id); -- 분할 결제 조회용
 
 -- updated_at 자동 업데이트
 CREATE TRIGGER update_payments_updated_at
@@ -1369,6 +2071,138 @@ Response:
 }
 ```
 
+### 분할 결제 API
+
+#### POST /api/split-payment/create
+```typescript
+// 분할 결제 초대 생성 (호스트)
+Request:
+{
+  "bookingId": "uuid",
+  "totalParticipants": 3,
+  "invitees": [
+    {
+      "email": "friend1@example.com",
+      "phone": "010-1234-5678"
+    },
+    {
+      "email": "friend2@example.com",
+      "phone": "010-2345-6789"
+    }
+  ]
+}
+
+Response:
+{
+  "success": true,
+  "splitPaymentId": "uuid",
+  "invitations": [
+    {
+      "invitationId": "uuid-1",
+      "invitedEmail": "friend1@example.com",
+      "shareAmount": 50000,
+      "inviteLink": "https://senior-care.com/invite/abc123"
+    },
+    {
+      "invitationId": "uuid-2",
+      "invitedEmail": "friend2@example.com",
+      "shareAmount": 50000,
+      "inviteLink": "https://senior-care.com/invite/def456"
+    }
+  ]
+}
+```
+
+#### GET /api/split-payment/invitation/:invitationId
+```typescript
+// 초대 정보 조회 (초대받은 사람)
+Response:
+{
+  "invitationId": "uuid",
+  "hostName": "홍길동",
+  "bookingInfo": {
+    "serviceName": "1:3 그룹 트레이닝",
+    "bookingDate": "2025-10-15",
+    "startTime": "14:00",
+    "location": "강남역 5번 출구",
+    "trainerName": "박트레이너"
+  },
+  "shareAmount": 50000,
+  "invitationStatus": "pending",
+  "expiresAt": "2025-10-15T14:00:00Z"
+}
+```
+
+#### POST /api/split-payment/accept
+```typescript
+// 초대 승인 및 결제 (초대받은 사람)
+Request:
+{
+  "invitationId": "uuid",
+  "customerId": "uuid"
+}
+
+Response:
+{
+  "success": true,
+  "paymentUrl": "https://api.tosspayments.com/v1/payments/...",
+  "orderId": "SPLIT-xxx",
+  "amount": 50000
+}
+```
+
+#### POST /api/split-payment/payment-complete
+```typescript
+// 분할 결제 참여자 결제 완료 (토스 콜백)
+Request:
+{
+  "invitationId": "uuid",
+  "paymentKey": "toss_payment_key",
+  "orderId": "SPLIT-xxx",
+  "amount": 50000
+}
+
+Response:
+{
+  "success": true,
+  "participantPaymentId": "uuid",
+  "hostRefundAmount": 50000,
+  "newHostShare": 100000,
+  "confirmedParticipants": 2,
+  "totalParticipants": 3
+}
+```
+
+#### GET /api/split-payment/:splitPaymentId/status
+```typescript
+// 분할 결제 상태 조회 (호스트)
+Response:
+{
+  "splitPaymentId": "uuid",
+  "totalAmount": 150000,
+  "hostShare": 50000,
+  "totalParticipants": 3,
+  "confirmedParticipants": 3,
+  "splitStatus": "completed",
+  "invitations": [
+    {
+      "invitationId": "uuid-1",
+      "invitedEmail": "friend1@example.com",
+      "shareAmount": 50000,
+      "invitationStatus": "accepted",
+      "acceptedAt": "2025-10-10T10:00:00Z"
+    },
+    {
+      "invitationId": "uuid-2",
+      "invitedEmail": "friend2@example.com",
+      "shareAmount": 50000,
+      "invitationStatus": "accepted",
+      "acceptedAt": "2025-10-10T11:00:00Z"
+    }
+  ]
+}
+```
+
 ---
 
 ## 💳 토스페이먼츠 연동
@@ -1559,13 +2393,16 @@ export async function POST(request: Request) {
 ## 📝 구현 체크리스트
 
 ### Phase 1: 데이터베이스 설정
-- [ ] bookings 테이블 필드 추가 (confirmed_at, completed_at, cancelled_at, cancellation_deadline)
+- [ ] bookings 테이블 필드 추가 (confirmed_at, completed_at, cancelled_at, cancellation_deadline, group_size, host_customer_id, is_split_payment) ⭐ 업데이트
 - [ ] booking_status enum 업데이트
-- [ ] payments 테이블 생성
+- [ ] payments 테이블 생성 (parent_payment_id 포함) ⭐ 업데이트
 - [ ] settlements 테이블 생성
 - [ ] trainer_credits 테이블 생성
 - [ ] withdrawals 테이블 생성
 - [ ] credit_transactions 테이블 생성
+- [ ] refund_policies 테이블 생성 ⭐ NEW
+- [ ] split_payments 테이블 생성 ⭐ NEW
+- [ ] split_payment_invitations 테이블 생성 ⭐ NEW
 - [ ] RLS 정책 설정
 - [ ] 트리거 함수 생성
 
@@ -1606,6 +2443,21 @@ export async function POST(request: Request) {
 - [ ] 크레딧 수동 조정 기능
 - [ ] 통계 대시보드 (수익, 정산 등)
 - [ ] **환불 정책 관리 페이지** ⭐ NEW
+- [ ] **분할 결제 모니터링 페이지** ⭐ NEW
+
+### Phase 7: 분할 결제 시스템 (1:N) ⭐ NEW
+- [ ] 분할 결제 초대 생성 API
+- [ ] 초대 링크 공유 기능 (카카오톡, 링크 복사)
+- [ ] 초대 수락 페이지 (초대받은 사람)
+- [ ] 초대자 결제 프로세스
+- [ ] 호스트 부분 환불 자동 처리
+- [ ] 분할 결제 상태 조회 (호스트)
+- [ ] 분할 결제 취소 시 각 참여자별 환불 처리
+- [ ] 분할 결제 UI 컴포넌트
+  - [ ] 호스트: 서비스 선택 화면 (1:1, 1:2, 1:3)
+  - [ ] 호스트: 초대 관리 페이지
+  - [ ] 초대자: 초대 수락 페이지
+  - [ ] 공통: 분담 상태 표시
 
 ---
 
@@ -2109,7 +2961,7 @@ export default function RefundPolicyPage() {
 
 ---
 
-### Phase 7: 테스트
+### Phase 8: 테스트
 - [ ] 결제 플로우 테스트
 - [ ] 환불 처리 테스트
 - [ ] 정산 계산 정확도 테스트
@@ -2118,15 +2970,48 @@ export default function RefundPolicyPage() {
 - [ ] Edge case 테스트
 - [ ] **환불 정책 변경 테스트** ⭐ NEW
 - [ ] **동적 환불율 계산 테스트** ⭐ NEW
+- [ ] **분할 결제 플로우 테스트** ⭐ NEW
+  - [ ] 호스트 전액 결제 → 초대자 승인 → 부분 환불
+  - [ ] 일부만 승인한 경우 정산 계산
+  - [ ] 분할 결제 취소 시 각 참여자별 환불
+  - [ ] 초대 만료 처리 (서비스 이용일 지남)
+
+---
+
+## 📚 버전 히스토리
+
+### v1.2 (2025-10-09) ⭐ 최신
+**추가 기능**:
+- 분할 결제 시스템 (1:N 결제) 전체 설계
+- `split_payments` 테이블 추가
+- `split_payment_invitations` 테이블 추가
+- bookings 테이블에 분할 결제 필드 추가 (group_size, host_customer_id, is_split_payment)
+- payments 테이블에 parent_payment_id 필드 추가
+- 분할 결제 API 엔드포인트 5개 추가
+- 분할 결제 취소 & 환불 로직 추가
+- UI/UX 플로우 상세 설계 (호스트/초대자)
+- Phase 7: 분할 결제 시스템 구현 체크리스트 추가
+
+### v1.1 (2025-10-09)
+**추가 기능**:
+- 동적 환불 정책 시스템 추가
+- `refund_policies` 테이블 설계
+- Admin 환불 정책 관리 UI 추가
+- payments 테이블에 `applied_policy_id` 필드 추가
+- 실시간 환불 시뮬레이터 UI
+- 환불 정책 변경 이력 관리
+
+### v1.0 (2025-10-09)
+**초기 버전**:
+- 기본 결제 & 정산 시스템 설계
+- 토스페이먼츠 연동 가이드
+- 크레딧 & 보증금 시스템
+- 6개 핵심 테이블 설계
+- RLS 정책 및 트리거 설정
+- 환불 정책 (고정 비율)
 
 ---
 
 **최종 업데이트**: 2025-10-09
-**버전**: 1.1
-**변경사항**:
-- 동적 환불 정책 시스템 추가
-- refund_policies 테이블 설계
-- Admin 환불 정책 관리 UI 추가
-- payments 테이블에 applied_policy_id 필드 추가
-
+**현재 버전**: 1.2
 **다음 단계**: 마이그레이션 파일 생성 및 토스페이먼츠 계정 설정
