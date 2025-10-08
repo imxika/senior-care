@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 /**
  * 결제 API 테스트 페이지
@@ -12,6 +12,35 @@ export default function TestPaymentPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [loadingBookings, setLoadingBookings] = useState(false);
+
+  // 페이지 로드 시 Booking 목록 가져오기
+  useEffect(() => {
+    fetchBookings();
+  }, []);
+
+  const fetchBookings = async () => {
+    setLoadingBookings(true);
+    try {
+      const response = await fetch('/api/bookings/list');
+      const data = await response.json();
+
+      if (data.success) {
+        setBookings(data.data.payableBookings || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch bookings:', err);
+    } finally {
+      setLoadingBookings(false);
+    }
+  };
+
+  // Booking 선택
+  const selectBooking = (booking: any) => {
+    setBookingId(booking.id);
+    setAmount(booking.total_price?.toString() || '100000');
+  };
 
   // 1. 결제 요청 테스트
   const handlePaymentRequest = async () => {
@@ -117,6 +146,54 @@ export default function TestPaymentPage() {
         </button>
       </div>
 
+      {/* Booking 목록 */}
+      <div className="bg-white border rounded-lg p-6 mb-6">
+        <h2 className="text-xl font-semibold mb-4">📋 결제 가능한 예약 목록</h2>
+
+        {loadingBookings ? (
+          <p className="text-gray-500">불러오는 중...</p>
+        ) : bookings.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <p className="mb-2">결제 가능한 예약이 없습니다.</p>
+            <p className="text-sm">먼저 예약을 생성해주세요.</p>
+          </div>
+        ) : (
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {bookings.map((booking: any) => (
+              <div
+                key={booking.id}
+                onClick={() => selectBooking(booking)}
+                className={`border rounded p-3 cursor-pointer hover:bg-blue-50 transition ${
+                  bookingId === booking.id ? 'bg-blue-100 border-blue-500' : ''
+                }`}
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <p className="font-medium">
+                      {booking.trainer?.full_name || '트레이너'} 세션
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {booking.booking_date} {booking.start_time} - {booking.end_time}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1 font-mono">
+                      ID: {booking.id.substring(0, 8)}...
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-blue-600">
+                      {booking.total_price?.toLocaleString()}원
+                    </p>
+                    <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                      {booking.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* 결제 요청 테스트 */}
       <div className="bg-white border rounded-lg p-6 mb-6">
         <h2 className="text-xl font-semibold mb-4">2. 결제 요청 테스트</h2>
@@ -130,11 +207,11 @@ export default function TestPaymentPage() {
               type="text"
               value={bookingId}
               onChange={(e) => setBookingId(e.target.value)}
-              placeholder="예: 123e4567-e89b-12d3-a456-426614174000"
+              placeholder="위 목록에서 선택하거나 직접 입력"
               className="w-full border rounded px-3 py-2"
             />
             <p className="text-xs text-gray-500 mt-1">
-              실제 존재하는 Booking ID를 입력하세요
+              위 목록에서 예약을 클릭하면 자동으로 입력됩니다
             </p>
           </div>
 
