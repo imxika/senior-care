@@ -21,10 +21,17 @@ profiles (사용자 기본 정보)
     ├─→ customers (고객 상세 정보)
     │       ↓ id
     │   bookings (예약)
+    │       ↓ id
+    │   payments (결제) ⭐ NEW
     │       ↓ trainer_id
     └─→ trainers (트레이너 상세 정보)
             ↓ id
         bookings (예약)
+            ↓ id
+        ├─→ payments (결제) ⭐ NEW
+        ├─→ settlements (정산) ⭐ NEW
+        ├─→ trainer_credits (크레딧) ⭐ NEW
+        └─→ withdrawals (출금) ⭐ NEW
 ```
 
 ### 핵심 관계
@@ -927,10 +934,63 @@ WITH CHECK (
 
 ---
 
-**마지막 업데이트**: 2025-10-08
+## 결제 & 정산 시스템
+
+결제 및 정산 시스템의 상세 스키마는 별도 문서를 참조하세요:
+
+**📄 `docs/06_PAYMENT_SETTLEMENT_SYSTEM.md`**
+
+### 결제 관련 테이블 (개요)
+
+```
+payments (결제 정보)
+├── booking_id → bookings.id (UNIQUE)
+├── customer_id → customers.id
+├── toss_payment_key (토스페이먼츠 키)
+└── payment_status ('pending', 'paid', 'refunded', etc.)
+
+settlements (정산 내역)
+├── booking_id → bookings.id (UNIQUE)
+├── payment_id → payments.id
+├── trainer_id → trainers.id
+└── settlement_status ('pending', 'available', 'completed', etc.)
+
+trainer_credits (트레이너 크레딧)
+├── trainer_id → trainers.id (UNIQUE)
+├── available_credits (출금 가능 크레딧)
+├── deposit_required (보증금: 200,000원)
+└── withdrawable_amount (자동 계산)
+
+withdrawals (출금 신청)
+├── trainer_id → trainers.id
+├── withdrawal_amount (출금액)
+└── withdrawal_status ('pending', 'approved', 'completed', etc.)
+
+credit_transactions (크레딧 거래 내역)
+├── trainer_id → trainers.id
+├── transaction_type ('settlement_add', 'penalty_deduct', etc.)
+└── amount (거래 금액)
+```
+
+### 핵심 비즈니스 로직
+
+- **결제 시점**: 트레이너 승인 시 100% 즉시 결제
+- **플랫폼 수수료**: 15%
+- **트레이너 정산**: 총 결제액의 85%
+- **정산 대기**: 서비스 완료 후 15일
+- **보증금**: 200,000원 필수 보유
+- **출금 가능**: 크레딧 - 200,000원
+
+상세 내용은 `docs/06_PAYMENT_SETTLEMENT_SYSTEM.md` 참조
+
+---
+
+**마지막 업데이트**: 2025-10-09
 **작성자**: Claude Code
-**버전**: 2.2
+**버전**: 2.3
 **변경사항**:
+- 결제 & 정산 시스템 테이블 추가 (payments, settlements, trainer_credits, withdrawals, credit_transactions)
+- 결제 관련 테이블 관계도 업데이트
 - Admin RLS 패턴 추가 (Service Role 클라이언트)
 - Supabase 관계 쿼리 구문 표준화 (`relation:table!foreign_key`)
 - 모든 `profiles` 참조를 `profile` (단수형)로 통일
