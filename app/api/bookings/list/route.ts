@@ -15,20 +15,10 @@ export async function GET() {
     // 인증 없어도 테스트용으로 조회 허용 (개발 환경에서만)
     const isAuthenticated = !authError && user;
 
-    // 2. Bookings 조회
+    // 2. Bookings 조회 (간단하게)
     let query = supabase
       .from('bookings')
-      .select(`
-        id,
-        booking_date,
-        start_time,
-        end_time,
-        status,
-        total_price,
-        customer:customers(id, full_name),
-        trainer:trainers(id, full_name),
-        payment:payments(id, payment_status, amount)
-      `)
+      .select('*')
       .order('created_at', { ascending: false })
       .limit(20);
 
@@ -55,10 +45,22 @@ export async function GET() {
       );
     }
 
-    // 3. 예약 분류
-    const payableBookings = bookings?.filter(booking => {
+    // 3. 각 예약의 결제 정보 조회
+    const bookingsWithPayments = await Promise.all(
+      (bookings || []).map(async (booking: any) => {
+        const { data: payments } = await supabase
+          .from('payments')
+          .select('id, payment_status, amount')
+          .eq('booking_id', booking.id);
+
+        return { ...booking, payments };
+      })
+    );
+
+    // 4. 예약 분류
+    const payableBookings = bookingsWithPayments.filter((booking: any) => {
       // 이미 결제된 예약 제외
-      const hasPaidPayment = booking.payment?.some(
+      const hasPaidPayment = booking.payments?.some(
         (p: any) => p.payment_status === 'paid'
       );
 
@@ -66,15 +68,15 @@ export async function GET() {
       return !hasPaidPayment && ['pending', 'confirmed'].includes(booking.status);
     });
 
-    const paidBookings = bookings?.filter(booking => {
+    const paidBookings = bookingsWithPayments.filter((booking: any) => {
       // 결제 완료된 예약
-      const hasPaidPayment = booking.payment?.some(
+      const hasPaidPayment = booking.payments?.some(
         (p: any) => p.payment_status === 'paid'
       );
       return hasPaidPayment;
     });
 
-    const completedBookings = bookings?.filter(booking => {
+    const completedBookings = bookingsWithPayments.filter((booking: any) => {
       // 완료된 예약 (정산 테스트용)
       return booking.status === 'completed';
     });

@@ -42,6 +42,32 @@ export default function TestPaymentPage() {
     setAmount(booking.total_price?.toString() || '100000');
   };
 
+  // 테스트 Booking 생성
+  const handleCreateTestBooking = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/bookings/create-test', {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create test booking');
+      }
+
+      alert('테스트 예약이 생성되었습니다!');
+      // 목록 새로고침
+      fetchBookings();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // 1. 결제 요청 테스트
   const handlePaymentRequest = async () => {
     setLoading(true);
@@ -148,14 +174,23 @@ export default function TestPaymentPage() {
 
       {/* Booking 목록 */}
       <div className="bg-white border rounded-lg p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">📋 결제 가능한 예약 목록</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">📋 결제 가능한 예약 목록</h2>
+          <button
+            onClick={handleCreateTestBooking}
+            disabled={loading}
+            className="bg-green-500 text-white px-4 py-2 rounded text-sm hover:bg-green-600 disabled:bg-gray-400"
+          >
+            {loading ? '생성 중...' : '➕ 테스트 예약 생성'}
+          </button>
+        </div>
 
         {loadingBookings ? (
           <p className="text-gray-500">불러오는 중...</p>
         ) : bookings.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            <p className="mb-2">결제 가능한 예약이 없습니다.</p>
-            <p className="text-sm">먼저 예약을 생성해주세요.</p>
+            <p className="mb-4">결제 가능한 예약이 없습니다.</p>
+            <p className="text-sm mb-4">위 "테스트 예약 생성" 버튼을 클릭하여 테스트용 예약을 만드세요.</p>
           </div>
         ) : (
           <div className="space-y-2 max-h-64 overflow-y-auto">
