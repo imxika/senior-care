@@ -283,6 +283,90 @@ export type Database = {
           },
         ]
       }
+      credit_transactions: {
+        Row: {
+          admin_notes: string | null
+          amount: number
+          balance_after: number
+          balance_before: number
+          booking_id: string | null
+          created_at: string | null
+          description: string
+          id: string
+          processed_by: string | null
+          settlement_id: string | null
+          trainer_id: string
+          transaction_type: string
+          withdrawal_id: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          amount: number
+          balance_after: number
+          balance_before: number
+          booking_id?: string | null
+          created_at?: string | null
+          description: string
+          id?: string
+          processed_by?: string | null
+          settlement_id?: string | null
+          trainer_id: string
+          transaction_type: string
+          withdrawal_id?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          amount?: number
+          balance_after?: number
+          balance_before?: number
+          booking_id?: string | null
+          created_at?: string | null
+          description?: string
+          id?: string
+          processed_by?: string | null
+          settlement_id?: string | null
+          trainer_id?: string
+          transaction_type?: string
+          withdrawal_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_transactions_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_transactions_processed_by_fkey"
+            columns: ["processed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_transactions_settlement_id_fkey"
+            columns: ["settlement_id"]
+            isOneToOne: false
+            referencedRelation: "settlements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_transactions_trainer_id_fkey"
+            columns: ["trainer_id"]
+            isOneToOne: false
+            referencedRelation: "trainers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_transactions_withdrawal_id_fkey"
+            columns: ["withdrawal_id"]
+            isOneToOne: false
+            referencedRelation: "withdrawals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_addresses: {
         Row: {
           address: string
@@ -918,6 +1002,79 @@ export type Database = {
           },
         ]
       }
+      settlements: {
+        Row: {
+          booking_id: string
+          created_at: string | null
+          id: string
+          notes: string | null
+          payment_id: string
+          platform_fee: number
+          service_completed_at: string
+          settlement_amount: number
+          settlement_available_at: string
+          settlement_completed_at: string | null
+          settlement_status: string
+          total_amount: number
+          trainer_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          payment_id: string
+          platform_fee: number
+          service_completed_at: string
+          settlement_amount: number
+          settlement_available_at: string
+          settlement_completed_at?: string | null
+          settlement_status?: string
+          total_amount: number
+          trainer_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          payment_id?: string
+          platform_fee?: number
+          service_completed_at?: string
+          settlement_amount?: number
+          settlement_available_at?: string
+          settlement_completed_at?: string | null
+          settlement_status?: string
+          total_amount?: number
+          trainer_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "settlements_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "settlements_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "settlements_trainer_id_fkey"
+            columns: ["trainer_id"]
+            isOneToOne: false
+            referencedRelation: "trainers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trainer_availability: {
         Row: {
           created_at: string | null
@@ -954,6 +1111,71 @@ export type Database = {
             foreignKeyName: "trainer_availability_trainer_id_fkey"
             columns: ["trainer_id"]
             isOneToOne: false
+            referencedRelation: "trainers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trainer_credits: {
+        Row: {
+          account_status: string | null
+          available_credits: number | null
+          created_at: string | null
+          deposit_required: number | null
+          deposit_status: string | null
+          id: string
+          last_settlement_at: string | null
+          last_withdrawal_at: string | null
+          pending_credits: number | null
+          suspension_reason: string | null
+          total_earned: number | null
+          total_penalty: number | null
+          total_withdrawn: number | null
+          trainer_id: string
+          updated_at: string | null
+          withdrawable_amount: number | null
+        }
+        Insert: {
+          account_status?: string | null
+          available_credits?: number | null
+          created_at?: string | null
+          deposit_required?: number | null
+          deposit_status?: string | null
+          id?: string
+          last_settlement_at?: string | null
+          last_withdrawal_at?: string | null
+          pending_credits?: number | null
+          suspension_reason?: string | null
+          total_earned?: number | null
+          total_penalty?: number | null
+          total_withdrawn?: number | null
+          trainer_id: string
+          updated_at?: string | null
+          withdrawable_amount?: number | null
+        }
+        Update: {
+          account_status?: string | null
+          available_credits?: number | null
+          created_at?: string | null
+          deposit_required?: number | null
+          deposit_status?: string | null
+          id?: string
+          last_settlement_at?: string | null
+          last_withdrawal_at?: string | null
+          pending_credits?: number | null
+          suspension_reason?: string | null
+          total_earned?: number | null
+          total_penalty?: number | null
+          total_withdrawn?: number | null
+          trainer_id?: string
+          updated_at?: string | null
+          withdrawable_amount?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trainer_credits_trainer_id_fkey"
+            columns: ["trainer_id"]
+            isOneToOne: true
             referencedRelation: "trainers"
             referencedColumns: ["id"]
           },
@@ -1077,6 +1299,93 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: true
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      withdrawals: {
+        Row: {
+          account_holder: string
+          account_number: string
+          admin_notes: string | null
+          approved_at: string | null
+          approved_by: string | null
+          bank_name: string
+          completed_at: string | null
+          created_at: string | null
+          failed_at: string | null
+          failure_reason: string | null
+          final_amount: number
+          id: string
+          processed_at: string | null
+          rejected_at: string | null
+          rejection_reason: string | null
+          requested_amount: number
+          requested_at: string | null
+          trainer_id: string
+          updated_at: string | null
+          withdrawal_fee: number | null
+          withdrawal_status: string
+        }
+        Insert: {
+          account_holder: string
+          account_number: string
+          admin_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          bank_name: string
+          completed_at?: string | null
+          created_at?: string | null
+          failed_at?: string | null
+          failure_reason?: string | null
+          final_amount: number
+          id?: string
+          processed_at?: string | null
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          requested_amount: number
+          requested_at?: string | null
+          trainer_id: string
+          updated_at?: string | null
+          withdrawal_fee?: number | null
+          withdrawal_status?: string
+        }
+        Update: {
+          account_holder?: string
+          account_number?: string
+          admin_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          bank_name?: string
+          completed_at?: string | null
+          created_at?: string | null
+          failed_at?: string | null
+          failure_reason?: string | null
+          final_amount?: number
+          id?: string
+          processed_at?: string | null
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          requested_amount?: number
+          requested_at?: string | null
+          trainer_id?: string
+          updated_at?: string | null
+          withdrawal_fee?: number | null
+          withdrawal_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "withdrawals_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "withdrawals_trainer_id_fkey"
+            columns: ["trainer_id"]
+            isOneToOne: false
+            referencedRelation: "trainers"
             referencedColumns: ["id"]
           },
         ]
