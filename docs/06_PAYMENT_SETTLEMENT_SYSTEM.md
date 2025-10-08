@@ -12,10 +12,12 @@
 2. [결제 플로우](#결제-플로우)
 3. [환불 정책](#환불-정책)
 4. [크레딧 & 보증금 시스템](#크레딧--보증금-시스템)
-5. [데이터베이스 스키마](#데이터베이스-스키마)
-6. [정산 계산 로직](#정산-계산-로직)
-7. [API 엔드포인트](#api-엔드포인트)
-8. [토스페이먼츠 연동](#토스페이먼츠-연동)
+5. [동적 환불 정책 시스템](#동적-환불-정책-시스템) ⭐ NEW
+6. [데이터베이스 스키마](#데이터베이스-스키마)
+7. [정산 계산 로직](#정산-계산-로직)
+8. [API 엔드포인트](#api-엔드포인트)
+9. [Admin 환불 정책 관리 UI](#admin-환불-정책-관리-ui) ⭐ NEW
+10. [토스페이먼츠 연동](#토스페이먼츠-연동)
 
 ---
 
@@ -240,6 +242,129 @@ type DepositStatus =
 
 ---
 
+## 🎛️ 동적 환불 정책 시스템
+
+### 개요
+
+Admin이 대시보드에서 환불 정책을 실시간으로 조정할 수 있는 시스템입니다.
+
+### 조정 가능한 항목
+
+#### 1. 취소 시점별 환불율
+- **장기 취소 기준 시간** (기본: 72시간)
+- **장기 취소 환불율** (기본: 90%)
+- **중기 취소 기준 시간** (기본: 48시간)
+- **중기 취소 환불율** (기본: 70%)
+- **단기 취소 기준 시간** (기본: 24시간)
+- **단기 취소 환불율** (기본: 50%)
+- **당일 취소 환불율** (기본: 0%)
+
+#### 2. 플랫폼 설정
+- **플랫폼 수수료율** (기본: 15%)
+- **정산 대기 일수** (기본: 15일)
+
+#### 3. 트레이너 설정
+- **보증금 금액** (기본: 200,000원)
+- **트레이너 취소 페널티율** (기본: 15%)
+- **트레이너 취소 시 고객 환불율** (기본: 100%)
+
+### 정책 버전 관리
+
+```typescript
+interface RefundPolicy {
+  id: string;
+  policy_name: string;
+  is_active: boolean;
+
+  // 환불율 설정
+  refund_rate_72h_plus: number;      // 72시간 이상 전
+  refund_rate_48_72h: number;        // 48-72시간 전
+  refund_rate_24_48h: number;        // 24-48시간 전
+  refund_rate_under_24h: number;     // 24시간 이내
+
+  // 시간 경계 설정
+  boundary_long_hours: number;       // 장기 취소 기준 (기본: 72)
+  boundary_medium_hours: number;     // 중기 취소 기준 (기본: 48)
+  boundary_short_hours: number;      // 단기 취소 기준 (기본: 24)
+
+  // 트레이너 취소 설정
+  trainer_cancellation_refund_rate: number;  // 고객 환불율
+  trainer_penalty_rate: number;              // 페널티율
+
+  // 플랫폼 설정
+  platform_fee_rate: number;         // 수수료율
+  settlement_waiting_days: number;   // 정산 대기 일수
+  trainer_deposit_required: number;  // 보증금
+
+  // 메타데이터
+  description: string;
+  created_by: string;
+  updated_by: string;
+  created_at: string;
+  updated_at: string;
+}
+```
+
+### 동적 계산 로직
+
+```typescript
+// 활성 정책 조회
+const getActivePolicy = async () => {
+  const { data } = await supabase
+    .from('refund_policies')
+    .select('*')
+    .eq('is_active', true)
+    .single();
+
+  return data;
+};
+
+// 동적 환불율 계산
+const calculateRefundRate = (
+  cancelledAt: Date,
+  bookingDate: Date,
+  policy: RefundPolicy
+): number => {
+  const hoursUntilService =
+    (bookingDate.getTime() - cancelledAt.getTime()) / (1000 * 60 * 60);
+
+  if (hoursUntilService >= policy.boundary_long_hours) {
+    return policy.refund_rate_72h_plus;
+  } else if (hoursUntilService >= policy.boundary_medium_hours) {
+    return policy.refund_rate_48_72h;
+  } else if (hoursUntilService >= policy.boundary_short_hours) {
+    return policy.refund_rate_24_48h;
+  } else {
+    return policy.refund_rate_under_24h;
+  }
+};
+
+// 동적 정산 계산
+const calculateWithPolicy = async (booking, payment) => {
+  const policy = await getActivePolicy();
+  const totalPrice = payment.amount;
+
+  // 정책에 따른 계산...
+  const platformFee = totalPrice * policy.platform_fee_rate;
+  const trainerAmount = totalPrice * (1 - policy.platform_fee_rate);
+
+  return { platformFee, trainerAmount, policy };
+};
+```
+
+### 정책 변경 영향 범위
+
+**즉시 적용**:
+- 새로운 예약의 환불 계산
+- 새로운 정산 계산
+- 새로운 크레딧 계산
+
+**기존 예약**:
+- 이미 생성된 예약은 생성 당시의 정책 적용
+- `payments` 테이블에 `applied_policy_id` 저장하여 추적
+
+---
+
 ## 🗄️ 데이터베이스 스키마
 
 ### 1. bookings 테이블 수정
@@ -297,7 +422,125 @@ CREATE TRIGGER calculate_cancellation_deadline
   EXECUTE FUNCTION set_cancellation_deadline();
 ```
 
-### 2. payments 테이블 (신규)
+### 2. refund_policies 테이블 (신규) ⭐
+
+Admin이 환불 정책을 동적으로 조정할 수 있는 설정 테이블입니다.
+
+```sql
+CREATE TABLE refund_policies (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  -- 정책 정보
+  policy_name VARCHAR(100) NOT NULL DEFAULT 'default',
+  is_active BOOLEAN DEFAULT true,
+
+  -- 환불율 설정 (취소 시점별)
+  refund_rate_72h_plus DECIMAL(3,2) DEFAULT 0.90 CHECK (refund_rate_72h_plus >= 0 AND refund_rate_72h_plus <= 1),
+  -- 72시간 이상 전 취소: 90%
+
+  refund_rate_48_72h DECIMAL(3,2) DEFAULT 0.70 CHECK (refund_rate_48_72h >= 0 AND refund_rate_48_72h <= 1),
+  -- 48-72시간 전 취소: 70%
+
+  refund_rate_24_48h DECIMAL(3,2) DEFAULT 0.50 CHECK (refund_rate_24_48h >= 0 AND refund_rate_24_48h <= 1),
+  -- 24-48시간 전 취소: 50%
+
+  refund_rate_under_24h DECIMAL(3,2) DEFAULT 0.00 CHECK (refund_rate_under_24h >= 0 AND refund_rate_under_24h <= 1),
+  -- 24시간 이내 취소: 0%
+
+  -- 시간 경계 설정 (시간 단위)
+  boundary_long_hours INTEGER DEFAULT 72 CHECK (boundary_long_hours > 0),
+  -- 장기 취소 기준 (기본: 72시간)
+
+  boundary_medium_hours INTEGER DEFAULT 48 CHECK (boundary_medium_hours > 0),
+  -- 중기 취소 기준 (기본: 48시간)
+
+  boundary_short_hours INTEGER DEFAULT 24 CHECK (boundary_short_hours > 0),
+  -- 단기 취소 기준 (기본: 24시간)
+
+  -- 트레이너 취소 설정
+  trainer_cancellation_refund_rate DECIMAL(3,2) DEFAULT 1.00 CHECK (trainer_cancellation_refund_rate >= 0 AND trainer_cancellation_refund_rate <= 1),
+  -- 트레이너 취소 시 고객 환불율: 100%
+
+  trainer_penalty_rate DECIMAL(3,2) DEFAULT 0.15 CHECK (trainer_penalty_rate >= 0 AND trainer_penalty_rate <= 1),
+  -- 트레이너 페널티율: 15%
+
+  -- 플랫폼 수수료 설정
+  platform_fee_rate DECIMAL(5,4) DEFAULT 0.15 CHECK (platform_fee_rate >= 0 AND platform_fee_rate <= 1),
+  -- 플랫폼 수수료: 15%
+
+  -- 보증금 설정
+  trainer_deposit_required DECIMAL(10,2) DEFAULT 200000 CHECK (trainer_deposit_required >= 0),
+  -- 트레이너 보증금: 200,000원
+
+  -- 정산 설정
+  settlement_waiting_days INTEGER DEFAULT 15 CHECK (settlement_waiting_days >= 0),
+  -- 정산 대기 일수: 15일
+
+  -- 메타데이터
+  description TEXT,
+  created_by UUID REFERENCES profiles(id),
+  updated_by UUID REFERENCES profiles(id),
+
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 인덱스
+CREATE INDEX idx_refund_policies_is_active ON refund_policies(is_active);
+
+-- 항상 하나의 활성 정책만 존재하도록 제약
+CREATE UNIQUE INDEX idx_refund_policies_active_unique
+  ON refund_policies(is_active)
+  WHERE is_active = true;
+
+-- 시간 경계 논리적 제약 (long > medium > short)
+ALTER TABLE refund_policies ADD CONSTRAINT check_boundary_order
+  CHECK (boundary_long_hours > boundary_medium_hours AND boundary_medium_hours > boundary_short_hours);
+
+-- 초기 정책 생성
+INSERT INTO refund_policies (
+  policy_name,
+  is_active,
+  description,
+  created_by
+) VALUES (
+  'Default Policy',
+  true,
+  '기본 환불 정책 - 72h(90%), 48h(70%), 24h(50%), 당일(0%)',
+  (SELECT id FROM profiles WHERE user_type = 'admin' LIMIT 1)
+);
+
+-- updated_at 자동 업데이트
+CREATE TRIGGER update_refund_policies_updated_at
+  BEFORE UPDATE ON refund_policies
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- RLS 정책
+ALTER TABLE refund_policies ENABLE ROW LEVEL SECURITY;
+
+-- 모두 활성 정책 읽기 가능 (클라이언트에서 정책 확인)
+CREATE POLICY "Anyone can view active policies"
+  ON refund_policies FOR SELECT
+  USING (is_active = true);
+
+-- Admin만 수정 가능
+CREATE POLICY "Admins can manage policies"
+  ON refund_policies FOR ALL
+  USING (
+    auth.uid() IN (
+      SELECT id FROM profiles WHERE user_type = 'admin'
+    )
+  );
+
+COMMENT ON TABLE refund_policies IS '환불 정책 설정 테이블 - Admin이 동적으로 조정 가능';
+COMMENT ON COLUMN refund_policies.is_active IS '활성 정책 여부 (한 번에 하나만 활성)';
+COMMENT ON COLUMN refund_policies.boundary_long_hours IS '장기 취소 기준 시간 (이상)';
+COMMENT ON COLUMN refund_policies.boundary_medium_hours IS '중기 취소 기준 시간';
+COMMENT ON COLUMN refund_policies.boundary_short_hours IS '단기 취소 기준 시간';
+```
+
+### 3. payments 테이블 (신규)
 
 ```sql
 CREATE TABLE payments (
@@ -305,6 +548,9 @@ CREATE TABLE payments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   booking_id UUID NOT NULL UNIQUE REFERENCES bookings(id) ON DELETE CASCADE,
   customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+
+  -- 적용된 정책 (결제 당시의 정책 저장)
+  applied_policy_id UUID REFERENCES refund_policies(id),
 
   -- 결제 금액
   amount DECIMAL(10,2) NOT NULL CHECK (amount > 0),
@@ -1359,6 +1605,509 @@ export async function POST(request: Request) {
 - [ ] 출금 승인 페이지
 - [ ] 크레딧 수동 조정 기능
 - [ ] 통계 대시보드 (수익, 정산 등)
+- [ ] **환불 정책 관리 페이지** ⭐ NEW
+
+---
+
+## 🎨 Admin 환불 정책 관리 UI
+
+### 페이지 경로
+`/admin/settings/refund-policy`
+
+### UI 컴포넌트 구조
+
+```typescript
+// app/(dashboard)/admin/settings/refund-policy/page.tsx
+'use client';
+
+import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import type { RefundPolicy } from '@/types/payment';
+
+export default function RefundPolicyPage() {
+  const [policy, setPolicy] = useState<RefundPolicy | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [simulationAmount, setSimulationAmount] = useState(100000);
+
+  // 활성 정책 불러오기
+  useEffect(() => {
+    loadActivePolicy();
+  }, []);
+
+  const loadActivePolicy = async () => {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('refund_policies')
+      .select('*')
+      .eq('is_active', true)
+      .single();
+
+    if (data) setPolicy(data);
+  };
+
+  // 정책 저장
+  const handleSave = async () => {
+    if (!policy) return;
+
+    setSaving(true);
+    const supabase = createClient();
+
+    const { error } = await supabase
+      .from('refund_policies')
+      .update({
+        ...policy,
+        updated_at: new Date().toISOString(),
+        updated_by: (await supabase.auth.getUser()).data.user?.id
+      })
+      .eq('id', policy.id);
+
+    if (!error) {
+      alert('정책이 저장되었습니다.');
+    }
+
+    setSaving(false);
+  };
+
+  // 환불 시뮬레이션 계산
+  const calculateRefundSimulation = (hours: number) => {
+    if (!policy) return 0;
+
+    if (hours >= policy.boundary_long_hours) {
+      return simulationAmount * policy.refund_rate_72h_plus;
+    } else if (hours >= policy.boundary_medium_hours) {
+      return simulationAmount * policy.refund_rate_48_72h;
+    } else if (hours >= policy.boundary_short_hours) {
+      return simulationAmount * policy.refund_rate_24_48h;
+    } else {
+      return simulationAmount * policy.refund_rate_under_24h;
+    }
+  };
+
+  if (!policy) return <div>Loading...</div>;
+
+  return (
+    <div className="max-w-5xl mx-auto p-6 space-y-6">
+      {/* 헤더 */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">환불 정책 설정</h1>
+          <p className="text-gray-600 mt-2">
+            취소 시점별 환불율과 플랫폼 수수료를 조정할 수 있습니다
+          </p>
+        </div>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
+        >
+          {saving ? '저장 중...' : '정책 저장'}
+        </button>
+      </div>
+
+      {/* 시뮬레이션 */}
+      <section className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
+        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <span>💡</span> 환불 시뮬레이션
+        </h3>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-2">예약 금액</label>
+          <input
+            type="number"
+            value={simulationAmount}
+            onChange={(e) => setSimulationAmount(parseInt(e.target.value))}
+            className="w-full p-3 border rounded-lg"
+            step="10000"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <h4 className="font-medium text-gray-700 mb-3">취소 시점별 환불액</h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-white p-4 rounded-lg border">
+              <div className="text-sm text-gray-600 mb-1">{policy.boundary_long_hours}시간+ 전</div>
+              <div className="text-2xl font-bold text-green-600">
+                {calculateRefundSimulation(policy.boundary_long_hours).toLocaleString()}원
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                ({(policy.refund_rate_72h_plus * 100).toFixed(0)}% 환불)
+              </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-lg border">
+              <div className="text-sm text-gray-600 mb-1">
+                {policy.boundary_medium_hours}-{policy.boundary_long_hours}h 전
+              </div>
+              <div className="text-2xl font-bold text-yellow-600">
+                {calculateRefundSimulation(policy.boundary_medium_hours).toLocaleString()}원
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                ({(policy.refund_rate_48_72h * 100).toFixed(0)}% 환불)
+              </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-lg border">
+              <div className="text-sm text-gray-600 mb-1">
+                {policy.boundary_short_hours}-{policy.boundary_medium_hours}h 전
+              </div>
+              <div className="text-2xl font-bold text-orange-600">
+                {calculateRefundSimulation(policy.boundary_short_hours).toLocaleString()}원
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                ({(policy.refund_rate_24_48h * 100).toFixed(0)}% 환불)
+              </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-lg border">
+              <div className="text-sm text-gray-600 mb-1">{policy.boundary_short_hours}h 이내</div>
+              <div className="text-2xl font-bold text-red-600">
+                {calculateRefundSimulation(0).toLocaleString()}원
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                ({(policy.refund_rate_under_24h * 100).toFixed(0)}% 환불)
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 환불율 설정 */}
+      <section className="bg-white rounded-xl shadow p-6">
+        <h2 className="text-xl font-semibold mb-4">취소 시점별 환불율</h2>
+
+        <div className="space-y-6">
+          {/* 장기 취소 */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                장기 취소 기준 (시간)
+              </label>
+              <input
+                type="number"
+                value={policy.boundary_long_hours}
+                onChange={(e) =>
+                  setPolicy({
+                    ...policy,
+                    boundary_long_hours: parseInt(e.target.value)
+                  })
+                }
+                className="w-full p-3 border rounded-lg"
+                min="1"
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                {policy.boundary_long_hours}시간 이상 전 취소
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                환불율 (0.00 ~ 1.00)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max="1"
+                value={policy.refund_rate_72h_plus}
+                onChange={(e) =>
+                  setPolicy({
+                    ...policy,
+                    refund_rate_72h_plus: parseFloat(e.target.value)
+                  })
+                }
+                className="w-full p-3 border rounded-lg"
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                {(policy.refund_rate_72h_plus * 100).toFixed(0)}% 환불
+              </p>
+            </div>
+          </div>
+
+          {/* 중기 취소 */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                중기 취소 기준 (시간)
+              </label>
+              <input
+                type="number"
+                value={policy.boundary_medium_hours}
+                onChange={(e) =>
+                  setPolicy({
+                    ...policy,
+                    boundary_medium_hours: parseInt(e.target.value)
+                  })
+                }
+                className="w-full p-3 border rounded-lg"
+                min="1"
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                {policy.boundary_medium_hours}-{policy.boundary_long_hours}시간 전 취소
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                환불율 (0.00 ~ 1.00)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max="1"
+                value={policy.refund_rate_48_72h}
+                onChange={(e) =>
+                  setPolicy({
+                    ...policy,
+                    refund_rate_48_72h: parseFloat(e.target.value)
+                  })
+                }
+                className="w-full p-3 border rounded-lg"
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                {(policy.refund_rate_48_72h * 100).toFixed(0)}% 환불
+              </p>
+            </div>
+          </div>
+
+          {/* 단기 취소 */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                단기 취소 기준 (시간)
+              </label>
+              <input
+                type="number"
+                value={policy.boundary_short_hours}
+                onChange={(e) =>
+                  setPolicy({
+                    ...policy,
+                    boundary_short_hours: parseInt(e.target.value)
+                  })
+                }
+                className="w-full p-3 border rounded-lg"
+                min="1"
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                {policy.boundary_short_hours}-{policy.boundary_medium_hours}시간 전 취소
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                환불율 (0.00 ~ 1.00)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max="1"
+                value={policy.refund_rate_24_48h}
+                onChange={(e) =>
+                  setPolicy({
+                    ...policy,
+                    refund_rate_24_48h: parseFloat(e.target.value)
+                  })
+                }
+                className="w-full p-3 border rounded-lg"
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                {(policy.refund_rate_24_48h * 100).toFixed(0)}% 환불
+              </p>
+            </div>
+          </div>
+
+          {/* 당일 취소 */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                당일 취소 (고정)
+              </label>
+              <div className="p-3 bg-gray-50 border rounded-lg text-gray-700">
+                {policy.boundary_short_hours}시간 이내 취소
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                환불율 (0.00 ~ 1.00)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max="1"
+                value={policy.refund_rate_under_24h}
+                onChange={(e) =>
+                  setPolicy({
+                    ...policy,
+                    refund_rate_under_24h: parseFloat(e.target.value)
+                  })
+                }
+                className="w-full p-3 border rounded-lg"
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                {(policy.refund_rate_under_24h * 100).toFixed(0)}% 환불
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 플랫폼 설정 */}
+      <section className="bg-white rounded-xl shadow p-6">
+        <h2 className="text-xl font-semibold mb-4">플랫폼 설정</h2>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              플랫폼 수수료율 (0.00 ~ 1.00)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              max="1"
+              value={policy.platform_fee_rate}
+              onChange={(e) =>
+                setPolicy({
+                  ...policy,
+                  platform_fee_rate: parseFloat(e.target.value)
+                })
+              }
+              className="w-full p-3 border rounded-lg"
+            />
+            <p className="text-sm text-gray-500 mt-1">
+              트레이너 정산: {((1 - policy.platform_fee_rate) * 100).toFixed(1)}%
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              정산 대기 기간 (일)
+            </label>
+            <input
+              type="number"
+              value={policy.settlement_waiting_days}
+              onChange={(e) =>
+                setPolicy({
+                  ...policy,
+                  settlement_waiting_days: parseInt(e.target.value)
+                })
+              }
+              className="w-full p-3 border rounded-lg"
+              min="0"
+            />
+            <p className="text-sm text-gray-500 mt-1">
+              서비스 완료 후 {policy.settlement_waiting_days}일 후 정산 가능
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* 트레이너 설정 */}
+      <section className="bg-white rounded-xl shadow p-6">
+        <h2 className="text-xl font-semibold mb-4">트레이너 설정</h2>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              보증금 (원)
+            </label>
+            <input
+              type="number"
+              step="10000"
+              value={policy.trainer_deposit_required}
+              onChange={(e) =>
+                setPolicy({
+                  ...policy,
+                  trainer_deposit_required: parseFloat(e.target.value)
+                })
+              }
+              className="w-full p-3 border rounded-lg"
+              min="0"
+            />
+            <p className="text-sm text-gray-500 mt-1">
+              {policy.trainer_deposit_required.toLocaleString()}원
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              트레이너 취소 페널티율 (0.00 ~ 1.00)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              max="1"
+              value={policy.trainer_penalty_rate}
+              onChange={(e) =>
+                setPolicy({
+                  ...policy,
+                  trainer_penalty_rate: parseFloat(e.target.value)
+                })
+              }
+              className="w-full p-3 border rounded-lg"
+            />
+            <p className="text-sm text-gray-500 mt-1">
+              트레이너 취소 시 {(policy.trainer_penalty_rate * 100).toFixed(0)}% 페널티
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* 정책 설명 */}
+      <section className="bg-white rounded-xl shadow p-6">
+        <h2 className="text-xl font-semibold mb-4">정책 설명 (선택)</h2>
+
+        <textarea
+          value={policy.description || ''}
+          onChange={(e) =>
+            setPolicy({
+              ...policy,
+              description: e.target.value
+            })
+          }
+          className="w-full p-3 border rounded-lg"
+          rows={3}
+          placeholder="정책 변경 사유나 설명을 입력하세요..."
+        />
+      </section>
+
+      {/* 저장 버튼 (하단) */}
+      <div className="flex justify-end">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium text-lg"
+        >
+          {saving ? '저장 중...' : '정책 저장'}
+        </button>
+      </div>
+    </div>
+  );
+}
+```
+
+### 주요 기능
+
+1. **실시간 시뮬레이션**
+   - 입력한 금액에 대한 취소 시점별 환불액 자동 계산
+   - 4가지 시나리오 즉시 표시
+
+2. **직관적인 입력**
+   - 시간 경계 조정 (24h, 48h, 72h)
+   - 환불율 조정 (0% ~ 100%)
+   - 실시간 미리보기
+
+3. **검증**
+   - 시간 경계 논리적 순서 검증 (72h > 48h > 24h)
+   - 환불율 범위 검증 (0.00 ~ 1.00)
+   - 보증금 최소값 검증
+
+4. **변경 이력**
+   - `updated_by` 필드에 Admin ID 저장
+   - `updated_at` 자동 기록
+   - `description` 필드에 변경 사유 기록
+
+---
 
 ### Phase 7: 테스트
 - [ ] 결제 플로우 테스트
@@ -1367,8 +2116,17 @@ export async function POST(request: Request) {
 - [ ] 크레딧 잔고 테스트
 - [ ] 보증금 검증 테스트
 - [ ] Edge case 테스트
+- [ ] **환불 정책 변경 테스트** ⭐ NEW
+- [ ] **동적 환불율 계산 테스트** ⭐ NEW
 
 ---
 
 **최종 업데이트**: 2025-10-09
+**버전**: 1.1
+**변경사항**:
+- 동적 환불 정책 시스템 추가
+- refund_policies 테이블 설계
+- Admin 환불 정책 관리 UI 추가
+- payments 테이블에 applied_policy_id 필드 추가
+
 **다음 단계**: 마이그레이션 파일 생성 및 토스페이먼츠 계정 설정
