@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>시니어핏 사업계획서</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Pretendard Variable', -apple-system, sans-serif;
+            background: #f5f5f5;
+            overflow-x: hidden;
+        }
+        
+        .presentation {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+        }
+        
+        .slide {
+            min-height: 100vh;
+            padding: 60px 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            page-break-after: always;
+            position: relative;
+        }
+        
+        /* 표지 */
+        .slide.cover {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+        }
+        
+        .cover h1 {
+            font-size: 72px;
+            font-weight: 800;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .cover .english {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.95;
+            font-weight: 600;
+        }
+        
+        .cover .subtitle {
+            font-size: 32px;
+            margin-bottom: 40px;
+            opacity: 0.9;
+        }
+        
+        .cover .tagline {
+            font-size: 24px;
+            margin-top: 60px;
+            padding: 20px 40px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50px;
+            display: inline-block;
+        }
+        
+        /* 일반 슬라이드 */
+        .slide h2 {
+            font-size: 48px;
+            color: #667eea;
+            margin-bottom: 40px;
+            border-bottom: 4px solid #667eea;
+            padding-bottom: 15px;
+        }
+        
+        .slide h3 {
+            font-size: 32px;
+            color: #333;
+            margin: 30px 0 20px;
+        }
+        
+        .slide p, .slide li {
+            font-size: 20px;
+            line-height: 1.8;
+            color: #555;
+        }
+        
+        /* 통계 박스 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+        
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .stat-number {
+            font-size: 56px;
+            font-weight: 800;
+            margin-bottom: 10px;
+        }
+        
+        .stat-label {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+        
+        /* 특징 카드 */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            margin: 30px 0;
+        }
+        
+        .feature-card {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .feature-card h4 {
+            font-size: 24px;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        
+        .feature-card ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .feature-card li {
+            padding: 10px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+        
+        .feature-card li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #667eea;
+            font-weight: bold;
+            font-size: 20px;
+        }
+        
+        /* 비교표 */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .comparison-table th {
+            background: #667eea;
+            color: white;
+            padding: 20px;
+            font-size: 20px;
+        }
+        
+        .comparison-table td {
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            font-size: 18px;
+        }
+        
+        .comparison-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .highlight {
+            background: #fff3cd !important;
+            font-weight: bold;
+        }
+        
+        /* 타임라인 */
+        .timeline {
+            position: relative;
+            padding: 30px 0;
+        }
+        
+        .timeline-item {
+            display: flex;
+            margin: 30px 0;
+            align-items: center;
+        }
+        
+        .timeline-date {
+            background: #667eea;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 50px;
+            font-weight: bold;
+            min-width: 150px;
+            text-align: center;
+        }
+        
+        .timeline-content {
+            flex: 1;
+            margin-left: 30px;
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+        }
+        
+        /* 강조 박스 */
+        .highlight-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin: 30px 0;
+            text-align: center;
+        }
+        
+        .highlight-box h3 {
+            color: white;
+            margin-bottom: 20px;
+        }
+        
+        /* 인포 박스 */
+        .info-box {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+            margin: 20px 0;
+        }
+        
+        /* 슬라이드 번호 */
+        .slide-number {
+            position: absolute;
+            bottom: 30px;
+            right: 40px;
+            color: #999;
+            font-size: 16px;
+        }
+        
+        /* 네비게이션 */
+        .nav-buttons {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 15px 30px;
+            border-radius: 50px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            z-index: 1000;
+            display: flex;
+            gap: 20px;
+        }
+        
+        .nav-buttons button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .nav-buttons button:hover {
+            background: #5568d3;
+            transform: scale(1.05);
+        }
+        
+        .nav-buttons .current-slide {
+            color: #667eea;
+            font-weight: bold;
+            padding: 12px 20px;
+        }
+        
+        @media print {
+            .nav-buttons {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="presentation">
+        <!-- 슬라이드 1: 표지 -->
+        <div class="slide cover">
+            <h1>시니어핏</h1>
+            <div class="english">SeniorFit</div>
+            <div class="subtitle">시니어 전문 운동 플랫폼</div>
+            <div class="tagline">🏋️ Stay Fit, Stay Active - 건강한 노년을 위한 맞춤 운동</div>
+            <div style="margin-top: 60px; font-size: 20px;">
+                <p>사업계획서 / 투자제안서</p>
+                <p style="margin-top: 10px;">2025년</p>
+            </div>
+        </div>
+
+        <!-- 슬라이드 2: 목차 -->
+        <div class="slide">
+            <h2>📋 목차</h2>
+            <div style="font-size: 24px; line-height: 2.5; margin-top: 40px;">
+                <p>1. 사업 개요 및 브랜드 전략</p>
+                <p>2. 시장 현황 및 기회</p>
+                <p>3. 기존 솔루션의 한계</p>
+                <p>4. 시니어핏의 5가지 차별성</p>
+                <p>5. 서비스 상세 및 확장 전략</p>
+                <p>6. 추천 예약 시스템</p>
+                <p>7. 기술 우위 및 개발 현황</p>
+                <p>8. 비즈니스 모델 및 재무 계획</p>
+                <p>9. 투자 제안 및 정부지원사업</p>
+                <p>10. 사회적 가치</p>
+            </div>
+            <div class="slide-number">2</div>
+        </div>
+
+        <!-- 슬라이드 3: 시니어 운동의 본질 (NEW) -->
+        <div class="slide">
+            <h2>💡 시니어 운동의 본질</h2>
+            
+            <div class="highlight-box">
+                <h3>시니어 운동 = 재활 + 일반운동의 통합</h3>
+                <p style="font-size: 28px; margin-top: 20px;">
+                    재활부터 수영, 요가까지<br>
+                    <strong>경계 없는 시니어 전문 운동</strong>
+                </p>
+            </div>
+            
+            <div style="margin-top: 40px; padding: 30px; background: #f8f9fa; border-radius: 15px;">
+                <h3 style="margin-top: 0;">📊 일반 피트니스 vs 시니어 운동</h3>
+                <table class="comparison-table" style="margin-top: 20px;">
+                    <tr>
+                        <th>구분</th>
+                        <th>일반 피트니스</th>
+                        <th>시니어 운동</th>
+                    </tr>
+                    <tr>
+                        <td><strong>목적</strong></td>
+                        <td>체력 향상, 근육 증가</td>
+                        <td>건강 유지, 낙상 방지, 일상능력</td>
+                    </tr>
+                    <tr>
+                        <td><strong>강도</strong></td>
+                        <td>고강도 가능</td>
+                        <td>저강도, 안전 중심</td>
+                    </tr>
+                    <tr>
+                        <td><strong>범주</strong></td>
+                        <td>운동만</td>
+                        <td><strong>재활 + 예방 + 건강증진</strong></td>
+                    </tr>
+                    <tr class="highlight">
+                        <td><strong>특징</strong></td>
+                        <td>일반 트레이너</td>
+                        <td><strong>전문성 필수 (재활과 운동 모두)</strong></td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div class="info-box" style="margin-top: 30px;">
+                <p style="font-size: 20px; color: #333; text-align: center;">
+                    <strong>🎯 핵심:</strong> 수영도 시니어에겐 "재활 운동"이자 "일반 운동"<br>
+                    → 전문성과 안전성이 핵심!
+                </p>
+            </div>
+            
+            <div class="slide-number">3</div>
+        </div>
+
+        <!-- 슬라이드 4: 브랜드 전략 -->
+        <div class="slide">
+            <h2>🎯 왜 "시니어핏"인가?</h2>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>✅ 서비스 본질과 완벽 일치</h4>
+                    <ul>
+                        <li><strong>"Fit"</strong> = 재활 + 일반운동 모두 포괄</li>
+                        <li>건강 회복 (Fit for recovery)</li>
+                        <li>건강 유지 (Keep fit)</li>
+                        <li>능동적 건강 관리 (Stay fit)</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <h4>✅ 명확한 차별화</h4>
+                    <ul>
+                        <li><strong>"시니어"</strong> 명시 = 타겟 즉시 인지</li>
+                        <li>일반 피트니스와 구분</li>
+                        <li>전문성 강조</li>
+                        <li>자녀 세대도 쉽게 이해</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <h3 style="margin-top: 40px;">🚀 글로벌 벤치마킹</h3>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>Nike Training Club</h4>
+                    <ul>
+                        <li>운동 앱 → 용품 판매</li>
+                        <li>"Fit" 브랜드 활용</li>
+                        <li>생태계 확장 성공</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <h4>Peloton</h4>
+                    <ul>
+                        <li>운동 서비스 → 액세서리</li>
+                        <li>커뮤니티 구축</li>
+                        <li>구독 모델 성공</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="highlight-box" style="margin-top: 40px;">
+                <h3>시니어핏 = 시니어 운동 생태계의 중심</h3>
+                <p style="font-size: 24px;">운동 서비스 → 용품 → 건강 플랫폼</p>
+            </div>
+            
+            <div class="slide-number">4</div>
+        </div>
+
+        <!-- 슬라이드 5: 사업 개요 -->
+        <div class="slide">
+            <h2>💪 사업 개요</h2>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>🔍 수요자 Pain Point</h4>
+                    <ul>
+                        <li>시니어 맞춤 운동 프로그램 부족</li>
+                        <li>일반 피트니스는 위험함</li>
+                        <li>가격 비교 불가능</li>
+                        <li>전문가 찾기 어려움</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <h4>📢 공급자 Pain Point</h4>
+                    <ul>
+                        <li>시니어 고객 찾기 어려움</li>
+                        <li>홍보 비용 부담</li>
+                        <li>예약 관리 시스템 부족</li>
+                        <li>신규 진입 장벽</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <h3 style="margin-top: 50px;">시니어핏 솔루션</h3>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-number">🏠</div>
+                    <div class="stat-label" style="font-size: 20px; margin-top: 10px;">방문형 + 센터형</div>
+                    <p style="margin-top: 10px; font-size: 16px;">고객이 선택</p>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">💰</div>
+                    <div class="stat-label" style="font-size: 20px; margin-top: 10px;">투명한 가격</div>
+                    <p style="margin-top: 10px; font-size: 16px;">30% 할인 옵션</p>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">⭐</div>
+                    <div class="stat-label" style="font-size: 20px; margin-top: 10px;">검증된 전문가</div>
+                    <p style="margin-top: 10px; font-size: 16px;">자격증 + 리뷰</p>
+                </div>
+            </div>
+            
+            <div class="info-box" style="margin-top: 40px;">
+                <p style="font-size: 22px; text-align: center; color: #667eea; font-weight: bold;">
+                    "재활부터 수영, 요가까지 - 시니어 건강의 시작, 시니어핏"
+                </p>
+            </div>
+            
+            <div class="slide-number">5</div>
+        </div>
+
+        <!-- 슬라이드 6: 시장 현황 -->
+        <div class="slide">
+            <h2>📊 시장 현황 및 기회</h2>
+            
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-number">72조원</div>
+                    <div class="stat-label">2020년 시장 규모</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">168조원</div>
+                    <div class="stat-label">2030년 예상 규모</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">9%</div>
+                    <div class="stat-label">연평균 성장률</div>
+                </div>
+            </div>
+            
+            <h3 style="margin-top: 50px;">📈 고령화 트렌드</h3>
+            <ul style="margin-top: 20px; font-size: 22px; line-height: 2;">
+                <li>2025년 초고령사회 진입 (65세 이상 20% 돌파)</li>
+                <li>베이비붐 세대 본격 진입 (1955-1963년생)</li>
+                <li><strong>활동적 시니어 증가</strong> (헬시 에이징 트렌드) 🔥</li>
+                <li>시니어 전문 운동 수요 폭발적 증가</li>
+            </ul>
+            
+            <div class="highlight-box" style="margin-top: 40px;">
+                <h3>시장 기회</h3>
+                <p style="font-size: 24px;">시니어 전문 운동 플랫폼 = <strong>블루오션</strong><br>일반 피트니스와 완전히 다른 시장</p>
+            </div>
+            
+            <div class="slide-number">6</div>
+        </div>
+
+        <!-- 슬라이드 7: 경쟁사 분석 -->
+        <div class="slide">
+            <h2>🏢 기존 솔루션의 한계</h2>
+            
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>카테고리</th>
+                        <th>대표 플랫폼</th>
+                        <th>부족한 점</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>일반 PT 예약</td>
+                        <td>바디코디<br>온핏</td>
+                        <td><strong>시니어 특화 없음</strong><br>일반 피트니스 (위험)</td>
+                    </tr>
+                    <tr>
+                        <td>재활 전문</td>
+                        <td>포인티</td>
+                        <td>B2C 플랫폼 아님<br>센터용 솔루션</td>
+                    </tr>
+                    <tr>
+                        <td>케어 시설</td>
+                        <td>시니어앤라이프<br>케어네이션</td>
+                        <td>간병 중심<br>운동 서비스 부족</td>
+                    </tr>
+                    <tr>
+                        <td>종합 헬스케어</td>
+                        <td>GC케어</td>
+                        <td>운동 예약 불가<br>공급자 매칭 없음</td>
+                    </tr>
+                    <tr class="highlight">
+                        <td><strong>시니어핏</strong></td>
+                        <td><strong>신규 진입</strong></td>
+                        <td><strong>✓ 시니어 전문 운동 플랫폼</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div class="info-box" style="margin-top: 40px;">
+                <p style="font-size: 20px; color: #333;"><strong>💡 시장 갭:</strong> 시니어 전문 운동 플랫폼 부재<br>재활과 일반운동을 통합한 서비스 없음</p>
+            </div>
+            
+            <div class="slide-number">7</div>
+        </div>
+
+        <!-- 슬라이드 8: 5가지 차별성 -->
+        <div class="slide">
+            <h2>⭐ 시니어핏의 5가지 핵심 차별성</h2>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>1️⃣ 시니어 전문 운동</h4>
+                    <ul>
+                        <li>재활 + 일반운동 통합</li>
+                        <li>안전성 최우선</li>
+                        <li>전문 자격증 보유자만</li>
+                        <li>일반 피트니스와 완전 차별화</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <h4>2️⃣ 양방향 서비스</h4>
+                    <ul>
+                        <li>방문형 (트레이너가 방문)</li>
+                        <li>센터형 (고객이 센터 방문)</li>
+                        <li>하이브리드 (병행)</li>
+                        <li>고객이 선택</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <h4>3️⃣ 추천 예약 시스템</h4>
+                    <ul>
+                        <li>지정 예약 대비 30% 저렴</li>
+                        <li>AI 기반 7가지 매칭</li>
+                        <li>전문가 큐레이션</li>
+                        <li>공정한 기회 분배</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <h4>4️⃣ 시니어 특화 UI/UX</h4>
+                    <ul>
+                        <li>큰 글씨 (24px+)</li>
+                        <li>큰 버튼 (80px+)</li>
+                        <li>간단한 3단계 예약</li>
+                        <li>시니어 테스트 완료</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="highlight-box" style="margin-top: 40px;">
+                <h3>5️⃣ 압도적 비용 효율성</h3>
+                <p style="font-size: 24px;">자체 개발로 연 운영비 <strong>88만원</strong><br>(기존 솔루션 대비 <strong>1/36</strong>, 97% 절감)</p>
+            </div>
+            
+            <div class="slide-number">8</div>
+        </div>
+
+        <!-- 슬라이드 9: 서비스 상세 -->
+        <div class="slide">
+            <h2>🏋️ 서비스 상세 및 확장 전략</h2>
+            
+            <h3>Phase 1: MVP - 시니어 전문 운동</h3>
+            <div class="stats-grid" style="margin-top: 30px;">
+                <div class="stat-box" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                    <div class="stat-number">🏠</div>
+                    <div class="stat-label" style="font-size: 18px; margin-top: 10px;">방문형</div>
+                    <p style="margin-top: 15px; font-size: 16px;">재활 PT, 수영, 요가<br>60분 50,000~80,000원</p>
+                </div>
+                
+                <div class="stat-box" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);">
+                    <div class="stat-number">🏋️</div>
+                    <div class="stat-label" style="font-size: 18px; margin-top: 10px;">센터형</div>
+                    <p style="margin-top: 15px; font-size: 16px;">전문 장비 활용<br>60분 40,000~60,000원</p>
+                </div>
+                
+                <div class="stat-box" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: #333;">
+                    <div class="stat-number">🔄</div>
+                    <div class="stat-label" style="font-size: 18px; margin-top: 10px; color: #333;">하이브리드</div>
+                    <p style="margin-top: 15px; font-size: 16px; color: #555;">센터 + 방문 병행</p>
+                </div>
+            </div>
+            
+            <h3 style="margin-top: 40px;">Phase 2-3: 시니어핏 생태계 확장</h3>
+            <table class="comparison-table" style="margin-top: 20px;">
+                <tr>
+                    <th>Phase</th>
+                    <th>서비스/제품</th>
+                    <th>내용</th>
+                </tr>
+                <tr>
+                    <td><strong>2단계</strong><br>(6개월)</td>
+                    <td><strong>시니어핏 스토어 🛒</strong></td>
+                    <td>운동 용품, 재활 보조기구, 영양제<br><strong>앱 내 "스토어" 탭 추가</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>3단계</strong><br>(1년)</td>
+                    <td><strong>시니어핏 플랫폼</strong></td>
+                    <td>건강 데이터 관리, 운동 루틴, 커뮤니티</td>
+                </tr>
+                <tr class="highlight">
+                    <td><strong>4단계</strong><br>(1년+)</td>
+                    <td><strong>시니어핏 B2B</strong></td>
+                    <td>요양원, 병원, 기업 복지 연계</td>
+                </tr>
+            </table>
+            
+            <div class="slide-number">9</div>
+        </div>
+
+        <!-- 슬라이드 10: 추천 예약 전략 -->
+        <div class="slide">
+            <h2>🎯 추천 예약 시스템 전략</h2>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>💰 가격 경쟁력</h4>
+                    <ul>
+                        <li>지정 예약: 기본가 × 1.3</li>
+                        <li>추천 예약: 기본가 (30% 절약)</li>
+                        <li>월 8회 이용 시 12만원 차이</li>
+                        <li>가격 민감 고객 유입</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <h4>🤝 공정한 기회 분배</h4>
+                    <ul>
+                        <li>신규 트레이너 90일 가산점</li>
+                        <li>예약 수 기반 우선순위</li>
+                        <li>스타 쏠림 방지</li>
+                        <li>생태계 건강성 유지</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <h3 style="margin-top: 40px;">AI 매칭 알고리즘 (7가지 기준)</h3>
+            <table class="comparison-table" style="margin-top: 20px;">
+                <tr>
+                    <td><strong>서비스 타입</strong></td>
+                    <td>30점</td>
+                    <td><strong>경력</strong></td>
+                    <td>최대 10점</td>
+                </tr>
+                <tr>
+                    <td><strong>전문분야</strong></td>
+                    <td>20점/개</td>
+                    <td><strong>자격증</strong></td>
+                    <td>3점/개</td>
+                </tr>
+                <tr>
+                    <td><strong>지역 일치</strong></td>
+                    <td>25점</td>
+                    <td><strong>부하 분산</strong></td>
+                    <td>최대 20점</td>
+                </tr>
+                <tr class="highlight">
+                    <td colspan="2"><strong>가격 적정성</strong></td>
+                    <td colspan="2"><strong>최대 15점</strong></td>
+                </tr>
+            </table>
+            
+            <div class="info-box" style="margin-top: 30px;">
+                <p style="font-size: 20px; color: #333;"><strong>💡 Win-Win-Win:</strong> 고객(저렴) + 트레이너(안정) + 플랫폼(확대)</p>
+            </div>
+            
+            <div class="slide-number">10</div>
+        </div>
+
+        <!-- 슬라이드 11: 기술 우위 -->
+        <div class="slide">
+            <h2>💻 기술 우위 및 개발 현황</h2>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>🚀 자체 개발 스택</h4>
+                    <ul>
+                        <li>Next.js 15 (최신)</li>
+                        <li>Supabase (서버리스)</li>
+                        <li>Vercel (자동화)</li>
+                        <li>PWA (앱처럼 사용)</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <h4>✅ 개발 완료 (98%)</h4>
+                    <ul>
+                        <li>예약 시스템 (지정/추천)</li>
+                        <li>AI 매칭 알고리즘</li>
+                        <li>실시간 알림</li>
+                        <li>리뷰 시스템</li>
+                        <li>시니어 UI/UX</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <h3 style="margin-top: 40px;">비용 비교</h3>
+            <div class="stats-grid">
+                <div class="stat-box" style="background: linear-gradient(135deg, #f5576c 0%, #fa709a 100%);">
+                    <div class="stat-label">기존 솔루션</div>
+                    <div class="stat-number">3,200만원</div>
+                    <div class="stat-label">연간 운영비</div>
+                </div>
+                
+                <div class="stat-box" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                    <div class="stat-label">시니어핏</div>
+                    <div class="stat-number">88만원</div>
+                    <div class="stat-label">연간 운영비</div>
+                </div>
+                
+                <div class="stat-box" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                    <div class="stat-label">비용 절감</div>
+                    <div class="stat-number">97%</div>
+                    <div class="stat-label">36배 효율</div>
+                </div>
+            </div>
+            
+            <div class="info-box" style="margin-top: 30px;">
+                <p style="font-size: 20px; color: #333;"><strong>🎯 즉시 런칭 가능:</strong> 98% 완료, 결제 시스템만 연동</p>
+            </div>
+            
+            <div class="slide-number">11</div>
+        </div>
+
+        <!-- 슬라이드 12: 비즈니스 모델 -->
+        <div class="slide">
+            <h2>💰 비즈니스 모델</h2>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>수익 1: 거래 수수료</h4>
+                    <ul>
+                        <li>플랫폼 수수료 15-20%</li>
+                        <li>공급자 수익 80-85%</li>
+                        <li>Win-Win 구조</li>
+                        <li><strong>주 수익원</strong></li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <h4>수익 2: 구독 (공급자)</h4>
+                    <ul>
+                        <li>무료: 월 5건</li>
+                        <li>프로: 월 50,000원</li>
+                        <li>엔터프라이즈: 협의</li>
+                        <li>안정적 수익</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <h4>수익 3: 커머스 (Phase 2)</h4>
+                    <ul>
+                        <li>시니어핏 스토어</li>
+                        <li>운동/재활 용품</li>
+                        <li>영양제</li>
+                        <li>마진 20-30%</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <h4>수익 4: B2B (Phase 3)</h4>
+                    <ul>
+                        <li>요양원 파트너십</li>
+                        <li>병원 연계</li>
+                        <li>기업 복지</li>
+                        <li>대규모 계약</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="highlight-box" style="margin-top: 40px;">
+                <h3>다각화된 수익 모델</h3>
+                <p style="font-size: 22px;">서비스 수수료 + 구독 + 커머스 + B2B<br>= 지속가능한 비즈니스</p>
+            </div>
+            
+            <div class="slide-number">12</div>
+        </div>
+
+        <!-- 슬라이드 13: 재무 계획 -->
+        <div class="slide">
+            <h2>📈 재무 계획</h2>
+            
+            <h3>초기 목표 (6개월)</h3>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-number">1,000명</div>
+                    <div class="stat-label">월간 활성 사용자</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">100명</div>
+                    <div class="stat-label">등록 트레이너</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">5,000만원</div>
+                    <div class="stat-label">월 거래액</div>
+                </div>
+            </div>
+            
+            <h3 style="margin-top: 50px;">1년 목표</h3>
+            <div class="stats-grid">
+                <div class="stat-box" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                    <div class="stat-number">5,000명</div>
+                    <div class="stat-label">월간 활성 사용자</div>
+                </div>
+                <div class="stat-box" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                    <div class="stat-number">500명</div>
+                    <div class="stat-label">등록 트레이너</div>
+                </div>
+                <div class="stat-box" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                    <div class="stat-number">2억원</div>
+                    <div class="stat-label">월 거래액</div>
+                </div>
+            </div>
+            
+            <div class="info-box" style="margin-top: 40px;">
+                <p style="font-size: 20px; color: #333;"><strong>💡 1년 후 월 수익:</strong> 거래 수수료 3,000만 + 구독 1,000만 + 커머스 500만 = <strong>4,500만원</strong></p>
+            </div>
+            
+            <div class="slide-number">13</div>
+        </div>
+
+        <!-- 슬라이드 14: 로드맵 -->
+        <div class="slide">
+            <h2>🗺️ 향후 계획</h2>
+            
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-date">1-2개월</div>
+                    <div class="timeline-content">
+                        <h4 style="font-size: 22px; margin-bottom: 10px;">Phase 1: MVP 완성</h4>
+                        <p>결제 연동, 10명 트레이너, 50명 시니어 테스트</p>
+                    </div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="timeline-date">3-6개월</div>
+                    <div class="timeline-content">
+                        <h4 style="font-size: 22px; margin-bottom: 10px;">Phase 2: 정식 런칭 + 스토어</h4>
+                        <p>서울/수도권 확대, 100명 트레이너, <strong>시니어핏 스토어 오픈</strong></p>
+                    </div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="timeline-date">6-12개월</div>
+                    <div class="timeline-content">
+                        <h4 style="font-size: 22px; margin-bottom: 10px;">Phase 3: 플랫폼 확장</h4>
+                        <p>건강 데이터, 커뮤니티, 지방 확대, B2B 시작</p>
+                    </div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="timeline-date">1년 이후</div>
+                    <div class="timeline-content">
+                        <h4 style="font-size: 22px; margin-bottom: 10px;">Phase 4: 시니어 운동 생태계</h4>
+                        <p>요양원/병원/기업 연계, <strong>시니어 운동의 표준</strong></p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="highlight-box" style="margin-top: 40px;">
+                <h3>🎯 비전</h3>
+                <p style="font-size: 24px;">"시니어핏" = 시니어 운동의 대명사</p>
+            </div>
+            
+            <div class="slide-number">14</div>
+        </div>
+
+        <!-- 슬라이드 15: 투자 제안 -->
+        <div class="slide">
+            <h2>💼 투자 제안</h2>
+            
+            <div class="highlight-box">
+                <h3>시드 투자 유치</h3>
+                <div class="stat-number">5억원</div>
+                <p style="font-size: 20px; margin-top: 20px;">향후 12개월 운영 자금</p>
+            </div>
+            
+            <h3 style="margin-top: 50px;">자금 사용 계획</h3>
+            <table class="comparison-table">
+                <tr>
+                    <td><strong>개발 및 운영</strong></td>
+                    <td>2억원 (40%)</td>
+                    <td>결제, 인프라, 스토어 구축</td>
+                </tr>
+                <tr>
+                    <td><strong>마케팅</strong></td>
+                    <td>1.5억원 (30%)</td>
+                    <td>온/오프라인 광고, PR</td>
+                </tr>
+                <tr>
+                    <td><strong>인건비</strong></td>
+                    <td>1억원 (20%)</td>
+                    <td>핵심 팀 3-5명</td>
+                </tr>
+                <tr>
+                    <td><strong>운영비</strong></td>
+                    <td>5,000만원 (10%)</td>
+                    <td>사무실, 법무, 회계</td>
+                </tr>
+            </table>
+            
+            <div class="info-box" style="margin-top: 30px;">
+                <p style="font-size: 20px; color: #333;"><strong>💡 투자 매력:</strong> 98% 개발 완료 + 168조 시장 + 검증된 확장 모델 (Nike, Peloton)</p>
+            </div>
+            
+            <div class="slide-number">15</div>
+        </div>
+
+        <!-- 슬라이드 16: 정부지원사업 -->
+        <div class="slide">
+            <h2>🏛️ 정부지원사업 적합성</h2>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>예비창업패키지</h4>
+                    <ul>
+                        <li>초기 창업 기업</li>
+                        <li>최대 1억원 지원</li>
+                        <li>시니어 건강 = 사회적 가치 ✅</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <h4>디지털 헬스케어</h4>
+                    <ul>
+                        <li>IT + 고령 친화 산업</li>
+                        <li>플랫폼 기반 서비스</li>
+                        <li>정부 중점 육성 ✅</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <h4>사회적경제 기업</h4>
+                    <ul>
+                        <li>사회적 가치 창출</li>
+                        <li>취약계층 지원</li>
+                        <li>일자리 창출 ✅</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <h4>지역 특화 사업</h4>
+                    <ul>
+                        <li>고령화 지역 우선</li>
+                        <li>지자체 협력</li>
+                        <li>복지 서비스 확대 ✅</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="highlight-box" style="margin-top: 40px;">
+                <h3>핵심 강점</h3>
+                <p style="font-size: 22px;">사회적 가치 + 기술 혁신 + 일자리<br>= <strong>정부지원사업 최적</strong></p>
+            </div>
+            
+            <div class="slide-number">16</div>
+        </div>
+
+        <!-- 슬라이드 17: 사회적 가치 -->
+        <div class="slide">
+            <h2>🌟 사회적 가치</h2>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>🧓 시니어 건강 증진</h4>
+                    <ul>
+                        <li>안전한 운동 환경</li>
+                        <li>독립적 생활 유지</li>
+                        <li>낙상 예방</li>
+                        <li>삶의 질 향상</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <h4>💼 일자리 창출</h4>
+                    <ul>
+                        <li>전문 트레이너 일자리</li>
+                        <li>은퇴 전문가 재취업</li>
+                        <li>플랫폼 운영 인력</li>
+                        <li>지역 경제 활성화</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <h4>🏥 의료비 절감</h4>
+                    <ul>
+                        <li>예방적 운동으로 입원 감소</li>
+                        <li>낙상 사고 예방</li>
+                        <li>만성질환 관리</li>
+                        <li>국가 의료비 부담 완화</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <h4>🤝 가족 부담 경감</h4>
+                    <ul>
+                        <li>전문 케어로 안심</li>
+                        <li>투명한 가격</li>
+                        <li>간편한 예약</li>
+                        <li>일-가정 양립</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="highlight-box" style="margin-top: 40px;">
+                <h3>핵심 메시지</h3>
+                <p style="font-size: 24px;">수익성과 사회적 가치<br><strong>임팩트 비즈니스</strong></p>
+            </div>
+            
+            <div class="slide-number">17</div>
+        </div>
+
+        <!-- 슬라이드 18: 경쟁 포지셔닝 -->
+        <div class="slide">
+            <h2>🎯 경쟁 포지셔닝</h2>
+            
+            <div style="text-align: center; margin: 50px 0;">
+                <div style="position: relative; width: 600px; height: 400px; margin: 0 auto; border: 2px solid #ddd; border-radius: 10px;">
+                    <div style="position: absolute; top: -20px; left: 50%; transform: translateX(-50%); background: white; padding: 0 10px; font-weight: bold;">전문성 높음</div>
+                    <div style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); background: white; padding: 0 10px; font-weight: bold;">일반 서비스</div>
+                    <div style="position: absolute; left: -60px; top: 50%; transform: translateY(-50%); font-weight: bold;">일반<br>피트니스</div>
+                    <div style="position: absolute; right: -60px; top: 50%; transform: translateY(-50%); font-weight: bold;">시니어<br>전문</div>
+                    
+                    <!-- 경쟁사 -->
+                    <div style="position: absolute; bottom: 25%; left: 15%; background: #e0e0e0; padding: 10px 20px; border-radius: 10px;">바디코디<br>온핏</div>
+                    <div style="position: absolute; top: 30%; left: 20%; background: #e0e0e0; padding: 10px 20px; border-radius: 10px;">GC케어</div>
+                    <div style="position: absolute; bottom: 35%; right: 15%; background: #e0e0e0; padding: 10px 20px; border-radius: 10px;">케어네이션</div>
+                    
+                    <!-- 시니어핏 -->
+                    <div style="position: absolute; top: 25%; right: 20%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 25px; border-radius: 10px; font-weight: bold; font-size: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.2);">시니어핏</div>
+                </div>
+            </div>
+            
+            <h3 style="margin-top: 50px;">차별화 포인트</h3>
+            <div class="stats-grid" style="margin-top: 30px;">
+                <div class="stat-box">
+                    <div class="stat-number">🎯</div>
+                    <div class="stat-label" style="font-size: 18px; margin-top: 10px;">시니어 전문 운동</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">🔄</div>
+                    <div class="stat-label" style="font-size: 18px; margin-top: 10px;">양방향 서비스</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">💰</div>
+                    <div class="stat-label" style="font-size: 18px; margin-top: 10px;">30% 할인 옵션</div>
+                </div>
+            </div>
+            
+            <div class="slide-number">18</div>
+        </div>
+
+        <!-- 슬라이드 19: 맺음말 -->
+        <div class="slide cover" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <h1 style="font-size: 56px;">시니어핏과 함께<br>건강한 노년을 만들어갑니다</h1>
+            
+            <div style="margin-top: 60px; font-size: 24px; line-height: 2;">
+                <p>✓ 168조원 시니어 운동 시장 선점</p>
+                <p>✓ 98% 개발 완료, 즉시 런칭</p>
+                <p>✓ 검증된 확장 모델 (Nike, Peloton)</p>
+                <p>✓ 사회적 가치 + 수익성</p>
+                <p>✓ 재활과 일반운동의 통합</p>
+            </div>
+            
+            <div class="tagline" style="margin-top: 80px; font-size: 28px;">
+                Stay Fit, Stay Active<br>
+                <span style="font-size: 22px; margin-top: 10px; display: block;">시니어 건강의 시작, 시니어핏</span>
+            </div>
+            
+            <div style="margin-top: 60px; font-size: 18px;">
+                <p>Contact: contact@seniorfit.kr</p>
+                <p>Website: www.seniorfit.kr (준비 중)</p>
+                <p>Social: @seniorfit.official</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 네비게이션 버튼 -->
+    <div class="nav-buttons">
+        <button onclick="prevSlide()">◀ 이전</button>
+        <span class="current-slide"><span id="current">1</span> / <span id="total">19</span></span>
+        <button onclick="nextSlide()">다음 ▶</button>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+        
+        document.getElementById('total').textContent = totalSlides;
+        
+        function showSlide(n) {
+            if (n >= totalSlides) {
+                currentSlide = 0;
+            } else if (n < 0) {
+                currentSlide = totalSlides - 1;
+            } else {
+                currentSlide = n;
+            }
+            
+            window.scrollTo({
+                top: slides[currentSlide].offsetTop,
+                behavior: 'smooth'
+            });
+            
+            document.getElementById('current').textContent = currentSlide + 1;
+        }
+        
+        function nextSlide() {
+            showSlide(currentSlide + 1);
+        }
+        
+        function prevSlide() {
+            showSlide(currentSlide - 1);
+        }
+        
+        // 키보드 네비게이션
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                prevSlide();
+            }
+        });
+        
+        // 스크롤 감지
+        let isScrolling;
+        window.addEventListener('scroll', function() {
+            clearTimeout(isScrolling);
+            isScrolling = setTimeout(function() {
+                const scrollPosition = window.scrollY + window.innerHeight / 2;
+                
+                slides.forEach((slide, index) => {
+                    const slideTop = slide.offsetTop;
+                    const slideBottom = slideTop + slide.offsetHeight;
+                    
+                    if (scrollPosition >= slideTop && scrollPosition < slideBottom) {
+                        currentSlide = index;
+                        document.getElementById('current').textContent = currentSlide + 1;
+                    }
+                });
+            }, 50);
+        });
+        
+        showSlide(0);
+    </script>
+</body>
+</html>
