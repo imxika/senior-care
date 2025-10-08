@@ -8,7 +8,7 @@ import { TossPaymentConfirm, TossPaymentResponse, TossPaymentError } from '@/lib
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // 1. 인증 확인
     const { data: { user }, error: authError } = await supabase.auth.getUser();

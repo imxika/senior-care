@@ -10,7 +10,7 @@ export async function POST(
   { params }: { params: { paymentId: string } }
 ) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // 1. 인증 확인
     const { data: { user }, error: authError } = await supabase.auth.getUser();

@@ -39,7 +39,11 @@ export default function TestPaymentPage() {
   // Booking 선택
   const selectBooking = (booking: any) => {
     setBookingId(booking.id);
-    setAmount(booking.total_price?.toString() || '100000');
+    // total_price가 0이거나 없으면 기본값 100,000원
+    const price = booking.total_price && booking.total_price > 0
+      ? booking.total_price
+      : 100000;
+    setAmount(price.toString());
   };
 
   // 테스트 Booking 생성
@@ -215,8 +219,8 @@ export default function TestPaymentPage() {
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold text-blue-600">
-                      {booking.total_price?.toLocaleString()}원
+                    <p className={`font-semibold ${booking.total_price > 0 ? 'text-blue-600' : 'text-red-500'}`}>
+                      {booking.total_price > 0 ? `${booking.total_price?.toLocaleString()}원` : '금액 미설정'}
                     </p>
                     <span className="text-xs bg-gray-100 px-2 py-1 rounded">
                       {booking.status}
