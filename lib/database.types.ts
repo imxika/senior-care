@@ -1075,6 +1075,198 @@ export type Database = {
           },
         ]
       }
+      split_payment_invitations: {
+        Row: {
+          accepted_at: string | null
+          booking_id: string
+          cancelled_at: string | null
+          created_at: string | null
+          expires_at: string
+          host_customer_id: string
+          id: string
+          invitation_message: string | null
+          invitation_status: string
+          invitation_token: string
+          invitee_customer_id: string | null
+          invitee_email: string | null
+          invitee_phone: string | null
+          rejected_at: string | null
+          rejection_reason: string | null
+          sent_at: string | null
+          split_payment_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          booking_id: string
+          cancelled_at?: string | null
+          created_at?: string | null
+          expires_at: string
+          host_customer_id: string
+          id?: string
+          invitation_message?: string | null
+          invitation_status?: string
+          invitation_token: string
+          invitee_customer_id?: string | null
+          invitee_email?: string | null
+          invitee_phone?: string | null
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          sent_at?: string | null
+          split_payment_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          booking_id?: string
+          cancelled_at?: string | null
+          created_at?: string | null
+          expires_at?: string
+          host_customer_id?: string
+          id?: string
+          invitation_message?: string | null
+          invitation_status?: string
+          invitation_token?: string
+          invitee_customer_id?: string | null
+          invitee_email?: string | null
+          invitee_phone?: string | null
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          sent_at?: string | null
+          split_payment_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "split_payment_invitations_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "split_payment_invitations_host_customer_id_fkey"
+            columns: ["host_customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "split_payment_invitations_invitee_customer_id_fkey"
+            columns: ["invitee_customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "split_payment_invitations_split_payment_id_fkey"
+            columns: ["split_payment_id"]
+            isOneToOne: false
+            referencedRelation: "split_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      split_payments: {
+        Row: {
+          accepted_at: string | null
+          booking_id: string
+          cancelled_at: string | null
+          card_company: string | null
+          card_number_masked: string | null
+          created_at: string | null
+          customer_id: string
+          failed_at: string | null
+          failure_code: string | null
+          failure_message: string | null
+          id: string
+          invited_at: string | null
+          is_host: boolean | null
+          paid_at: string | null
+          parent_payment_id: string | null
+          payment_metadata: Json | null
+          payment_method: string | null
+          payment_status: string
+          rejected_at: string | null
+          split_amount: number
+          toss_order_id: string | null
+          toss_payment_key: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          booking_id: string
+          cancelled_at?: string | null
+          card_company?: string | null
+          card_number_masked?: string | null
+          created_at?: string | null
+          customer_id: string
+          failed_at?: string | null
+          failure_code?: string | null
+          failure_message?: string | null
+          id?: string
+          invited_at?: string | null
+          is_host?: boolean | null
+          paid_at?: string | null
+          parent_payment_id?: string | null
+          payment_metadata?: Json | null
+          payment_method?: string | null
+          payment_status?: string
+          rejected_at?: string | null
+          split_amount: number
+          toss_order_id?: string | null
+          toss_payment_key?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          booking_id?: string
+          cancelled_at?: string | null
+          card_company?: string | null
+          card_number_masked?: string | null
+          created_at?: string | null
+          customer_id?: string
+          failed_at?: string | null
+          failure_code?: string | null
+          failure_message?: string | null
+          id?: string
+          invited_at?: string | null
+          is_host?: boolean | null
+          paid_at?: string | null
+          parent_payment_id?: string | null
+          payment_metadata?: Json | null
+          payment_method?: string | null
+          payment_status?: string
+          rejected_at?: string | null
+          split_amount?: number
+          toss_order_id?: string | null
+          toss_payment_key?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "split_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "split_payments_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "split_payments_parent_payment_id_fkey"
+            columns: ["parent_payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trainer_availability: {
         Row: {
           created_at: string | null
