@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Users, UserCheck, Clock, Calendar, ExternalLink, AlertCircle, ArrowUpRight, Activity, UserCog, DollarSign, TrendingUp, CheckCircle, XCircle } from 'lucide-react'
+import { Calendar, AlertCircle, ArrowUpRight, DollarSign, XCircle, UserCog, Users, ExternalLink, TrendingUp, BarChart3 } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import {
@@ -47,28 +47,19 @@ export default async function AdminDashboard() {
     }
   )
 
-  // 통계 데이터 가져오기 (Service Role로 RLS 우회)
-  const { count: totalTrainers } = await serviceSupabase
-    .from('trainers')
-    .select('*', { count: 'exact', head: true })
+  // 오늘 날짜 기준 계산
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const todayISO = today.toISOString()
 
-  const { count: pendingTrainers } = await serviceSupabase
-    .from('trainers')
+  // 1. 오늘의 신규 예약 (승인 대기)
+  const { count: todayPendingBookings } = await serviceSupabase
+    .from('bookings')
     .select('*', { count: 'exact', head: true })
-    .eq('is_verified', false)
+    .eq('status', 'pending')
+    .gte('created_at', todayISO)
 
-  const { count: activeTrainers } = await serviceSupabase
-    .from('trainers')
-    .select('*', { count: 'exact', head: true })
-    .eq('is_verified', true)
-    .eq('is_active', true)
-
-  const { count: totalCustomers } = await serviceSupabase
-    .from('profiles')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_type', 'customer')
-
-  // 추천 예약 매칭 대기 수
+  // 2. 추천 예약 매칭 대기 수
   const { count: pendingRecommendedBookings } = await serviceSupabase
     .from('bookings')
     .select('*', { count: 'exact', head: true })
@@ -76,68 +67,36 @@ export default async function AdminDashboard() {
     .eq('status', 'pending')
     .is('trainer_id', null)
 
-  // 예약 통계
-  const { count: totalBookings } = await serviceSupabase
-    .from('bookings')
+  // 3. 미결제 건수 (pending 또는 failed)
+  const { count: unpaidPayments } = await serviceSupabase
+    .from('payments')
     .select('*', { count: 'exact', head: true })
+    .in('payment_status', ['pending', 'failed'])
 
-  const { count: pendingBookings } = await serviceSupabase
-    .from('bookings')
+  // 4. 트레이너 승인 대기
+  const { count: pendingTrainers } = await serviceSupabase
+    .from('trainers')
     .select('*', { count: 'exact', head: true })
-    .eq('status', 'pending')
+    .eq('is_verified', false)
 
-  const { count: confirmedBookings } = await serviceSupabase
-    .from('bookings')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'confirmed')
+  // 5. 오늘의 매출 (결제 완료 기준)
+  const { data: todayPayments } = await serviceSupabase
+    .from('payments')
+    .select('amount')
+    .eq('payment_status', 'paid')
+    .gte('paid_at', todayISO)
 
-  const { count: completedBookings } = await serviceSupabase
-    .from('bookings')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'completed')
+  const todayRevenue = todayPayments?.reduce((sum, p) => sum + parseFloat(p.amount), 0) || 0
 
-  const { count: cancelledBookings } = await serviceSupabase
-    .from('bookings')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'cancelled')
+  // 6. 이번 달 매출
+  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+  const { data: monthPayments } = await serviceSupabase
+    .from('payments')
+    .select('amount')
+    .eq('payment_status', 'paid')
+    .gte('paid_at', firstDayOfMonth.toISOString())
 
-  // 서비스 타입별 통계
-  const { data: serviceTypeStats } = await serviceSupabase
-    .from('bookings')
-    .select('service_type')
-    .not('service_type', 'is', null)
-
-  const serviceTypeCounts = serviceTypeStats?.reduce((acc: Record<string, number>, booking) => {
-    const type = booking.service_type
-    acc[type] = (acc[type] || 0) + 1
-    return acc
-  }, {}) || {}
-
-  // 완료된 예약의 총 매출 (completed만)
-  const { data: completedBookingsData } = await serviceSupabase
-    .from('bookings')
-    .select(`
-      total_price,
-      status
-    `)
-    .eq('status', 'completed')
-
-  const totalRevenue = completedBookingsData?.reduce((sum, booking) => {
-    return sum + (booking.total_price || 0)
-  }, 0) || 0
-
-  // 이번 달 매출
-  const now = new Date()
-  const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-  const { data: thisMonthBookings } = await serviceSupabase
-    .from('bookings')
-    .select('total_price')
-    .eq('status', 'completed')
-    .gte('booking_date', firstDayOfMonth)
-
-  const thisMonthRevenue = thisMonthBookings?.reduce((sum, booking) => {
-    return sum + (booking.total_price || 0)
-  }, 0) || 0
+  const monthRevenue = monthPayments?.reduce((sum, p) => sum + parseFloat(p.amount), 0) || 0
 
   return (
     <>
@@ -161,34 +120,28 @@ export default async function AdminDashboard() {
       </header>
 
       {/* Main Content */}
-      <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
+      <div className="flex flex-1 flex-col gap-6 p-4 md:gap-8 md:p-6">
         {/* Page Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">대시보드</h1>
-            <p className="text-muted-foreground mt-1">
-              안녕하세요, {profile?.full_name}님
-            </p>
-          </div>
-          <Button asChild>
-            <Link href="/admin/trainers">
-              트레이너 관리
-              <ArrowUpRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">대시보드</h1>
+          <p className="text-muted-foreground mt-1">
+            안녕하세요, {profile?.full_name}님. 오늘 확인이 필요한 항목들입니다.
+          </p>
         </div>
 
-        {/* Alerts */}
+        {/* Alerts - 즉시 액션이 필요한 항목 */}
         <div className="space-y-3">
           {pendingRecommendedBookings && pendingRecommendedBookings > 0 && (
             <Alert className="border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950">
               <UserCog className="h-4 w-4 text-green-600 dark:text-green-500" />
-              <AlertTitle className="text-green-900 dark:text-green-100">추천 예약 매칭 대기</AlertTitle>
+              <AlertTitle className="text-green-900 dark:text-green-100">🎯 추천 예약 매칭 필요</AlertTitle>
               <AlertDescription className="text-green-800 dark:text-green-200">
                 {pendingRecommendedBookings}건의 추천 예약이 트레이너 매칭을 기다리고 있습니다.
-                <Link href="/admin/bookings?status=pending" className="ml-2 font-medium underline underline-offset-4 hover:text-green-900">
-                  지금 매칭하기
-                </Link>
+                <Button asChild variant="link" className="ml-2 h-auto p-0 text-green-900 underline underline-offset-4 hover:text-green-700">
+                  <Link href="/admin/bookings?status=pending">
+                    지금 매칭하기 →
+                  </Link>
+                </Button>
               </AlertDescription>
             </Alert>
           )}
@@ -196,304 +149,276 @@ export default async function AdminDashboard() {
           {pendingTrainers && pendingTrainers > 0 && (
             <Alert className="border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950">
               <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-500" />
-              <AlertTitle className="text-yellow-900 dark:text-yellow-100">승인 대기 중인 트레이너</AlertTitle>
+              <AlertTitle className="text-yellow-900 dark:text-yellow-100">⏳ 트레이너 승인 대기</AlertTitle>
               <AlertDescription className="text-yellow-800 dark:text-yellow-200">
                 {pendingTrainers}명의 트레이너가 승인을 기다리고 있습니다.
-                <Link href="/admin/trainers" className="ml-2 font-medium underline underline-offset-4 hover:text-yellow-900">
-                  지금 확인하기
-                </Link>
+                <Button asChild variant="link" className="ml-2 h-auto p-0 text-yellow-900 underline underline-offset-4 hover:text-yellow-700">
+                  <Link href="/admin/trainers">
+                    지금 확인하기 →
+                  </Link>
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {unpaidPayments && unpaidPayments > 0 && (
+            <Alert className="border-orange-200 bg-orange-50 dark:border-orange-900 dark:bg-orange-950">
+              <DollarSign className="h-4 w-4 text-orange-600 dark:text-orange-500" />
+              <AlertTitle className="text-orange-900 dark:text-orange-100">💳 미결제 건수</AlertTitle>
+              <AlertDescription className="text-orange-800 dark:text-orange-200">
+                {unpaidPayments}건의 미결제 건이 있습니다.
+                <Button asChild variant="link" className="ml-2 h-auto p-0 text-orange-900 underline underline-offset-4 hover:text-orange-700">
+                  <Link href="/admin/payments">
+                    확인하기 →
+                  </Link>
+                </Button>
               </AlertDescription>
             </Alert>
           )}
         </div>
 
-        {/* Stats Grid - 사용자 통계 */}
+        {/* Key Metrics - 핵심 지표 */}
         <div>
-          <h2 className="text-lg font-semibold mb-3">사용자 통계</h2>
+          <h2 className="text-xl font-semibold mb-4">📊 오늘의 핵심 지표</h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
+            {/* 오늘 신규 예약 */}
+            <Card className="hover:shadow-lg transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">전체 트레이너</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{totalTrainers || 0}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  등록된 트레이너
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">승인 대기</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-yellow-600">{pendingTrainers || 0}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  검토가 필요합니다
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">활동 중</CardTitle>
-                <UserCheck className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{activeTrainers || 0}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  활성 트레이너
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">고객 수</CardTitle>
-                <Activity className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">{totalCustomers || 0}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  등록된 고객
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* 예약 통계 */}
-        <div>
-          <h2 className="text-lg font-semibold mb-3">예약 통계</h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">전체 예약</CardTitle>
+                <CardTitle className="text-sm font-medium">오늘 신규 예약</CardTitle>
                 <Calendar className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{totalBookings || 0}</div>
+                <div className="text-3xl font-bold text-blue-600">{todayPendingBookings || 0}건</div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  총 예약 건수
+                  승인 대기 중
                 </p>
+                <Button asChild variant="link" size="sm" className="mt-2 h-auto p-0 text-xs">
+                  <Link href="/admin/bookings?status=pending">
+                    예약 관리 →
+                  </Link>
+                </Button>
               </CardContent>
             </Card>
 
-            <Card>
+            {/* 추천 매칭 대기 */}
+            <Card className="hover:shadow-lg transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">대기 중</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">추천 매칭 대기</CardTitle>
+                <UserCog className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-yellow-600">{pendingBookings || 0}</div>
+                <div className="text-3xl font-bold text-green-600">{pendingRecommendedBookings || 0}건</div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  승인 대기
+                  트레이너 배정 필요
                 </p>
+                <Button asChild variant="link" size="sm" className="mt-2 h-auto p-0 text-xs">
+                  <Link href="/admin/bookings?status=pending">
+                    매칭하기 →
+                  </Link>
+                </Button>
               </CardContent>
             </Card>
 
-            <Card>
+            {/* 미결제 건수 */}
+            <Card className="hover:shadow-lg transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">예약 확정</CardTitle>
-                <CheckCircle className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">{confirmedBookings || 0}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  확정된 예약
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">완료</CardTitle>
-                <CheckCircle className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{completedBookings || 0}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  서비스 완료
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">취소</CardTitle>
+                <CardTitle className="text-sm font-medium">미결제 건수</CardTitle>
                 <XCircle className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-red-600">{cancelledBookings || 0}</div>
+                <div className="text-3xl font-bold text-orange-600">{unpaidPayments || 0}건</div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  취소된 예약
+                  확인 필요
                 </p>
+                <Button asChild variant="link" size="sm" className="mt-2 h-auto p-0 text-xs">
+                  <Link href="/admin/payments">
+                    결제 관리 →
+                  </Link>
+                </Button>
               </CardContent>
             </Card>
-          </div>
-        </div>
 
-        {/* 매출 통계 */}
-        <div>
-          <h2 className="text-lg font-semibold mb-3">매출 통계</h2>
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card>
+            {/* 오늘 매출 */}
+            <Card className="hover:shadow-lg transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">총 매출</CardTitle>
+                <CardTitle className="text-sm font-medium">오늘 매출</CardTitle>
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-600">
-                  ₩{totalRevenue.toLocaleString()}
+                <div className="text-3xl font-bold text-purple-600">
+                  ₩{todayRevenue.toLocaleString()}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  완료된 예약 기준
+                  결제 완료 기준
                 </p>
+                <Button asChild variant="link" size="sm" className="mt-2 h-auto p-0 text-xs">
+                  <Link href="/admin/analytics">
+                    분석 보기 →
+                  </Link>
+                </Button>
               </CardContent>
             </Card>
+          </div>
+        </div>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">이번 달 매출</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+        {/* 이번 달 요약 */}
+        <div>
+          <h2 className="text-xl font-semibold mb-4">📈 이번 달 요약</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>이번 달 총 매출</CardTitle>
+                    <CardDescription className="mt-1">
+                      {today.getMonth() + 1}월 누적 (결제 완료 기준)
+                    </CardDescription>
+                  </div>
+                  <TrendingUp className="h-8 w-8 text-green-600" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-blue-600">
-                  ₩{thisMonthRevenue.toLocaleString()}
+                <div className="text-4xl font-bold text-green-600">
+                  ₩{monthRevenue.toLocaleString()}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {now.getMonth() + 1}월 매출
-                </p>
+                <div className="mt-4 flex gap-2">
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/admin/analytics">
+                      상세 분석 보기
+                      <ArrowUpRight className="ml-2 h-3 w-3" />
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/admin/settlements">
+                      정산 관리
+                      <ArrowUpRight className="ml-2 h-3 w-3" />
+                    </Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>트레이너 승인 대기</CardTitle>
+                    <CardDescription className="mt-1">
+                      검토가 필요한 신규 트레이너
+                    </CardDescription>
+                  </div>
+                  <Users className="h-8 w-8 text-yellow-600" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-4xl font-bold text-yellow-600">
+                  {pendingTrainers || 0}명
+                </div>
+                <div className="mt-4">
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/admin/trainers">
+                      트레이너 관리
+                      <ArrowUpRight className="ml-2 h-3 w-3" />
+                    </Link>
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
         </div>
 
-        {/* 서비스 타입별 통계 */}
+        {/* Quick Actions - 빠른 액션 */}
         <div>
-          <h2 className="text-lg font-semibold mb-3">서비스 타입별 예약</h2>
+          <h2 className="text-xl font-semibold mb-4">⚡ 빠른 액션</h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {Object.entries(serviceTypeCounts).length > 0 ? (
-              Object.entries(serviceTypeCounts).map(([type, count]) => (
-                <Card key={type}>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium capitalize">{type}</CardTitle>
-                    <Activity className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{count}</div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {((count / (totalBookings || 1)) * 100).toFixed(1)}%
-                    </p>
-                  </CardContent>
-                </Card>
-              ))
-            ) : (
-              <Card className="col-span-full">
-                <CardContent className="pt-6">
-                  <p className="text-center text-muted-foreground text-sm">
-                    아직 예약이 없습니다
-                  </p>
-                </CardContent>
-              </Card>
-            )}
+            <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-950">
+                    <Calendar className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div className="flex-1">
+                    <CardTitle className="text-base">예약 관리</CardTitle>
+                    <CardDescription className="text-xs">전체 예약 확인</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Button asChild variant="outline" size="sm" className="w-full">
+                  <Link href="/admin/bookings">
+                    바로가기
+                    <ArrowUpRight className="ml-2 h-3 w-3" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-100 dark:bg-green-950">
+                    <DollarSign className="h-6 w-6 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div className="flex-1">
+                    <CardTitle className="text-base">결제 관리</CardTitle>
+                    <CardDescription className="text-xs">결제 현황 확인</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Button asChild variant="outline" size="sm" className="w-full">
+                  <Link href="/admin/payments">
+                    바로가기
+                    <ArrowUpRight className="ml-2 h-3 w-3" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-950">
+                    <BarChart3 className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div className="flex-1">
+                    <CardTitle className="text-base">결제 분석</CardTitle>
+                    <CardDescription className="text-xs">차트 및 통계</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Button asChild variant="outline" size="sm" className="w-full">
+                  <Link href="/admin/analytics">
+                    바로가기
+                    <ArrowUpRight className="ml-2 h-3 w-3" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-950">
+                    <ExternalLink className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+                  </div>
+                  <div className="flex-1">
+                    <CardTitle className="text-base">Sanity CMS</CardTitle>
+                    <CardDescription className="text-xs">콘텐츠 관리</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Button asChild variant="outline" size="sm" className="w-full">
+                  <a href="http://localhost:3333/senior-care" target="_blank" rel="noopener noreferrer">
+                    열기
+                    <ExternalLink className="ml-2 h-3 w-3" />
+                  </a>
+                </Button>
+              </CardContent>
+            </Card>
           </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="hover:bg-muted/50 transition-colors">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                  <Users className="h-5 w-5 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <CardTitle className="text-sm">트레이너 관리</CardTitle>
-                  <CardDescription className="text-xs">승인 및 Sanity 게시</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Button asChild variant="outline" size="sm" className="w-full">
-                <Link href="/admin/trainers">
-                  바로가기
-                  <ArrowUpRight className="ml-2 h-3 w-3" />
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:bg-muted/50 transition-colors">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-950">
-                  <ExternalLink className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                </div>
-                <div className="flex-1">
-                  <CardTitle className="text-sm">Sanity Studio</CardTitle>
-                  <CardDescription className="text-xs">CMS 관리</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Button asChild variant="outline" size="sm" className="w-full">
-                <a href="http://localhost:3333/senior-care" target="_blank" rel="noopener noreferrer">
-                  열기
-                  <ExternalLink className="ml-2 h-3 w-3" />
-                </a>
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:bg-muted/50 transition-colors">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-950">
-                  <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div className="flex-1">
-                  <CardTitle className="text-sm">예약 관리</CardTitle>
-                  <CardDescription className="text-xs">예약 현황 확인</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Button asChild variant="outline" size="sm" className="w-full">
-                <Link href="/admin/bookings">
-                  바로가기
-                  <ArrowUpRight className="ml-2 h-3 w-3" />
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:bg-muted/50 transition-colors">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 dark:bg-green-950">
-                  <UserCog className="h-5 w-5 text-green-600 dark:text-green-400" />
-                </div>
-                <div className="flex-1">
-                  <CardTitle className="text-sm">추천 예약 매칭</CardTitle>
-                  <CardDescription className="text-xs">
-                    {pendingRecommendedBookings ? `${pendingRecommendedBookings}건 대기` : '대기 없음'}
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Button asChild variant="outline" size="sm" className="w-full">
-                <Link href="/admin/bookings?status=pending">
-                  바로가기
-                  <ArrowUpRight className="ml-2 h-3 w-3" />
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </>

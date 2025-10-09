@@ -50,52 +50,78 @@ export default async function AdminSettlementsPage() {
     }
   )
 
-  // 완료된 예약만 조회 (정산 대상) - Service Role로 RLS 우회
-  const { data: completedBookings } = await serviceSupabase
-    .from('bookings')
+  // 결제 완료된 예약만 조회 (정산 대상) - Service Role로 RLS 우회
+  const { data: payments } = await serviceSupabase
+    .from('payments')
     .select(`
-      *,
-      trainer:trainers!trainer_id(
+      id,
+      amount,
+      payment_status,
+      paid_at,
+      payment_provider,
+      booking:bookings!booking_id(
         id,
-        hourly_rate,
-        profile:profiles!profile_id(full_name, avatar_url, email)
-      ),
-      customer:customers!customer_id(
-        profile:profiles!profile_id(full_name)
+        booking_date,
+        start_time,
+        end_time,
+        duration_minutes,
+        service_type,
+        booking_type,
+        service_completed_at,
+        trainer:trainers!trainer_id(
+          id,
+          hourly_rate,
+          profile:profiles!profile_id(full_name, avatar_url, email)
+        ),
+        customer:customers!customer_id(
+          profile:profiles!profile_id(full_name)
+        )
       )
     `)
-    .eq('status', 'completed')
-    .not('service_completed_at', 'is', null)
-    .order('service_completed_at', { ascending: false })
+    .eq('payment_status', 'paid')
+    .order('paid_at', { ascending: false })
 
-  // 트레이너별로 그룹화
+  // 트레이너별로 그룹화 (결제 기반)
+  const platformCommissionRate = 0.15 // 15% 수수료
+
   const trainerSettlements = new Map<string, {
     trainer: any
-    bookings: any[]
-    totalRevenue: number
+    payments: any[]
+    totalRevenue: number // 실제 결제 금액
+    platformCommission: number // 플랫폼 수수료 (15%)
+    settlementAmount: number // 트레이너 정산 금액 (85%)
     bookingCount: number
   }>()
 
-  completedBookings?.forEach((booking: any) => {
-    const trainerId = booking.trainer?.id
+  payments?.forEach((payment: any) => {
+    const booking = Array.isArray(payment.booking) ? payment.booking[0] : payment.booking
+    if (!booking?.trainer) return
+
+    const trainer = Array.isArray(booking.trainer) ? booking.trainer[0] : booking.trainer
+    const trainerId = trainer?.id
     if (!trainerId) return
 
-    const basePrice = PRICING[booking.service_type as keyof typeof PRICING] || 0
-    const finalPrice = basePrice * (booking.price_multiplier || 1) * (booking.duration_hours || 1)
+    const amount = parseFloat(payment.amount)
+    const commission = amount * platformCommissionRate
+    const settlement = amount - commission
 
     if (!trainerSettlements.has(trainerId)) {
       trainerSettlements.set(trainerId, {
-        trainer: booking.trainer,
-        bookings: [],
+        trainer,
+        payments: [],
         totalRevenue: 0,
+        platformCommission: 0,
+        settlementAmount: 0,
         bookingCount: 0,
       })
     }
 
-    const settlement = trainerSettlements.get(trainerId)!
-    settlement.bookings.push(booking)
-    settlement.totalRevenue += finalPrice
-    settlement.bookingCount += 1
+    const data = trainerSettlements.get(trainerId)!
+    data.payments.push({ ...payment, booking })
+    data.totalRevenue += amount
+    data.platformCommission += commission
+    data.settlementAmount += settlement
+    data.bookingCount += 1
   })
 
   // Map을 배열로 변환하고 매출 순으로 정렬
@@ -105,21 +131,24 @@ export default async function AdminSettlementsPage() {
 
   // 전체 통계
   const totalRevenue = settlements.reduce((sum, s) => sum + s.totalRevenue, 0)
+  const totalCommission = settlements.reduce((sum, s) => sum + s.platformCommission, 0)
+  const totalSettlement = settlements.reduce((sum, s) => sum + s.settlementAmount, 0)
   const totalBookings = settlements.reduce((sum, s) => sum + s.bookingCount, 0)
 
   // 이번 달 통계
   const currentMonth = new Date().getMonth()
   const currentYear = new Date().getFullYear()
-  const thisMonthBookings = completedBookings?.filter((b: any) => {
-    const completedDate = new Date(b.service_completed_at)
-    return completedDate.getMonth() === currentMonth && completedDate.getFullYear() === currentYear
+  const thisMonthPayments = payments?.filter((p: any) => {
+    const paidDate = new Date(p.paid_at)
+    return paidDate.getMonth() === currentMonth && paidDate.getFullYear() === currentYear
   }) || []
 
-  const thisMonthRevenue = thisMonthBookings.reduce((sum: number, b: any) => {
-    const basePrice = PRICING[b.service_type as keyof typeof PRICING] || 0
-    const finalPrice = basePrice * (b.price_multiplier || 1) * (b.duration_hours || 1)
-    return sum + finalPrice
+  const thisMonthRevenue = thisMonthPayments.reduce((sum: number, p: any) => {
+    return sum + parseFloat(p.amount)
   }, 0)
+
+  const thisMonthCommission = thisMonthRevenue * platformCommissionRate
+  const thisMonthSettlement = thisMonthRevenue - thisMonthCommission
 
   return (
     <>
@@ -149,16 +178,42 @@ export default async function AdminSettlementsPage() {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">총 매출</CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{formatPrice(totalRevenue)}</div>
+              <div className="text-2xl font-bold">{formatPrice(totalRevenue)}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                누적 매출
+                {totalBookings}건 결제 완료
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">플랫폼 수수료</CardTitle>
+              <TrendingUp className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{formatPrice(totalCommission)}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                15% 수수료
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">트레이너 정산액</CardTitle>
+              <DollarSign className="h-4 w-4 text-blue-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">{formatPrice(totalSettlement)}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                지급 예정 (85%)
               </p>
             </CardContent>
           </Card>
@@ -166,36 +221,23 @@ export default async function AdminSettlementsPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">이번 달</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{formatPrice(thisMonthRevenue)}</div>
+              <div className="text-2xl font-bold text-purple-600">{formatPrice(thisMonthRevenue)}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                {thisMonthBookings.length}건 완료
+                {thisMonthPayments.length}건
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">완료 예약</CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalBookings}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                총 예약 건수
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">활성 트레이너</CardTitle>
+              <CardTitle className="text-sm font-medium">활동 트레이너</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{settlements.length}</div>
+              <div className="text-2xl font-bold">{settlements.length}명</div>
               <p className="text-xs text-muted-foreground mt-1">
                 정산 대상
               </p>
@@ -243,13 +285,17 @@ export default async function AdminSettlementsPage() {
                       </div>
 
                       {/* Revenue Info */}
-                      <div className="flex flex-col items-end gap-1 md:min-w-[150px]">
-                        <div className="text-2xl md:text-3xl font-bold text-green-600">
-                          {formatPrice(settlement.totalRevenue)}
+                      <div className="flex flex-col items-end gap-1 md:min-w-[200px]">
+                        <div className="text-xs text-muted-foreground">정산 금액 (85%)</div>
+                        <div className="text-2xl md:text-3xl font-bold text-blue-600">
+                          {formatPrice(settlement.settlementAmount)}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          매출: {formatPrice(settlement.totalRevenue)} · 수수료: -{formatPrice(settlement.platformCommission)}
                         </div>
                         <div className="text-xs text-muted-foreground flex items-center gap-1">
                           <CheckCircle className="h-3 w-3" />
-                          총 {settlement.bookingCount}건 완료
+                          {settlement.bookingCount}건 완료
                         </div>
                       </div>
                     </div>
@@ -268,24 +314,32 @@ export default async function AdminSettlementsPage() {
                       </Link>
                     </div>
 
-                    {/* Bookings List */}
+                    {/* Payments List */}
                     <div className="space-y-3">
-                      {settlement.bookings.slice(0, 5).map((booking: any) => {
-                        const basePrice = PRICING[booking.service_type as keyof typeof PRICING] || 0
-                        const finalPrice = basePrice * (booking.price_multiplier || 1) * (booking.duration_hours || 1)
+                      {settlement.payments.slice(0, 5).map((payment: any) => {
+                        const booking = payment.booking
+                        const customer = Array.isArray(booking?.customer) ? booking.customer[0] : booking?.customer
+                        const customerProfile = Array.isArray(customer?.profile) ? customer.profile[0] : customer?.profile
+
+                        const amount = parseFloat(payment.amount)
+                        const commission = amount * platformCommissionRate
+                        const settlementAmount = amount - commission
 
                         return (
                           <div
-                            key={booking.id}
+                            key={payment.id}
                             className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
                           >
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
                                 <span className="font-medium text-sm">
-                                  {booking.customer?.profiles?.full_name || '고객'}
+                                  {customerProfile?.full_name || '고객'}
                                 </span>
                                 <Badge variant="outline" className="text-xs">
                                   {booking.booking_type === 'direct' ? '지정' : '추천'}
+                                </Badge>
+                                <Badge variant="secondary" className="text-xs">
+                                  {payment.payment_provider === 'stripe' ? 'Stripe' : 'Toss'}
                                 </Badge>
                               </div>
                               <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
@@ -298,15 +352,18 @@ export default async function AdminSettlementsPage() {
                                   {booking.service_type === 'home_visit' ? '방문' : booking.service_type === 'center_visit' ? '센터' : '온라인'}
                                 </span>
                                 <span>·</span>
-                                <span>{booking.duration_hours}시간</span>
+                                <span>{Math.round(booking.duration_minutes / 60)}시간</span>
                               </div>
                             </div>
                             <div className="text-right ml-4">
-                              <div className="font-semibold text-sm text-green-600">
-                                {formatPrice(finalPrice)}
+                              <div className="font-semibold text-sm text-blue-600">
+                                {formatPrice(settlementAmount)}
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                {new Date(booking.service_completed_at).toLocaleDateString('ko-KR')}
+                                매출 {formatPrice(amount)}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {new Date(payment.paid_at).toLocaleDateString('ko-KR')}
                               </div>
                             </div>
                           </div>

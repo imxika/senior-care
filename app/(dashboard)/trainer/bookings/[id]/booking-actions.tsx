@@ -32,9 +32,13 @@ interface BookingActionsProps {
   bookingId: string
   status: string
   adminMatchedAt: string | null
+  payments?: Array<{
+    id: string
+    payment_status: string
+  }> | null
 }
 
-export function BookingActions({ bookingId, status, adminMatchedAt }: BookingActionsProps) {
+export function BookingActions({ bookingId, status, adminMatchedAt, payments }: BookingActionsProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [showRejectDialog, setShowRejectDialog] = useState(false)
@@ -119,13 +123,26 @@ export function BookingActions({ bookingId, status, adminMatchedAt }: BookingAct
   }
 
   const handleComplete = async () => {
+    // 결제 확인
+    const hasPaidPayment = payments?.some(p => p.payment_status === 'paid')
+
+    if (!hasPaidPayment) {
+      toast.error('완료 처리 불가', {
+        description: '결제가 완료되지 않았습니다. 고객이 결제를 완료한 후 서비스 완료 처리가 가능합니다.'
+      })
+      return
+    }
+
     setIsLoading(true)
     const result = await updateBookingStatus(bookingId, 'completed')
     setIsLoading(false)
 
     if (result.error) {
-      alert(result.error)
+      toast.error('완료 처리 실패', {
+        description: result.error
+      })
     } else {
+      toast.success('서비스 완료 처리되었습니다')
       router.refresh()
     }
   }
@@ -247,23 +264,36 @@ export function BookingActions({ bookingId, status, adminMatchedAt }: BookingAct
   }
 
   if (status === 'confirmed') {
+    const hasPaidPayment = payments?.some(p => p.payment_status === 'paid')
+
     return (
-      <div className="flex gap-3">
-        <Button
-          onClick={handleComplete}
-          disabled={isLoading}
-          className="h-12 md:h-14 flex-1"
-        >
-          완료 처리
-        </Button>
-        <Button
-          onClick={handleNoShow}
-          disabled={isLoading}
-          variant="outline"
-          className="h-12 md:h-14 flex-1"
-        >
-          노쇼
-        </Button>
+      <div className="space-y-3">
+        {!hasPaidPayment && (
+          <Alert className="border-yellow-200 bg-yellow-50">
+            <AlertCircle className="h-4 w-4 text-yellow-600" />
+            <AlertDescription className="text-sm text-yellow-800">
+              결제 대기 중입니다. 고객이 결제를 완료해야 서비스 완료 처리가 가능합니다.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <div className="flex gap-3">
+          <Button
+            onClick={handleComplete}
+            disabled={isLoading || !hasPaidPayment}
+            className="h-12 md:h-14 flex-1"
+          >
+            완료 처리
+          </Button>
+          <Button
+            onClick={handleNoShow}
+            disabled={isLoading}
+            variant="outline"
+            className="h-12 md:h-14 flex-1"
+          >
+            노쇼
+          </Button>
+        </div>
       </div>
     )
   }

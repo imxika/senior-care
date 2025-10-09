@@ -11,6 +11,18 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Loader2, Save, X } from 'lucide-react'
 import { updateTrainerProfile } from './actions'
+import { toast } from 'sonner'
+
+// 정형화된 전문분야 카테고리
+const SPECIALTY_OPTIONS = [
+  '재활 PT',
+  '개인 PT',
+  '스트레칭/관절운동',
+  '보행훈련',
+  '요가',
+  '필라테스',
+  '실버 댄스',
+]
 
 interface ProfileEditFormProps {
   profile: any
@@ -30,12 +42,13 @@ export function ProfileEditForm({ profile, trainer, isEditing, setIsEditing }: P
   const [phone, setPhone] = useState(profile?.phone || '')
 
   // 트레이너 정보 - 숫자는 문자열로 관리
-  const [yearsExperience, setYearsExperience] = useState(trainer?.experience_years?.toString() || '')
+  const [yearsExperience, setYearsExperience] = useState(trainer?.years_experience?.toString() || '')
   const [hourlyRate, setHourlyRate] = useState(trainer?.hourly_rate?.toString() || '')
   const [bio, setBio] = useState(trainer?.bio || '')
-  const [specialtiesInput, setSpecialtiesInput] = useState(
-    trainer?.specialties?.join(', ') || ''
+  const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>(
+    trainer?.specialties || []
   )
+  const [otherSpecialty, setOtherSpecialty] = useState('')
   const [certificationsInput, setCertificationsInput] = useState(
     trainer?.certifications?.join(', ') || ''
   )
@@ -70,12 +83,18 @@ export function ProfileEditForm({ profile, trainer, isEditing, setIsEditing }: P
     }
 
     const formData = new FormData()
+    // 기타 전문분야가 있으면 추가
+    const finalSpecialties = [...selectedSpecialties]
+    if (otherSpecialty.trim()) {
+      finalSpecialties.push(`기타: ${otherSpecialty.trim()}`)
+    }
+
     formData.append('full_name', fullName)
     formData.append('phone', phone)
     formData.append('years_experience', yearsExperience || '0')
     formData.append('hourly_rate', hourlyRate || '0')
     formData.append('bio', bio)
-    formData.append('specialties', specialtiesInput)
+    formData.append('specialties', finalSpecialties.join(', '))
     formData.append('certifications', certificationsInput)
     formData.append('service_areas', serviceAreasInput)
     formData.append('max_group_size', maxGroupSize || '1')
@@ -88,22 +107,35 @@ export function ProfileEditForm({ profile, trainer, isEditing, setIsEditing }: P
 
     if (result.error) {
       setError(result.error)
+      toast.error('프로필 업데이트 실패', {
+        description: result.error
+      })
       setLoading(false)
     } else {
       setLoading(false)
       setIsEditing(false)
+      toast.success('프로필이 성공적으로 업데이트되었습니다')
       router.refresh()
     }
+  }
+
+  const toggleSpecialty = (specialty: string) => {
+    setSelectedSpecialties(prev =>
+      prev.includes(specialty)
+        ? prev.filter(s => s !== specialty)
+        : [...prev, specialty]
+    )
   }
 
   const handleCancel = () => {
     // 원래 값으로 되돌리기
     setFullName(profile?.full_name || '')
     setPhone(profile?.phone || '')
-    setYearsExperience(trainer?.experience_years?.toString() || '')
+    setYearsExperience(trainer?.years_experience?.toString() || '')
     setHourlyRate(trainer?.hourly_rate?.toString() || '')
     setBio(trainer?.bio || '')
-    setSpecialtiesInput(trainer?.specialties?.join(', ') || '')
+    setSelectedSpecialties(trainer?.specialties || [])
+    setOtherSpecialty('')
     setCertificationsInput(trainer?.certifications?.join(', ') || '')
     setServiceAreasInput(trainer?.service_areas?.join(', ') || '')
     setMaxGroupSize(trainer?.max_group_size?.toString() || '')
@@ -261,18 +293,45 @@ export function ProfileEditForm({ profile, trainer, isEditing, setIsEditing }: P
               </div>
 
               <div className="space-y-2 pt-2 border-t">
-                <Label htmlFor="specialties" className="text-sm">전문 분야</Label>
+                <Label className="text-sm">전문 분야</Label>
                 {isEditing ? (
-                  <>
-                    <Input
-                      id="specialties"
-                      value={specialtiesInput}
-                      onChange={(e) => setSpecialtiesInput(e.target.value)}
-                      placeholder="예: 근력 운동, 유산소, 재활 (쉼표로 구분)"
-                      className="h-12 md:h-11 text-base"
-                    />
-                    <p className="text-xs text-muted-foreground">쉼표(,)로 구분하여 입력하세요</p>
-                  </>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {SPECIALTY_OPTIONS.map((specialty) => (
+                        <div key={specialty} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={specialty}
+                            checked={selectedSpecialties.includes(specialty)}
+                            onCheckedChange={() => toggleSpecialty(specialty)}
+                            className="h-5 w-5"
+                          />
+                          <label
+                            htmlFor={specialty}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            {specialty}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* 기타 전문분야 입력 */}
+                    <div className="space-y-2 pt-2 border-t">
+                      <Label htmlFor="other_specialty" className="text-sm text-muted-foreground">
+                        위 목록에 없는 전문분야 (선택사항)
+                      </Label>
+                      <Input
+                        id="other_specialty"
+                        value={otherSpecialty}
+                        onChange={(e) => setOtherSpecialty(e.target.value)}
+                        placeholder="예: 수중운동, 실내사이클 등"
+                        className="h-12 md:h-11 text-base"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        💡 입력하시면 관리자가 검토 후 정식 카테고리로 추가합니다
+                      </p>
+                    </div>
+                  </div>
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {trainer?.specialties && trainer.specialties.length > 0 ? (
@@ -325,7 +384,7 @@ export function ProfileEditForm({ profile, trainer, isEditing, setIsEditing }: P
             </CardHeader>
             <CardContent className="space-y-3 md:space-y-4 px-4 md:px-6 pb-4 md:pb-6">
               <div className="space-y-2">
-                <Label htmlFor="service_areas" className="text-sm">서비스 지역</Label>
+                <Label htmlFor="service_areas" className="text-sm">방문 서비스 가능 지역</Label>
                 {isEditing ? (
                   <>
                     <Input
@@ -335,7 +394,7 @@ export function ProfileEditForm({ profile, trainer, isEditing, setIsEditing }: P
                       placeholder="예: 강남구, 서초구, 송파구 (쉼표로 구분)"
                       className="h-12 md:h-11 text-base"
                     />
-                    <p className="text-xs text-muted-foreground">쉼표(,)로 구분하여 입력하세요</p>
+                    <p className="text-xs text-muted-foreground">방문 서비스가 가능한 지역을 쉼표(,)로 구분하여 입력하세요</p>
                   </>
                 ) : (
                   <div className="flex flex-wrap gap-2">
@@ -346,7 +405,7 @@ export function ProfileEditForm({ profile, trainer, isEditing, setIsEditing }: P
                         </Badge>
                       ))
                     ) : (
-                      <p className="text-sm text-muted-foreground">서비스 지역 없음</p>
+                      <p className="text-sm text-muted-foreground">방문 서비스 지역 미설정</p>
                     )}
                   </div>
                 )}

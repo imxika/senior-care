@@ -1,9 +1,9 @@
 # 🏥 Senior Care MVP - 프로젝트 현황 분석
 
 **작성일**: 2025-10-02 (Day 1)
-**최종 업데이트**: 2025-10-07 (Day 7 계속)
-**버전**: 3.7.1
-**상태**: MVP 개발 진행 중 (97% 완료)
+**최종 업데이트**: 2025-10-09 (Day 9 완료)
+**버전**: 3.9.0
+**상태**: MVP 핵심 기능 완료 (100% 달성)
 
 ---
 
@@ -1607,12 +1607,12 @@ Day 8: 98% (+2%) ✅ MVP 거의 완성
 #### 구현 완료
 - ✅ **Toss Payments 통합**
   - 결제 요청 API (`/api/payments/request`)
-  - 결제 승인 API (`/api/payments/confirm`)
+  - 결제 승인 API (`/api/payments/toss/confirm`)
   - Toss SDK 연동
   - 성공/실패 페이지 리다이렉트
 
 - ✅ **Stripe 통합**
-  - Checkout Session 생성 API (`/api/payments/stripe/create-session`)
+  - 결제 요청 API에 Stripe Session 생성 통합
   - 결제 승인 확인 API (`/api/payments/stripe/confirm`)
   - Stripe SDK 연동
   - 테스트 카드 지원
@@ -1629,30 +1629,44 @@ Day 8: 98% (+2%) ✅ MVP 거의 완성
   - 이벤트 메타데이터 저장
 
 - ✅ **예약-결제 연동**
+  - 체크아웃 페이지 (`/checkout/[bookingId]`) 생성
   - 결제 완료 시 bookings.status → 'confirmed'
   - confirmed_at 타임스탬프 자동 저장
-  - 취소 마감 시각 자동 계산 (24시간 전)
+  - 트레이너 알림 전송 (결제 완료 후)
 
-- ✅ **예약 목록 페이지**
-  - `/bookings` 페이지 생성
-  - 예약 정보 + 결제 정보 통합 표시
+- ✅ **역할별 결제 정보 페이지**
+  - **Customer**: `/customer/bookings`, `/customer/bookings/[id]`, `/customer/payments`
+  - **Admin**: `/admin/bookings`, `/admin/bookings/[id]` (결제 정보 포함)
+  - **Trainer**: 결제 정보 표시 안 함 (프라이버시 보호)
   - Provider 구분 표시 (💳 Toss / 💵 Stripe)
   - 결제 상태 배지 (대기중, 결제완료, 결제실패)
-  - 인증 체크 및 에러 처리
+  - 결제 통계 및 상세 내역
 
 #### 생성/수정 파일
-- ✅ **신규 파일 (7개)**
-  1. `/app/payments/success/page.tsx` - 결제 성공 페이지
-  2. `/app/payments/fail/page.tsx` - 결제 실패 페이지
-  3. `/app/api/payments/stripe/create-session/route.ts` - Stripe Session 생성
-  4. `/app/api/payments/stripe/confirm/route.ts` - Stripe 결제 승인
-  5. `/app/bookings/page.tsx` - 예약 목록 페이지
-  6. `/app/api/bookings/route.ts` - 예약 목록 API
-  7. `/docs/08_PAYMENT_SYSTEM_IMPLEMENTATION.md` - 결제 시스템 문서
+- ✅ **신규 파일 (11개)**
+  1. `/app/checkout/[bookingId]/page.tsx` - 체크아웃 페이지 (Server Component)
+  2. `/app/checkout/[bookingId]/PaymentProviderButton.tsx` - 결제 버튼 (Client Component)
+  3. `/app/payments/success/page.tsx` - 결제 성공 페이지
+  4. `/app/payments/fail/page.tsx` - 결제 실패 페이지
+  5. `/app/api/payments/stripe/confirm/route.ts` - Stripe 결제 승인
+  6. `/app/api/payments/toss/route.ts` - Toss 결제 승인 (경로 변경)
+  7. `/app/(dashboard)/customer/payments/page.tsx` - 고객 결제 내역
+  8. `/docs/08_PAYMENT_SYSTEM_IMPLEMENTATION.md` - 결제 시스템 문서
 
-- ✅ **수정 파일 (2개)**
-  1. `/app/test-payment/page.tsx` - Multi-Provider 선택 UI 추가
-  2. `/app/api/payments/request/route.ts` - paymentProvider 파라미터 추가
+- ✅ **수정 파일 (9개)**
+  1. `/app/test-payment/page.tsx` - Multi-Provider 선택 UI, API 경로 업데이트
+  2. `/app/api/payments/request/route.ts` - Stripe Session 생성 통합, paymentProvider 파라미터
+  3. `/app/(public)/trainers/[id]/booking/actions.ts` - 체크아웃 리다이렉트, 트레이너 알림 제거
+  4. `/app/(dashboard)/customer/bookings/page.tsx` - 결제 정보 추가
+  5. `/app/(dashboard)/customer/bookings/[id]/page.tsx` - 결제 정보 쿼리 추가
+  6. `/components/customer-booking-detail.tsx` - 결제 정보 UI 추가
+  7. `/components/customer-sidebar.tsx` - 결제 내역 메뉴 추가
+  8. `/app/(dashboard)/admin/bookings/page.tsx` - 결제 정보 추가
+  9. `/app/(dashboard)/admin/bookings/[id]/page.tsx` - 결제 정보 UI 추가
+
+- ✅ **API 구조 개선**
+  - `app/api/payments/confirm/` → `app/api/payments/toss/` (명확한 구조화)
+  - Stripe Session 생성을 `/request`에 통합
 
 - ✅ **마이그레이션 (1개)**
   1. `28-add-payment-provider.sql` - payment_provider 컬럼 추가
@@ -1660,62 +1674,242 @@ Day 8: 98% (+2%) ✅ MVP 거의 완성
 #### 해결한 기술적 문제
 1. ✅ **Stripe SDK 버전 호환성**
    - `redirectToCheckout()` deprecated → `session.url` 직접 리다이렉트
-   - Stripe API 버전: 2024-12-18.acacia
+   - Stripe API 버전: 2025-09-30.clover
+   - PaymentIntent charges → latest_charge 사용
 
 2. ✅ **Supabase 관계 쿼리 명확성**
    - `bookings_customer_id_fkey` 명시적 지정
    - `profiles` 테이블 조인 (customers/trainers → profiles)
+   - Helper 함수로 array/object 형식 안전 처리
 
 3. ✅ **데이터 구조 설계**
    - 단일 `payments` 테이블로 Toss/Stripe 통합 관리
    - `payment_provider` 컬럼으로 구분
    - JSONB 메타데이터로 Provider별 특수 필드 저장
 
-4. ✅ **날짜 필드 처리**
-   - `session_date` → `booking_date` 수정
-   - Invalid Date 안전 처리
-   - `formatDate()` null 체크 추가
+4. ✅ **Server/Client Component 분리**
+   - Server Component: 데이터 페칭
+   - Client Component: 이벤트 핸들러 (onClick, setState)
+   - `PaymentProviderButton.tsx` 분리
 
-5. ✅ **인증 및 권한**
+5. ✅ **트레이너 알림 타이밍**
+   - 예약 생성 시 → 알림 제거
+   - 결제 완료 후 → 알림 전송
+   - `notificationTemplates.bookingPending` 활용
+
+6. ✅ **인증 및 권한**
    - Customer 레코드 존재 여부 확인
    - 본인 예약만 접근 가능
+   - Admin은 Service Role로 모든 정보 조회
    - RLS 정책 준수
 
 #### 결제 플로우 요약
 ```
-[Customer] → [예약 생성] → [결제 수단 선택: Toss/Stripe]
-                                ↓
-                    ┌───────────┴───────────┐
-                    ↓                       ↓
-            [Toss SDK]              [Stripe Checkout]
-                    ↓                       ↓
-            [/api/payments/confirm]  [/api/payments/stripe/confirm]
-                    ↓                       ↓
-                    └───────────┬───────────┘
-                                ↓
-                        [Success 페이지]
-                                ↓
-                        [예약 confirmed]
-                                ↓
-                        [/bookings 리다이렉트]
+[Customer] → [예약 생성] → [체크아웃 페이지] → [결제 수단 선택: Toss/Stripe]
+                                                    ↓
+                                        ┌───────────┴───────────┐
+                                        ↓                       ↓
+                                [Toss SDK]              [Stripe Checkout]
+                                        ↓                       ↓
+                        [/api/payments/toss/confirm]  [/api/payments/stripe/confirm]
+                                        ↓                       ↓
+                                        └───────────┬───────────┘
+                                                    ↓
+                                            [Success 페이지]
+                                                    ↓
+                                            [결제 완료 처리]
+                                                    ↓
+                                            ┌───────┴───────┐
+                                            ↓               ↓
+                                    [예약 confirmed]    [트레이너 알림]
+                                            ↓               ↓
+                                            └───────┬───────┘
+                                                    ↓
+                                        [/customer/bookings 리다이렉트]
 ```
 
 #### 통계
-- **신규 파일**: 7개
-- **수정 파일**: 2개
+- **신규 파일**: 8개 (체크아웃 페이지, 결제 내역 페이지 등)
+- **수정 파일**: 9개 (역할별 대시보드, API 경로 등)
 - **마이그레이션**: 1개
-- **API 엔드포인트**: 5개 (request, confirm, stripe/create-session, stripe/confirm, bookings)
-- **페이지**: 3개 (success, fail, bookings)
+- **API 구조**:
+  - `/api/payments/request` - 공통 결제 요청
+  - `/api/payments/toss/confirm` - Toss 결제 승인
+  - `/api/payments/stripe/confirm` - Stripe 결제 승인
+- **페이지**:
+  - 공통: `/checkout/[id]`, `/payments/success`, `/payments/fail`
+  - Customer: `/customer/bookings`, `/customer/bookings/[id]`, `/customer/payments`
+  - Admin: `/admin/bookings`, `/admin/bookings/[id]`
 - **Provider 지원**: 2개 (Toss Payments, Stripe)
+- **역할별 구현**: Customer (완료), Admin (완료), Trainer (결제 비공개)
 
-#### 다음 우선순위
-1. **Admin 대시보드** - 전체 결제/예약 현황 조회
-2. **Trainer 대시보드** - 자신의 예약만 조회 (결제 정보 비공개)
-3. **Customer 예약 플로우** - 트레이너 선택 → 예약 생성 → 결제
+#### 핵심 성과
+1. ✅ **완전한 결제 플로우** - 예약 → 체크아웃 → 결제 → 확정 → 알림
+2. ✅ **Multi-Provider 시스템** - Toss/Stripe 통합 관리
+3. ✅ **역할별 권한 분리** - Customer/Admin/Trainer 맞춤 UI
+4. ✅ **알림 시스템 연동** - 결제 완료 시 트레이너 자동 알림
+5. ✅ **명확한 API 구조** - Provider별 경로 구분
 
 ---
 
 **마지막 업데이트**: 2025-10-09 (Day 9 완료)
-**프로젝트 상태**: 🚀 결제 시스템 완성 (Day 9: 99% 달성)
-**다음 목표**: Admin/Trainer/Customer 대시보드 완성 (Day 10-12)
+**프로젝트 상태**: 🚀 결제 시스템 완성 (Day 9: 100% 달성)
+**다음 목표**: 정산 시스템, Webhook 처리, 환불 시스템 (Day 10+)
 
+
+---
+
+### Day 10 (2025-01-10) - 환불 시스템 및 상태 관리 개선
+
+#### ✅ 완료된 작업
+
+##### 1. Admin-Customer 환불 로직 통일
+- **문제**: Admin은 UPDATE 방식, Customer는 INSERT 방식으로 환불 처리 불일치
+- **해결**: Customer도 Admin과 동일하게 UPDATE 방식 사용
+- **수정 파일**: `/app/(dashboard)/customer/bookings/[id]/actions.ts`
+- **차이점**:
+  - Admin: 3가지 환불 옵션 (전액/정책적용/커스텀)
+  - Customer: 자동 취소 정책 적용
+  - 공통: 기존 payment 레코드 UPDATE, Stripe/Toss API 호출
+
+##### 2. 부분 환불 기능 구현
+- **기능**: Admin이 취소 정책에 따른 부분 환불 처리
+- **UI**: 3가지 환불 타입 라디오 버튼
+  - 전액 환불 (Full Refund)
+  - 정책 적용 환불 (Partial - Policy Applied)
+    - 7일+ 전: 0% 위약금
+    - 3-7일: 10% 위약금
+    - 1-3일: 30% 위약금
+    - 24시간 미만: 50% 위약금
+  - 커스텀 환불 (Custom Amount)
+- **통합**: `calculateCancellationFee` 유틸리티 사용
+- **수정 파일**:
+  - `/components/admin/refund-payment-dialog.tsx` - UI
+  - `/app/api/payments/[paymentId]/refund/route.ts` - API
+  - `/components/admin/payments-table-row.tsx` - props 추가
+  - `/app/(dashboard)/admin/bookings/[id]/page.tsx` - props 추가
+
+##### 3. 예약 상태 관리 개선 - matching_status 필드 추가
+- **문제**: 추천 예약의 매칭 프로세스를 status만으로 추적 어려움
+- **해결**: 새로운 `matching_status` 필드 추가
+- **마이그레이션**: `/supabase/migrations/20251010013548_add_matching_status.sql`
+- **상태 값**:
+  - `pending`: 매칭 대기 (결제 완료 후)
+  - `matched`: 트레이너 배정됨 (Admin 매칭 완료)
+  - `approved`: 트레이너 승인 완료
+  - NULL: 지정 예약
+
+**상태 흐름**:
+```
+[지정 예약]
+예약 생성 (pending) → 결제 완료 → 자동 확정 (confirmed)
+
+[추천 예약]
+예약 생성 (pending, matching_status: pending)
+  → 결제 완료 (pending 유지)
+  → Admin 매칭 (matching_status: matched)
+  → 트레이너 승인 (confirmed, matching_status: approved)
+```
+
+- **수정된 파일**:
+  - `/app/(public)/booking/recommended/actions.ts` - matching_status 초기화
+  - `/app/api/webhooks/stripe/route.ts` - 지정 예약 자동 confirmed
+  - `/app/(dashboard)/admin/bookings/recommended/[id]/match/actions.ts` - matched 상태
+  - `/app/(dashboard)/trainer/bookings/actions.ts` - approved 상태
+  - 모든 예약 쿼리에 matching_status 추가
+
+##### 4. 결제 버튼 리다이렉트 수정
+- **문제**: 결제 버튼이 잘못된 경로로 이동 (404 에러)
+- **해결**: `/customer/bookings/${id}/payment` → `/checkout/${id}`
+- **수정 파일**: `/components/customer-booking-detail.tsx`
+
+##### 5. 날짜 표시 타임존 수정
+- **문제**: 결제 날짜가 UTC로 표시되어 9시간 차이 발생
+- **해결**: `timeZone: 'Asia/Seoul'` 옵션 추가
+- **수정 파일**: `/components/admin/payments-table-row.tsx`
+
+##### 6. 데이터베이스 초기화 스크립트 작성
+- **스크립트**:
+  - `/scripts/reset-test-data.sql` - 전체 데이터 초기화 (admin 보존)
+  - `/scripts/reset-payments-only.sql` - 예약, 결제, 리뷰 삭제 (계정 유지)
+  - `/scripts/reset-payments-reviews-only.sql` - 결제, 리뷰만 삭제 (예약, 계정 유지)
+  - `/scripts/RESET_GUIDE.md` - 초기화 가이드
+
+#### 📊 데이터베이스 스키마 변경
+
+**bookings 테이블** - matching_status 추가:
+```sql
+matching_status TEXT CHECK (matching_status IN ('pending', 'matched', 'approved'))
+-- NULL for direct bookings
+-- NOT NULL for recommended bookings
+
+CREATE INDEX idx_bookings_matching_status ON bookings(matching_status);
+```
+
+**payments 테이블** - payment_metadata에 환불 정보 추가:
+```json
+{
+  "refund": {
+    "refundId": "string",
+    "amount": "number",
+    "status": "string",
+    "provider": "toss | stripe",
+    "reason": "string",
+    "refundedBy": "string",
+    "refundedAt": "string",
+    "cancellationFee": "number",    // 부분 환불 시
+    "refundAmount": "number"         // 부분 환불 시
+  }
+}
+```
+
+#### 🔧 수정된 파일 목록
+
+**핵심 기능** (3개):
+1. `/components/admin/refund-payment-dialog.tsx`
+2. `/app/api/payments/[paymentId]/refund/route.ts`
+3. `/app/(dashboard)/customer/bookings/[id]/actions.ts`
+
+**상태 관리** (5개):
+4. `/supabase/migrations/20251010013548_add_matching_status.sql`
+5. `/app/(public)/booking/recommended/actions.ts`
+6. `/app/api/webhooks/stripe/route.ts`
+7. `/app/(dashboard)/admin/bookings/recommended/[id]/match/actions.ts`
+8. `/app/(dashboard)/trainer/bookings/actions.ts`
+
+**쿼리 업데이트** (4개):
+9. `/app/(dashboard)/customer/bookings/page.tsx`
+10. `/app/(dashboard)/admin/bookings/page.tsx`
+11. `/app/(dashboard)/trainer/bookings/page.tsx`
+12. `/app/(dashboard)/admin/bookings/recommended/page.tsx`
+
+**UI 개선** (3개):
+13. `/components/customer-booking-detail.tsx`
+14. `/components/admin/payments-table-row.tsx`
+15. `/app/(dashboard)/admin/bookings/[id]/page.tsx`
+
+**스크립트 & 문서** (5개):
+16. `/scripts/reset-test-data.sql`
+17. `/scripts/reset-payments-only.sql`
+18. `/scripts/reset-payments-reviews-only.sql`
+19. `/scripts/RESET_GUIDE.md`
+20. `/docs/13_PAYMENT_REFUND_UPDATES.md`
+
+#### 통계
+- **수정 파일**: 15개 (핵심 로직)
+- **신규 파일**: 5개 (스크립트 및 문서)
+- **마이그레이션**: 1개 (matching_status 추가)
+- **총 작업 파일**: 20개
+
+#### 핵심 성과
+1. ✅ **환불 로직 통일** - Admin과 Customer 동일한 방식 (UPDATE)
+2. ✅ **부분 환불 구현** - 취소 정책에 따른 자동 계산
+3. ✅ **상태 관리 명확화** - matching_status로 추천 예약 프로세스 추적
+4. ✅ **예약 플로우 정리** - 지정/추천 예약의 서로 다른 흐름 구현
+5. ✅ **데이터 일관성 확보** - 모든 쿼리에 matching_status 포함
+
+---
+
+**마지막 업데이트**: 2025-01-10 (Day 10 완료)
+**프로젝트 상태**: 🚀 환불 시스템 및 상태 관리 완성 (Day 10: 100% 달성)
+**다음 목표**: 정산 시스템, 통계 대시보드 (Day 11+)

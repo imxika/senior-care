@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { TossPaymentConfirm, TossPaymentResponse, TossPaymentError } from '@/lib/types/toss';
+import { createNotification, notificationTemplates } from '@/lib/notifications';
 
 /**
- * 결제 승인
- * POST /api/payments/confirm
+ * Toss Payments 결제 승인
+ * POST /api/payments/toss/confirm
  */
 export async function POST(request: NextRequest) {
   try {
@@ -159,7 +160,51 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', payment.booking_id);
 
-    // 11. 성공 응답
+    // 11. 트레이너에게 알림 전송 (결제 완료 후)
+    // Booking 정보와 트레이너 정보 조회
+    const { data: bookingWithTrainer } = await supabase
+      .from('bookings')
+      .select(`
+        booking_date,
+        start_time,
+        trainer:trainers!inner(
+          id,
+          profile_id
+        )
+      `)
+      .eq('id', payment.booking_id)
+      .single();
+
+    // 고객 이름 조회
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .single();
+
+    // 알림 생성 및 전송
+    if (bookingWithTrainer?.trainer) {
+      const trainerData = Array.isArray(bookingWithTrainer.trainer)
+        ? bookingWithTrainer.trainer[0]
+        : bookingWithTrainer.trainer;
+
+      if (trainerData?.profile_id) {
+        const scheduledAt = new Date(
+          `${bookingWithTrainer.booking_date}T${bookingWithTrainer.start_time}`
+        );
+        const customerName = profile?.full_name || '고객';
+
+        const notification = notificationTemplates.bookingPending(customerName, scheduledAt);
+
+        await createNotification({
+          userId: trainerData.profile_id,
+          ...notification,
+          link: `/trainer/bookings/${payment.booking_id}`,
+        });
+      }
+    }
+
+    // 12. 성공 응답
     return NextResponse.json({
       success: true,
       data: {

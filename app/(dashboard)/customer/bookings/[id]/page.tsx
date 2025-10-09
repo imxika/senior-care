@@ -26,7 +26,7 @@ export default async function CustomerBookingDetailPage({ params }: PageProps) {
     redirect('/')
   }
 
-  // 예약 정보 조회
+  // 예약 정보 조회 (결제 정보 포함)
   const { data: booking, error } = await supabase
     .from('bookings')
     .select(`
@@ -50,6 +50,17 @@ export default async function CustomerBookingDetailPage({ params }: PageProps) {
         address,
         address_detail,
         address_label
+      ),
+      payments(
+        id,
+        amount,
+        currency,
+        payment_method,
+        payment_status,
+        payment_provider,
+        paid_at,
+        created_at,
+        payment_metadata
       )
     `)
     .eq('id', id)
@@ -60,10 +71,18 @@ export default async function CustomerBookingDetailPage({ params }: PageProps) {
     notFound()
   }
 
-  // 리뷰 정보 조회
+  // 리뷰 정보 조회 (트레이너 이름 포함)
   const { data: review } = await supabase
     .from('reviews')
-    .select('*')
+    .select(`
+      *,
+      trainer:trainers(
+        id,
+        profiles!trainers_profile_id_fkey(
+          full_name
+        )
+      )
+    `)
     .eq('booking_id', id)
     .single()
 

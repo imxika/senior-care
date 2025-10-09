@@ -66,7 +66,7 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
     redirect('/customer/dashboard')
   }
 
-  // 예약 목록 가져오기 (트레이너 정보 포함)
+  // 예약 목록 가져오기 (트레이너 정보 + 결제 정보 포함)
   const { data: bookings, error } = await supabase
     .from('bookings')
     .select(`
@@ -79,6 +79,8 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
       start_time,
       end_time,
       status,
+      matching_status,
+      total_price,
       created_at,
       updated_at,
       trainer:trainers(
@@ -88,6 +90,16 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
           email,
           avatar_url
         )
+      ),
+      payments(
+        id,
+        amount,
+        currency,
+        payment_method,
+        payment_status,
+        payment_provider,
+        paid_at,
+        created_at
       )
     `)
     .eq('customer_id', customer.id)
@@ -135,11 +147,14 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
 
   if (params.search) {
     const search = params.search.toLowerCase()
-    filteredBookings = filteredBookings.filter(b =>
-      b.trainer?.profiles?.full_name?.toLowerCase().includes(search) ||
-      b.trainer?.profiles?.email?.toLowerCase().includes(search) ||
-      b.id.toLowerCase().includes(search)
-    )
+    filteredBookings = filteredBookings.filter(b => {
+      const trainerProfile = Array.isArray(b.trainer) ? b.trainer[0]?.profiles?.[0] : null
+      return (
+        trainerProfile?.full_name?.toLowerCase().includes(search) ||
+        trainerProfile?.email?.toLowerCase().includes(search) ||
+        b.id.toLowerCase().includes(search)
+      )
+    })
   }
 
   // 정렬 (기본값: 최근 활동 순)
@@ -170,8 +185,10 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
         comparison = a.status.localeCompare(b.status)
         break
       case 'trainer_name':
-        const aTrainer = a.trainer?.profiles?.full_name || ''
-        const bTrainer = b.trainer?.profiles?.full_name || ''
+        const aTrainerProfile = Array.isArray(a.trainer) ? a.trainer[0]?.profiles?.[0] : null
+        const bTrainerProfile = Array.isArray(b.trainer) ? b.trainer[0]?.profiles?.[0] : null
+        const aTrainer = aTrainerProfile?.full_name || ''
+        const bTrainer = bTrainerProfile?.full_name || ''
         comparison = aTrainer.localeCompare(bTrainer)
         break
       default:
@@ -204,6 +221,45 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
   // 타입 표시 함수
   const getTypeBadge = (type: string) => {
     return type === 'direct' ? '지정' : '추천'
+  }
+
+  // Trainer profile helper
+  const getTrainerProfile = (trainer: any) => {
+    if (!trainer) return null
+    // Handle both array and object formats
+    if (Array.isArray(trainer)) {
+      const trainerObj = trainer[0]
+      return Array.isArray(trainerObj?.profiles) ? trainerObj.profiles[0] : trainerObj?.profiles
+    }
+    // Direct object access
+    return Array.isArray(trainer.profiles) ? trainer.profiles[0] : trainer.profiles
+  }
+
+  // Payment helper (가장 최근 결제 반환)
+  const getPayment = (payments: any) => {
+    if (!Array.isArray(payments) || payments.length === 0) return null
+
+    // 가장 최근 결제 반환 (생성일 기준)
+    return payments.sort((a: any, b: any) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )[0]
+  }
+
+  // Payment status badge
+  const getPaymentBadge = (payment: any) => {
+    if (!payment) {
+      return { label: '⏳ 결제 대기', variant: 'secondary' as const, color: 'text-yellow-600' }
+    }
+
+    const status = payment.payment_status
+    const variants = {
+      paid: { label: '✅ 결제 완료', variant: 'default' as const, color: 'text-green-600' },
+      pending: { label: '⏳ 결제 대기', variant: 'secondary' as const, color: 'text-yellow-600' },
+      failed: { label: '❌ 결제 실패', variant: 'destructive' as const, color: 'text-red-600' },
+      cancelled: { label: '🚫 결제 취소', variant: 'outline' as const, color: 'text-gray-600' },
+      refunded: { label: '💰 환불 완료', variant: 'outline' as const, color: 'text-blue-600' },
+    }
+    return variants[status as keyof typeof variants] || { label: '⏳ 결제 대기', variant: 'outline' as const, color: 'text-gray-600' }
   }
 
   return (
@@ -334,7 +390,7 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
                         {/* 트레이너 정보 */}
                         <div>
                           <p className="text-xl font-semibold mb-2">
-                            {booking.trainer?.profiles?.full_name || (
+                            {getTrainerProfile(booking.trainer)?.full_name || (
                               <span className="text-muted-foreground">매칭 대기중</span>
                             )}
                           </p>
@@ -345,6 +401,15 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
                             <Badge variant="outline" className="text-base px-3 py-1">
                               {getTypeBadge(booking.booking_type)}
                             </Badge>
+                            {(() => {
+                              const payment = getPayment(booking.payments)
+                              const paymentBadge = getPaymentBadge(payment)
+                              return (
+                                <Badge variant={paymentBadge.variant} className="text-base px-3 py-1">
+                                  {paymentBadge.label}
+                                </Badge>
+                              )
+                            })()}
                           </div>
                         </div>
 
@@ -355,10 +420,17 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
                             <BookingDateDisplay date={booking.booking_date} format="date-only" />
                             <span className="font-semibold">{booking.start_time.slice(0, 5)}</span>
                           </div>
-                          <div className="text-sm text-muted-foreground">
-                            <span className="font-mono">{booking.id.slice(0, 8)}</span>
-                            <span className="mx-2">•</span>
-                            <BookingDateDisplay date={booking.updated_at || booking.created_at} format="created" />
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="text-muted-foreground">
+                              <span className="font-mono">{booking.id.slice(0, 8)}</span>
+                              <span className="mx-2">•</span>
+                              <BookingDateDisplay date={booking.updated_at || booking.created_at} format="created" />
+                            </div>
+                            {booking.total_price && (
+                              <span className="font-bold text-lg">
+                                {booking.total_price.toLocaleString('ko-KR')}원
+                              </span>
+                            )}
                           </div>
                         </div>
 
@@ -384,6 +456,7 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
                       <th className="text-left p-4 font-semibold text-base">타입</th>
                       <SortableTableHeader label="트레이너" sortKey="trainer_name" className="p-4 text-base" basePath="/customer/bookings" />
                       <SortableTableHeader label="예약일시" sortKey="booking_date" className="p-4 text-base" basePath="/customer/bookings" />
+                      <th className="text-left p-4 font-semibold text-base">결제</th>
                       <SortableTableHeader label="최근 활동" sortKey="updated_at" className="p-4 text-base" basePath="/customer/bookings" />
                       <SortableTableHeader label="상태" sortKey="status" className="p-4 text-base" basePath="/customer/bookings" />
                       <th className="text-left p-4 font-semibold text-base">액션</th>
@@ -399,13 +472,31 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
                             <Badge variant="outline" className="text-base px-3 py-1">{getTypeBadge(booking.booking_type)}</Badge>
                           </td>
                           <td className="p-4 text-base">
-                            {booking.trainer?.profiles?.full_name || (
+                            {getTrainerProfile(booking.trainer)?.full_name || (
                               <span className="text-muted-foreground">매칭 대기중</span>
                             )}
                           </td>
                           <td className="p-4 text-base">
                             <BookingDateDisplay date={booking.booking_date} format="date-only" />
                             <span className="ml-2 font-semibold">{booking.start_time.slice(0, 5)}</span>
+                          </td>
+                          <td className="p-4">
+                            {(() => {
+                              const payment = getPayment(booking.payments)
+                              const paymentBadge = getPaymentBadge(payment)
+                              return (
+                                <div className="space-y-1">
+                                  <Badge variant={paymentBadge.variant} className="text-sm px-2 py-1">
+                                    {paymentBadge.label}
+                                  </Badge>
+                                  {booking.total_price && (
+                                    <div className="text-sm font-semibold">
+                                      {booking.total_price.toLocaleString('ko-KR')}원
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })()}
                           </td>
                           <td className="p-4 text-base text-muted-foreground">
                             <BookingDateDisplay date={booking.updated_at || booking.created_at} format="created" />

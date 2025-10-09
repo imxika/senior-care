@@ -238,7 +238,7 @@ export default function TestPaymentPage() {
         throw new Error('먼저 결제 요청을 생성하세요');
       }
 
-      const response = await fetch('/api/payments/confirm', {
+      const response = await fetch('/api/payments/toss/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -535,7 +535,7 @@ export default function TestPaymentPage() {
             <li>Toss 결제창 오픈 (카드 정보 입력)</li>
             <li>Toss 서버에서 결제 처리</li>
             <li>성공 시: successUrl로 리다이렉트</li>
-            <li>POST /api/payments/confirm → DB 업데이트</li>
+            <li>POST /api/payments/toss/confirm → DB 업데이트</li>
             <li>예약 확정 완료</li>
           </ol>
         </div>

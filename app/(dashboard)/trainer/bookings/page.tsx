@@ -92,7 +92,21 @@ export default async function TrainerBookingsPage({ searchParams }: PageProps) {
   const { data: rawBookings, error } = await serviceSupabase
     .from('bookings')
     .select(`
-      *,
+      id,
+      customer_id,
+      trainer_id,
+      booking_type,
+      service_type,
+      booking_date,
+      start_time,
+      end_time,
+      status,
+      matching_status,
+      total_price,
+      created_at,
+      updated_at,
+      trainer_notes,
+      session_summary,
       customer:customers!customer_id(
         id,
         profile:profiles!profile_id(

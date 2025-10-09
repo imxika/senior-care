@@ -90,7 +90,6 @@ export default async function TrainerBookingPage({ params, searchParams }: PageP
     .single()
 
   console.log('Trainer max_group_size:', trainer?.max_group_size)
-  console.log('Trainer experience_years:', trainer?.experience_years)
   console.log('Trainer years_experience:', trainer?.years_experience)
 
   if (error || !trainer) {

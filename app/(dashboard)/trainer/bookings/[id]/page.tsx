@@ -46,12 +46,12 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
     }
   )
 
-  // 예약 정보 조회
+  // 예약 정보 조회 (결제 정보 포함)
   const { data: booking, error } = await serviceSupabase
     .from('bookings')
     .select(`
       *,
-      customer:customers(
+      customer:customers!customer_id(
         id,
         age,
         gender,
@@ -61,17 +61,21 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
         emergency_phone,
         medical_conditions,
         mobility_level,
-        profile:profiles!customers_profile_id_fkey(
+        profile:profiles!profile_id(
           full_name,
           phone,
           email
         )
       ),
-      booking_address:customer_addresses(
+      booking_address:customer_addresses!address_id(
         id,
         address,
         address_detail,
         address_label
+      ),
+      payments(
+        id,
+        payment_status
       )
     `)
     .eq('id', id)
@@ -413,6 +417,7 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
                 bookingId={booking.id}
                 status={booking.status}
                 adminMatchedAt={booking.admin_matched_at}
+                payments={booking.payments}
               />
             </CardContent>
           </Card>

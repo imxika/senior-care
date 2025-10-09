@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Loader2, Eye, EyeOff } from 'lucide-react'
 import { updatePassword } from './actions'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { toast } from 'sonner'
 
 interface SecuritySettingsFormProps {
   currentEmail: string
@@ -15,7 +16,6 @@ interface SecuritySettingsFormProps {
 export function SecuritySettingsForm({ currentEmail }: SecuritySettingsFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
 
   // 비밀번호 표시 상태
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
@@ -66,14 +66,16 @@ export function SecuritySettingsForm({ currentEmail }: SecuritySettingsFormProps
 
     if (result.error) {
       setError(result.error)
+      toast.error('비밀번호 변경 실패', {
+        description: result.error
+      })
       setLoading(false)
     } else {
-      setSuccess(true)
+      toast.success('비밀번호가 성공적으로 변경되었습니다')
       setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
       setLoading(false)
-      setTimeout(() => setSuccess(false), 5000)
     }
   }
 
@@ -188,12 +190,6 @@ export function SecuritySettingsForm({ currentEmail }: SecuritySettingsFormProps
               </div>
             )}
 
-            {success && (
-              <div className="rounded-lg bg-green-500/15 p-3 text-sm text-green-600">
-                비밀번호가 성공적으로 변경되었습니다
-              </div>
-            )}
-
             <div
               className="flex justify-end gap-2 sticky bottom-4 p-4 rounded-lg border shadow-lg"
               style={{
@@ -210,7 +206,6 @@ export function SecuritySettingsForm({ currentEmail }: SecuritySettingsFormProps
                   setNewPassword('')
                   setConfirmPassword('')
                   setError(null)
-                  setSuccess(false)
                 }}
               >
                 취소

@@ -17,6 +17,12 @@ interface ReviewFormProps {
     comment: string
     trainer_response?: string | null
     trainer_response_at?: string | null
+    trainer?: {
+      id: string
+      profiles?: {
+        full_name?: string
+      }
+    }
   } | null
 }
 
@@ -177,7 +183,7 @@ export function ReviewForm({ bookingId, trainerId, existingReview }: ReviewFormP
               <div className="flex items-center gap-2 mb-2">
                 <MessageSquare className="h-4 w-4 text-primary" />
                 <p className="text-xs lg:text-sm font-medium text-primary">
-                  트레이너 답글
+                  {existingReview?.trainer?.profiles?.full_name || '트레이너'} 답글
                 </p>
               </div>
               <p className="text-sm lg:text-base whitespace-pre-wrap text-foreground">

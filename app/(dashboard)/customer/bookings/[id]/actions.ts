@@ -1,9 +1,15 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import type { CancellationReason } from '@/lib/constants'
 import { calculateCancellationFee } from '@/lib/utils'
+import Stripe from 'stripe'
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2024-12-18.acacia',
+})
 
 export async function cancelBooking(
   bookingId: string,
@@ -80,6 +86,15 @@ ${notes ? `상세 사유: ${notes}\n` : ''}취소 시기: ${cancellationInfo.tim
     ? `${booking.customer_notes}\n\n${cancellationDetails}`
     : cancellationDetails
 
+  // 결제 정보 조회
+  const { data: payments } = await supabase
+    .from('payments')
+    .select('id, payment_status, payment_provider, payment_metadata, amount, currency, payment_method, created_at')
+    .eq('booking_id', bookingId)
+    .eq('payment_status', 'paid')
+
+  console.log('결제 정보 조회:', { bookingId, paymentsFound: payments?.length || 0, payments })
+
   // 예약 상태를 cancelled로 변경
   const { error: updateError } = await supabase
     .from('bookings')
@@ -100,6 +115,124 @@ ${notes ? `상세 사유: ${notes}\n` : ''}취소 시기: ${cancellationInfo.tim
       bookingId
     })
     return { error: `예약 취소에 실패했습니다: ${updateError?.message || '알 수 없는 오류'}` }
+  }
+
+  // 결제 환불 처리 (결제가 있는 경우만)
+  if (payments && payments.length > 0) {
+    const paidPayment = payments[0]
+
+    try {
+      // Service Role로 환불 처리
+      const serviceSupabase = createServiceClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          }
+        }
+      )
+
+      let refundResult: any = null
+
+      // Stripe 환불
+      if (paidPayment.payment_provider === 'stripe') {
+        const paymentIntentId = paidPayment.payment_metadata?.stripePaymentIntentId
+
+        if (paymentIntentId) {
+          const refundAmountInCents = Math.round(cancellationInfo.refundAmount * 100)
+
+          const refund = await stripe.refunds.create({
+            payment_intent: paymentIntentId,
+            amount: refundAmountInCents,
+            reason: 'requested_by_customer',
+            metadata: {
+              refund_reason: `고객 예약 취소 - ${reason}`,
+              booking_id: bookingId,
+              customer_id: customer.id,
+              refunded_at: new Date().toISOString()
+            }
+          })
+
+          refundResult = {
+            refundId: refund.id,
+            amount: refund.amount / 100,
+            status: refund.status,
+            provider: 'stripe'
+          }
+
+          console.log('Stripe 환불 완료:', refundResult)
+        }
+      }
+      // Toss 환불
+      else if (paidPayment.payment_provider === 'toss') {
+        const paymentKey = paidPayment.payment_metadata?.paymentKey
+
+        if (paymentKey) {
+          const tossResponse = await fetch(
+            `https://api.tosspayments.com/v1/payments/${paymentKey}/cancel`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Basic ${Buffer.from(process.env.TOSS_SECRET_KEY + ':').toString('base64')}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                cancelReason: `고객 예약 취소 - ${reason}`,
+                cancelAmount: Math.round(cancellationInfo.refundAmount)
+              })
+            }
+          )
+
+          if (tossResponse.ok) {
+            const tossData = await tossResponse.json()
+            refundResult = {
+              refundId: tossData.transactionKey,
+              amount: tossData.cancels?.[0]?.cancelAmount || cancellationInfo.refundAmount,
+              status: tossData.status,
+              provider: 'toss'
+            }
+
+            console.log('Toss 환불 완료:', refundResult)
+          } else {
+            console.error('Toss 환불 실패:', await tossResponse.text())
+          }
+        }
+      }
+
+      // 기존 결제 레코드를 환불 상태로 업데이트 (Admin 방식과 동일)
+      if (refundResult) {
+        const { error: updateError } = await serviceSupabase
+          .from('payments')
+          .update({
+            payment_status: 'refunded',
+            refunded_at: new Date().toISOString(),
+            payment_metadata: {
+              ...paidPayment.payment_metadata,
+              refund: {
+                ...refundResult,
+                reason: `고객 예약 취소 - ${reason}`,
+                refundedBy: customer.id,
+                refundedAt: new Date().toISOString(),
+                cancellationFee: cancellationInfo.cancellationFee,
+                refundAmount: cancellationInfo.refundAmount
+              }
+            }
+          })
+          .eq('id', paidPayment.id)
+
+        if (updateError) {
+          console.error('환불 레코드 업데이트 실패:', updateError)
+        } else {
+          console.log('환불 레코드 업데이트 완료')
+        }
+      }
+
+    } catch (refundError) {
+      console.error('환불 처리 중 오류:', refundError)
+      // 환불 실패해도 예약은 취소됨 - 관리자가 수동 환불 필요
+    }
   }
 
   // 트레이너에게 알림 전송 (트레이너가 배정된 경우만)

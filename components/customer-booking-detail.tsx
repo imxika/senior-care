@@ -18,18 +18,26 @@ import { useRouter } from 'next/navigation'
 interface CustomerBookingDetailProps {
   booking: {
     id: string
-    status: string
+    status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show'
     booking_date: string
     start_time: string
     end_time: string
     duration_minutes: number
     service_type: string
-    booking_type: string
+    booking_type: 'direct' | 'recommended'
     session_type: string
     total_price: number
+    price_per_person?: number
+    group_size?: number
     customer_notes?: string
     rejection_reason?: string
     rejection_note?: string
+    created_at?: string
+    trainer_id?: string
+    trainer_matched_at?: string
+    trainer_confirmed_at?: string
+    service_started_at?: string
+    service_completed_at?: string
     booking_address?: {
       id: string
       address: string
@@ -45,6 +53,17 @@ interface CustomerBookingDetailProps {
         email?: string
       }
     }
+    payments?: Array<{
+      id: string
+      amount: string
+      currency: string
+      payment_method: string
+      payment_status: string
+      payment_provider: string
+      paid_at?: string
+      created_at: string
+      payment_metadata?: any
+    }>
   }
   existingReview?: {
     id: string
@@ -166,7 +185,7 @@ export function CustomerBookingDetail({ booking, existingReview }: CustomerBooki
           bookingType={booking.booking_type || 'direct'}
           currentStatus={booking.status}
           hasTrainer={!!booking.trainer_id}
-          createdAt={booking.created_at}
+          createdAt={booking.created_at || new Date().toISOString()}
           trainerMatchedAt={booking.trainer_matched_at}
           trainerConfirmedAt={booking.trainer_confirmed_at}
           serviceStartedAt={booking.service_started_at}
@@ -244,7 +263,7 @@ export function CustomerBookingDetail({ booking, existingReview }: CustomerBooki
                 </div>
               </div>
 
-              {booking.group_size > 1 && (
+              {booking.group_size && booking.group_size > 1 && (
                 <div className="flex items-start gap-3">
                   <Users className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                   <div className="min-w-0">
@@ -289,7 +308,7 @@ export function CustomerBookingDetail({ booking, existingReview }: CustomerBooki
         </Card>
 
         {/* 트레이너 정보 */}
-        {booking.trainer ? (
+        {booking.trainer && booking.status !== 'pending' ? (
           <Card>
             <CardHeader>
               <CardTitle className="text-lg md:text-xl">배정된 트레이너</CardTitle>
@@ -325,32 +344,151 @@ export function CustomerBookingDetail({ booking, existingReview }: CustomerBooki
         ) : (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg md:text-xl">트레이너 매칭 대기 중</CardTitle>
+              <CardTitle className="text-lg md:text-xl">
+                {booking.trainer ? '트레이너 승인 대기 중' : '트레이너 매칭 대기 중'}
+              </CardTitle>
               <CardDescription className="text-sm">
-                관리자가 최적의 트레이너를 매칭하고 있습니다. 매칭이 완료되면 알림을 보내드립니다.
+                {booking.trainer
+                  ? '트레이너가 예약을 확인하고 있습니다. 승인되면 알림을 보내드립니다.'
+                  : '관리자가 최적의 트레이너를 매칭하고 있습니다. 매칭이 완료되면 알림을 보내드립니다.'
+                }
               </CardDescription>
             </CardHeader>
           </Card>
         )}
 
-        {/* 가격 정보 */}
+        {/* 주차 안내 */}
+        {booking.service_type === 'home_visit' && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+            <p className="font-semibold mb-1 md:mb-2 text-base md:text-lg">🅿️ 주차 안내</p>
+            <ul className="space-y-1 text-sm md:text-base">
+              <li>• 고객 측 주차 제공 불가 시, 인근 유료 주차장 이용</li>
+              <li>• 주차비는 서비스 종료 후 별도 청구됩니다</li>
+            </ul>
+          </div>
+        )}
+
+        {/* 결제 정보 */}
         {booking.total_price > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg md:text-xl">결제 정보</CardTitle>
+              <CardTitle className="text-lg md:text-xl">💳 결제 정보</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                {booking.group_size > 1 && (
-                  <div className="flex justify-between text-sm md:text-base">
+              <div className="space-y-3">
+                {/* 가격 정보 */}
+                {booking.group_size && booking.group_size > 1 && booking.price_per_person && (
+                  <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">인당 가격</span>
                     <span>{booking.price_per_person.toLocaleString()}원</span>
                   </div>
                 )}
-                <div className="flex justify-between font-bold text-base md:text-lg pt-2 border-t">
-                  <span>총 금액</span>
-                  <span>{booking.total_price.toLocaleString()}원</span>
+                <div className="flex justify-between font-bold text-base pt-2 border-t">
+                  <span>총 예약 금액</span>
+                  <span className="text-lg">{booking.total_price.toLocaleString()}원</span>
                 </div>
+
+                {/* 결제 상태 */}
+                {booking.payments && booking.payments.length > 0 && (
+                  <>
+                    <div className="border-t pt-3 mt-3 space-y-2">
+                      {booking.payments.map((payment) => {
+                        const statusBadge = (() => {
+                          const variants = {
+                            paid: { label: '✅ 결제 완료', color: 'bg-green-100 text-green-700', variant: 'default' as const },
+                            pending: { label: '⏳ 결제 대기', color: 'bg-yellow-100 text-yellow-700', variant: 'secondary' as const },
+                            failed: { label: '❌ 결제 실패', color: 'bg-red-100 text-red-700', variant: 'destructive' as const },
+                            cancelled: { label: '🚫 취소', color: 'bg-gray-100 text-gray-700', variant: 'outline' as const },
+                            refunded: { label: '💰 환불 완료', color: 'bg-blue-100 text-blue-700', variant: 'outline' as const },
+                          }
+                          return variants[payment.payment_status as keyof typeof variants] || variants.pending
+                        })()
+
+                        const providerLabel = payment.payment_provider === 'stripe' ? '💵 Stripe' : '💳 Toss'
+
+                        return (
+                          <div key={payment.id} className="bg-muted/50 rounded-lg p-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Badge variant={statusBadge.variant} className="text-xs">
+                                {statusBadge.label}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">{providerLabel}</span>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div>
+                                <p className="text-muted-foreground">결제 금액</p>
+                                <p className="font-semibold">{parseFloat(payment.amount).toLocaleString()}원</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">결제 수단</p>
+                                <p className="font-semibold">{payment.payment_method || '카드'}</p>
+                              </div>
+                              {payment.paid_at && (
+                                <div className="col-span-2">
+                                  <p className="text-muted-foreground">결제 완료 시각</p>
+                                  <p className="font-semibold">
+                                    {new Date(payment.paid_at).toLocaleString('ko-KR', {
+                                      year: 'numeric',
+                                      month: '2-digit',
+                                      day: '2-digit',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                    })}
+                                  </p>
+                                </div>
+                              )}
+                              <div className="col-span-2">
+                                <p className="text-muted-foreground">결제 ID</p>
+                                <p className="font-mono text-xs">{payment.id.slice(0, 12)}...</p>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </>
+                )}
+
+                {/* 결제 대기 상태 */}
+                {(!booking.payments || booking.payments.length === 0) && (
+                  <div className={`rounded-lg p-4 mt-3 space-y-3 ${
+                    booking.status === 'completed'
+                      ? 'bg-blue-50 border border-blue-200'
+                      : 'bg-yellow-50 border border-yellow-200'
+                  }`}>
+                    <p className={`text-sm md:text-base flex items-center gap-2 font-medium ${
+                      booking.status === 'completed'
+                        ? 'text-blue-800'
+                        : 'text-yellow-800'
+                    }`}>
+                      <AlertCircle className="h-4 w-4" />
+                      {booking.status === 'completed'
+                        ? '서비스 완료 후 정산 예정입니다'
+                        : '결제 대기 중입니다'}
+                    </p>
+                    {booking.status !== 'completed' && booking.status !== 'cancelled' && (
+                      <>
+                        <p className="text-xs md:text-sm text-yellow-700">
+                          {booking.booking_type === 'direct'
+                            ? '결제를 완료하시면 트레이너에게 예약 요청이 전달됩니다.'
+                            : '결제를 완료하시면 관리자가 트레이너를 매칭해드립니다.'
+                          }
+                        </p>
+                        <Button
+                          className="w-full"
+                          variant="default"
+                          size="lg"
+                          onClick={() => {
+                            window.location.href = `/checkout/${booking.id}`
+                          }}
+                        >
+                          결제하기
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

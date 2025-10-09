@@ -41,6 +41,7 @@ interface BookingWithRelations {
   start_time: string
   end_time: string
   status: string
+  matching_status?: string
   total_price: number
   created_at: string
   updated_at: string
@@ -62,6 +63,16 @@ interface BookingWithRelations {
       email?: string
     }
   }
+  payments?: Array<{
+    id: string
+    amount: string
+    currency: string
+    payment_method: string
+    payment_status: string
+    payment_provider: string
+    paid_at?: string
+    created_at: string
+  }>
 }
 
 const ITEMS_PER_PAGE = 10
@@ -111,6 +122,7 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
       start_time,
       end_time,
       status,
+      matching_status,
       total_price,
       created_at,
       updated_at,
@@ -131,6 +143,16 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
           full_name,
           email
         )
+      ),
+      payments(
+        id,
+        amount,
+        currency,
+        payment_method,
+        payment_status,
+        payment_provider,
+        paid_at,
+        created_at
       )
     `)
     .order('created_at', { ascending: false })

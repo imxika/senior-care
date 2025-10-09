@@ -109,9 +109,6 @@ export default async function CustomerReviewsPage() {
                 <CardHeader className="p-6">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
-                      <CardTitle className="text-xl md:text-2xl mb-3">
-                        {review.trainer?.profiles?.full_name || '알 수 없음'}
-                      </CardTitle>
                       <div className="flex items-center gap-3 mb-3">
                         <div className="flex">
                           {[1, 2, 3, 4, 5].map((star) => (
@@ -163,7 +160,7 @@ export default async function CustomerReviewsPage() {
                         <div className="flex items-center gap-3 mb-3">
                           <MessageSquare className="h-5 w-5 text-primary" />
                           <p className="text-base md:text-lg font-medium text-primary">
-                            트레이너 답글
+                            {review.trainer?.profiles?.full_name || '트레이너'} 답글
                           </p>
                         </div>
                         <p className="text-base md:text-lg whitespace-pre-wrap text-foreground leading-relaxed">

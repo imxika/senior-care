@@ -61,7 +61,7 @@ export default async function MatchTrainerPage({ params }: PageProps) {
           phone
         )
       ),
-      booking_address:customer_addresses(
+      booking_address:customer_addresses!address_id(
         id,
         address,
         address_detail,

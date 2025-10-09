@@ -310,6 +310,15 @@ export function BookingForm({
         />
       </div>
 
+      {/* 주차 안내 */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+        <p className="font-semibold mb-1">🅿️ 주차 안내</p>
+        <ul className="space-y-1 text-xs">
+          <li>• 고객 측 주차 제공 불가 시, 인근 유료 주차장 이용</li>
+          <li>• 주차비는 서비스 종료 후 별도 청구됩니다</li>
+        </ul>
+      </div>
+
       {/* Submit */}
       <div className="pt-4">
         <Button type="submit" className="w-full" size="lg" disabled={loading}>

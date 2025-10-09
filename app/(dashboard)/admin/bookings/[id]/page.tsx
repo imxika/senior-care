@@ -22,11 +22,14 @@ import {
   Phone,
   Mail,
   FileText,
-  DollarSign
+  DollarSign,
+  CreditCard,
+  Bell
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatPrice, formatDate, formatTime, combineDateTime } from '@/lib/utils'
 import { BOOKING_STATUS_CONFIG, SERVICE_TYPE_LABELS } from '@/lib/constants'
+import { RefundPaymentDialog } from '@/components/admin/refund-payment-dialog'
 
 interface PageProps {
   params: Promise<{
@@ -88,6 +91,17 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
           email,
           phone
         )
+      ),
+      payments!booking_id(
+        id,
+        amount,
+        currency,
+        payment_method,
+        payment_status,
+        payment_provider,
+        paid_at,
+        created_at,
+        payment_metadata
       )
     `)
     .eq('id', id)
@@ -107,6 +121,16 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
   if (error || !booking) {
     notFound()
   }
+
+  // Trainer에게 전송된 알림 조회
+  const { data: trainerNotifications } = booking?.trainer
+    ? await serviceSupabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', ((booking.trainer as any).profile as any).id)
+        .or(`link.cs.{/bookings/${id}},link.cs.{/trainer/bookings/${id}}`)
+        .order('created_at', { ascending: false })
+    : { data: null }
 
   const statusConfig = BOOKING_STATUS_CONFIG[booking.status as keyof typeof BOOKING_STATUS_CONFIG] || BOOKING_STATUS_CONFIG.pending
   const scheduledDateTime = combineDateTime(booking.booking_date, booking.start_time)
@@ -295,6 +319,151 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
             </CardContent>
           </Card>
         </div>
+
+        {/* 결제 정보 - Admin용 (모든 결제 상태 표시) */}
+        {booking.total_price > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                💳 결제 정보 (관리자)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {/* 총 예약 금액 */}
+              <div className="flex justify-between items-center pb-3 border-b">
+                <span className="text-sm text-muted-foreground">총 예약 금액</span>
+                <span className="text-lg font-bold">{booking.total_price.toLocaleString()}원</span>
+              </div>
+
+              {/* 결제 상세 내역 */}
+              {booking.payments && booking.payments.length > 0 ? (
+                <div className="space-y-3 mt-3">
+                  <p className="text-sm font-medium text-muted-foreground">결제 내역</p>
+                  {booking.payments.map((payment: any) => {
+                    const statusBadge =
+                      payment.payment_status === 'paid' ? { label: '✅ 결제 완료', variant: 'default' as const } :
+                      payment.payment_status === 'pending' ? { label: '⏳ 결제 대기', variant: 'secondary' as const } :
+                      payment.payment_status === 'refunded' ? { label: '🔄 환불 완료', variant: 'outline' as const } :
+                      payment.payment_status === 'cancelled' ? { label: '🚫 취소', variant: 'secondary' as const } :
+                      { label: '❌ 결제 실패', variant: 'destructive' as const };
+
+                    const providerLabel = payment.payment_provider === 'stripe' ? 'Stripe' : 'Toss Payments';
+
+                    return (
+                      <div key={payment.id} className="bg-muted/50 rounded-lg p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>
+                          <span className="text-xs text-muted-foreground">{providerLabel}</span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <span className="text-muted-foreground">금액:</span>
+                            <span className="ml-1 font-medium">{parseFloat(payment.amount).toLocaleString()}원</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">결제수단:</span>
+                            <span className="ml-1 font-medium">{payment.payment_method}</span>
+                          </div>
+                        </div>
+
+                        {payment.paid_at && (
+                          <div className="text-xs">
+                            <span className="text-muted-foreground">결제일시:</span>
+                            <span className="ml-1">{new Date(payment.paid_at).toLocaleString('ko-KR')}</span>
+                          </div>
+                        )}
+
+                        {payment.payment_status === 'refunded' && payment.payment_metadata?.refund && (
+                          <div className="text-xs bg-yellow-50 border border-yellow-200 rounded p-2 mt-2">
+                            <p className="font-medium text-yellow-800">환불 정보</p>
+                            <p className="text-yellow-700 mt-1">
+                              사유: {payment.payment_metadata.refund.reason || '정보 없음'}
+                            </p>
+                            {payment.payment_metadata.refund.refundedAt && (
+                              <p className="text-yellow-700">
+                                환불일시: {new Date(payment.payment_metadata.refund.refundedAt).toLocaleString('ko-KR')}
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between pt-1 border-t">
+                          <div className="text-xs text-muted-foreground">
+                            결제 ID: {payment.id}
+                          </div>
+                          {payment.payment_status === 'paid' && (
+                            <RefundPaymentDialog
+                              paymentId={payment.id}
+                              amount={payment.amount}
+                              provider={payment.payment_provider}
+                              bookingDate={booking.booking_date}
+                              startTime={booking.start_time}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-3">
+                  <p className="text-sm text-yellow-800 font-medium">⚠️ 결제 대기 중</p>
+                  <p className="text-xs text-yellow-700 mt-1">고객이 아직 결제를 완료하지 않았습니다.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 트레이너 알림 전송 확인 (Admin) */}
+        {booking.trainer && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="h-5 w-5" />
+                🔔 트레이너 알림 전송 내역
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {trainerNotifications && trainerNotifications.length > 0 ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    총 {trainerNotifications.length}건의 알림이 전송되었습니다.
+                  </p>
+                  <div className="space-y-2">
+                    {trainerNotifications.map((notification: any) => (
+                      <div key={notification.id} className="bg-gray-50 rounded-lg p-3 border">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium">{notification.title}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{notification.message}</p>
+                            <div className="flex gap-2 items-center mt-2">
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(notification.created_at).toLocaleString('ko-KR')}
+                              </span>
+                              {notification.read_at ? (
+                                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">✓ 읽음</span>
+                              ) : (
+                                <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">미읽음</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <p className="text-sm text-yellow-800 font-medium">⚠️ 알림 전송 내역 없음</p>
+                  <p className="text-xs text-yellow-700 mt-1">아직 트레이너에게 전송된 알림이 없습니다.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* 추가 정보 */}
         {(booking.customer_notes || booking.specialty_required) && (

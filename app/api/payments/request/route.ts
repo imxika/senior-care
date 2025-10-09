@@ -163,7 +163,74 @@ export async function POST(request: NextRequest) {
       // 이벤트 기록 실패는 에러로 처리하지 않음 (주요 기능은 성공)
     }
 
-    // 9. 성공 응답
+    // 9. Create payment session based on provider
+    let paymentUrl = '';
+
+    if (paymentProvider === 'stripe') {
+      // Create Stripe session
+      const Stripe = (await import('stripe')).default;
+      const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+
+      if (!stripeSecretKey) {
+        throw new Error('STRIPE_SECRET_KEY is not defined');
+      }
+
+      const stripe = new Stripe(stripeSecretKey, {
+        apiVersion: '2025-09-30.clover',
+      });
+
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+      const successUrl = `${baseUrl}/payments/success`;
+      const cancelUrl = `${baseUrl}/checkout/${bookingId}`;
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: 'krw',
+              product_data: {
+                name: orderName,
+                description: `Booking ID: ${bookingId}`,
+              },
+              unit_amount: parseInt(amount.toString()),
+            },
+            quantity: 1,
+          },
+        ],
+        mode: 'payment',
+        success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}&orderId=${orderId}&amount=${amount}`,
+        cancel_url: cancelUrl,
+        customer_email: user.email,
+        metadata: {
+          orderId: orderId,
+          paymentId: payment.id,
+          bookingId: bookingId,
+          customerId: customer.id,
+        },
+      });
+
+      // Update payment with Stripe session info
+      await supabase
+        .from('payments')
+        .update({
+          payment_metadata: {
+            ...payment.payment_metadata,
+            stripeSessionId: session.id,
+            stripeSessionUrl: session.url,
+          },
+        })
+        .eq('id', payment.id);
+
+      paymentUrl = session.url || '';
+
+    } else if (paymentProvider === 'toss') {
+      // Toss Payments - requires client-side SDK
+      // Client will handle Toss Payments widget initialization
+      paymentUrl = ''; // Toss doesn't use direct URL redirect
+    }
+
+    // 10. 성공 응답
     return NextResponse.json({
       success: true,
       data: {
@@ -172,7 +239,9 @@ export async function POST(request: NextRequest) {
         amount: amount,
         orderName,
         customerName,
-        paymentProvider: paymentProvider
+        paymentProvider: paymentProvider,
+        sessionUrl: paymentUrl, // Stripe session URL or Toss checkout URL
+        checkoutUrl: paymentUrl // Alias for compatibility
       }
     });
 

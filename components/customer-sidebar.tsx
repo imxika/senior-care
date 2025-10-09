@@ -10,6 +10,7 @@ import {
   Home,
   MessageSquare,
   GraduationCap,
+  CreditCard,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -60,6 +61,11 @@ const data = {
       ],
     },
     {
+      title: "결제 내역",
+      url: "/customer/payments",
+      icon: CreditCard,
+    },
+    {
       title: "찜한 트레이너",
       url: "/customer/favorites",
       icon: Heart,
@@ -86,6 +92,10 @@ const data = {
         {
           title: "알림",
           url: "/customer/settings/notifications",
+        },
+        {
+          title: "보안",
+          url: "/customer/settings/security",
         },
       ],
     },

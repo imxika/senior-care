@@ -379,17 +379,19 @@ export default function Home() {
           <CardContent className="p-8 md:p-12 text-center">
             <h3 className="text-2xl md:text-4xl font-bold mb-4">지금 바로 시작하세요</h3>
             <p className="text-base md:text-lg text-muted-foreground mb-8">
-              간편한 전화 상담으로 맞춤형 재활 프로그램을 상담받으세요
+              회원가입하고 맞춤형 재활 프로그램을 시작하세요
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-              <Input
-                placeholder="전화번호 입력"
-                type="tel"
-                className="h-12 text-base md:text-lg"
-              />
-              <Button size="lg" className="h-12 px-8 text-lg whitespace-nowrap">
-                상담 신청
-              </Button>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link href="/signup">
+                <Button size="lg" className="h-14 px-10 text-lg font-semibold w-full sm:w-auto">
+                  회원가입 하기
+                </Button>
+              </Link>
+              <Link href="/login">
+                <Button size="lg" variant="outline" className="h-14 px-10 text-lg font-semibold w-full sm:w-auto">
+                  로그인
+                </Button>
+              </Link>
             </div>
           </CardContent>
         </Card>

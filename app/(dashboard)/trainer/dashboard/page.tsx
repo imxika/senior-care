@@ -11,7 +11,7 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb'
-import { Dumbbell, Calendar, Star, AlertCircle, ArrowUpRight } from 'lucide-react'
+import { Dumbbell, Calendar, Star, AlertCircle, ArrowUpRight, Heart } from 'lucide-react'
 import Link from 'next/link'
 
 export default async function TrainerDashboard() {
@@ -33,6 +33,12 @@ export default async function TrainerDashboard() {
     .select('*')
     .eq('profile_id', user.id)
     .single()
+
+  // 찜한 고객 수 조회
+  const { count: favoriteCount } = await supabase
+    .from('favorites')
+    .select('*', { count: 'exact', head: true })
+    .eq('trainer_id', trainer?.id || '')
 
   return (
     <>
@@ -73,7 +79,7 @@ export default async function TrainerDashboard() {
         )}
 
         {/* Quick Actions */}
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-4">
           <Card className="hover:bg-muted/50 transition-colors">
             <CardHeader>
               <div className="flex items-center gap-3">
@@ -135,6 +141,26 @@ export default async function TrainerDashboard() {
               </Button>
             </CardContent>
           </Card>
+
+          <Card className="hover:bg-muted/50 transition-colors border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/50">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100 dark:bg-red-950">
+                  <Heart className="h-5 w-5 text-red-600 dark:text-red-400" />
+                </div>
+                <div className="flex-1">
+                  <CardTitle className="text-sm">찜한 고객</CardTitle>
+                  <CardDescription className="text-xs">관심 고객 수</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-red-600">{favoriteCount || 0}</div>
+                <p className="text-xs text-muted-foreground mt-1">명의 고객이 찜했습니다</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Profile Info */}
@@ -148,12 +174,20 @@ export default async function TrainerDashboard() {
           <CardContent className="grid gap-2">
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">경력</span>
-              <span className="font-medium">{trainer?.experience_years || 0}년</span>
+              <span className="font-medium">{trainer?.years_experience || 0}년</span>
             </div>
             <Separator />
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">평점</span>
               <span className="font-medium">⭐ {trainer?.rating?.toFixed(1) || '0.0'} ({trainer?.total_reviews || 0}개 리뷰)</span>
+            </div>
+            <Separator />
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground flex items-center gap-1">
+                <Heart className="h-4 w-4" />
+                찜한 고객 수
+              </span>
+              <span className="font-medium text-red-500">{favoriteCount || 0}명</span>
             </div>
             <Separator />
             <div className="flex justify-between items-center">

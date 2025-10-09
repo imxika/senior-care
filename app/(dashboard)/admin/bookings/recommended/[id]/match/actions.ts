@@ -109,7 +109,8 @@ export async function matchTrainerToBooking(
     .from('bookings')
     .update({
       trainer_id: trainerId,
-      status: 'pending',  // 트레이너 승인 대기 상태로 변경
+      status: 'pending',  // 트레이너 승인 대기 상태로 유지
+      matching_status: 'matched',  // 트레이너 매칭 완료
       admin_matched_at: new Date().toISOString(),
       admin_matched_by: user.id
     })

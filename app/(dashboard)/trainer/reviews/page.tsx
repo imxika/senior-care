@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
@@ -47,16 +47,16 @@ export default async function TrainerReviewsPage() {
     redirect('/trainer/dashboard')
   }
 
-  // 리뷰 목록 조회 (예약 정보 포함)
-  const { data: reviews } = await supabase
+  // 리뷰 목록 조회 (고객 정보 포함) - Service Role로 RLS 우회
+  const serviceClient = createServiceClient()
+  const { data: reviews } = await serviceClient
     .from('reviews')
     .select(`
       *,
       customer:customers(
-        profiles!customers_profile_id_fkey(
-          full_name,
-          avatar_url
-        )
+        id,
+        profile_id,
+        full_name
       ),
       booking:bookings(
         id,
@@ -69,10 +69,22 @@ export default async function TrainerReviewsPage() {
     .eq('trainer_id', trainer.id)
     .order('created_at', { ascending: false })
 
+  // profiles 구조로 변환 (기존 코드 호환성)
+  const reviewsWithCustomerNames = reviews?.map(review => ({
+    ...review,
+    customer: {
+      ...review.customer,
+      profiles: {
+        full_name: review.customer?.full_name,
+        avatar_url: null
+      }
+    }
+  }))
+
   // 통계 계산
-  const totalReviews = reviews?.length || 0
+  const totalReviews = reviewsWithCustomerNames?.length || 0
   const averageRating = trainer.average_rating || 0
-  const reviewsWithResponse = reviews?.filter(r => r.trainer_response)?.length || 0
+  const reviewsWithResponse = reviewsWithCustomerNames?.filter(r => r.trainer_response)?.length || 0
   const reviewsWithoutResponse = totalReviews - reviewsWithResponse
 
   return (
@@ -144,8 +156,8 @@ export default async function TrainerReviewsPage() {
 
         {/* 리뷰 목록 */}
         <div className="grid gap-3 md:gap-4">
-          {reviews && reviews.length > 0 ? (
-            reviews.map((review) => (
+          {reviewsWithCustomerNames && reviewsWithCustomerNames.length > 0 ? (
+            reviewsWithCustomerNames.map((review) => (
               <Card key={review.id}>
                 <CardHeader className="px-4 md:px-6 pt-4 md:pt-6">
                   <div className="flex items-start justify-between gap-4">
@@ -190,7 +202,9 @@ export default async function TrainerReviewsPage() {
                   </div>
                   {review.booking && (
                     <CardDescription className="text-xs md:text-sm mt-2">
-                      {review.booking.service_type} • {new Date(review.booking.booking_date).toLocaleDateString('ko-KR')} {review.booking.start_time}
+                      {review.booking.service_type === 'home_visit' ? '방문 서비스' :
+                       review.booking.service_type === 'center_visit' ? '센터 방문' :
+                       review.booking.service_type} • {new Date(review.booking.booking_date).toLocaleDateString('ko-KR')} {review.booking.start_time?.slice(0, 5)}
                     </CardDescription>
                   )}
                 </CardHeader>

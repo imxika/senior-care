@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { DollarSign, TrendingUp, Calendar, Download, FileText } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -80,17 +80,17 @@ export default async function TrainerEarningsPage({ searchParams }: PageProps) {
   const currentYear = parseInt(params.year || now.getFullYear().toString())
   const currentMonth = parseInt(params.month || (now.getMonth() + 1).toString())
 
-  // 완료된 예약 가져오기
-  const { data: completedBookings } = await supabase
+  // 완료된 예약 가져오기 - Service Role로 RLS 우회
+  const serviceClient = createServiceClient()
+  const { data: completedBookings } = await serviceClient
     .from('bookings')
     .select(`
       *,
       customers!bookings_customer_id_fkey(
         id,
-        profiles!customers_profile_id_fkey(
-          full_name,
-          email
-        )
+        profile_id,
+        full_name,
+        email
       )
     `)
     .eq('trainer_id', trainerInfo.id)
@@ -107,10 +107,9 @@ export default async function TrainerEarningsPage({ searchParams }: PageProps) {
     booking_type?: string
     customers?: {
       id: string
-      profiles?: {
-        full_name?: string
-        email?: string
-      }
+      profile_id?: string
+      full_name?: string
+      email?: string
     }
     customer?: {
       id: string
@@ -123,7 +122,13 @@ export default async function TrainerEarningsPage({ searchParams }: PageProps) {
 
   const bookings = completedBookings?.map((booking: CompletedBooking) => ({
     ...booking,
-    customer: booking.customers
+    customer: {
+      id: booking.customers?.id,
+      profiles: {
+        full_name: booking.customers?.full_name,
+        email: booking.customers?.email
+      }
+    }
   })) || []
 
   // 이번 달 수입 계산

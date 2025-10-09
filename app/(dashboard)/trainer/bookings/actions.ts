@@ -75,6 +75,7 @@ export async function updateBookingStatus(
   interface BookingUpdateData {
     status: string
     updated_at: string
+    matching_status?: string
     rejection_reason?: string
     rejection_note?: string
   }
@@ -82,6 +83,11 @@ export async function updateBookingStatus(
   const updateData: BookingUpdateData = {
     status,
     updated_at: new Date().toISOString()
+  }
+
+  // 추천 예약 승인 시 matching_status 업데이트
+  if (status === 'confirmed' && booking.booking_type === 'recommended') {
+    updateData.matching_status = 'approved'
   }
 
   // 거절 시 사유 추가

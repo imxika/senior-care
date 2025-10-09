@@ -11,6 +11,8 @@ import {
   Home,
   Star,
   UserCog,
+  CreditCard,
+  DollarSign,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -71,19 +73,38 @@ const data = {
       ],
     },
     {
-      title: "리뷰 관리",
-      url: "/admin/reviews",
-      icon: Star,
-    },
-    {
-      title: "통계",
-      url: "/admin/stats",
-      icon: BarChart3,
+      title: "결제 관리",
+      url: "/admin/payments",
+      icon: CreditCard,
+      items: [
+        {
+          title: "전체 결제",
+          url: "/admin/payments",
+        },
+        {
+          title: "결제 완료",
+          url: "/admin/payments?status=paid",
+        },
+        {
+          title: "결제 대기",
+          url: "/admin/payments?status=pending",
+        },
+      ],
     },
     {
       title: "정산 관리",
       url: "/admin/settlements",
-      icon: FileText,
+      icon: DollarSign,
+    },
+    {
+      title: "결제 분석",
+      url: "/admin/analytics",
+      icon: BarChart3,
+    },
+    {
+      title: "리뷰 관리",
+      url: "/admin/reviews",
+      icon: Star,
     },
     {
       title: "설정",

@@ -122,6 +122,7 @@ export async function createRecommendedBooking(formData: FormData): Promise<Acti
     current_participants: 1, // 예약자 본인
     group_size: 1, // 추천 예약은 기본 1:1 (deprecated, session_type 사용)
     status: 'pending',
+    matching_status: 'pending', // 추천 예약은 매칭 대기 상태로 시작
     price_per_person: 0, // 매칭 후 설정
     total_price: 0, // 매칭 후 설정
     customer_notes: customerNotes,
@@ -194,5 +195,6 @@ export async function createRecommendedBooking(formData: FormData): Promise<Acti
 
   revalidatePath('/customer/bookings')
 
-  return { success: true, data: booking }
+  // 예약 생성 후 즉시 결제 페이지로 리다이렉트
+  redirect(`/checkout/${booking.id}`)
 }

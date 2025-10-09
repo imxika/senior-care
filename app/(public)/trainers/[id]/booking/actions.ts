@@ -242,26 +242,9 @@ export async function createBooking(formData: FormData) {
     return { error: `참가자 정보 저장 중 오류가 발생했습니다: ${participantError.message}` }
   }
 
-  // Get customer name for notification
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name')
-    .eq('id', user.id)
-    .single()
+  // NOTE: Trainer notification will be sent AFTER payment is confirmed
+  // See /api/payments/toss/confirm or /api/payments/stripe/confirm for notification logic
 
-  // Create notification for trainer
-  const customerName = profile?.full_name || '고객'
-  const scheduledAt = new Date(`${date}T${startTime}`)
-  const notification = notificationTemplates.bookingPending(customerName, scheduledAt)
-
-  if (trainer.profile_id) {
-    await createNotification({
-      userId: trainer.profile_id,
-      ...notification,
-      link: `/trainer/bookings/${booking.id}`
-    })
-  }
-
-  // Redirect to customer bookings page with success message
-  redirect('/customer/bookings?success=true')
+  // Redirect to checkout page for payment
+  redirect(`/checkout/${booking.id}`)
 }

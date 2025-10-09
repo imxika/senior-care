@@ -56,51 +56,59 @@
 ### 전체 흐름도
 
 ```
-[Customer] → [예약 생성] → [결제 수단 선택]
-                                ↓
-                    ┌───────────┴───────────┐
-                    ↓                       ↓
-            [Toss Payments]          [Stripe Checkout]
-                    ↓                       ↓
-            [결제 승인 API]          [Session 확인 API]
-                    ↓                       ↓
-                    └───────────┬───────────┘
-                                ↓
-                        [Success 페이지]
-                                ↓
-                        [예약 확정]
-                                ↓
-                        [/bookings 리다이렉트]
+[Customer] → [예약 생성] → [체크아웃 페이지] → [결제 수단 선택]
+                                                    ↓
+                                        ┌───────────┴───────────┐
+                                        ↓                       ↓
+                                [Toss Payments]          [Stripe Checkout]
+                                        ↓                       ↓
+                                [결제 승인 API]          [Session 확인 API]
+                                        ↓                       ↓
+                                        └───────────┬───────────┘
+                                                    ↓
+                                            [Success 페이지]
+                                                    ↓
+                                            [결제 완료 처리]
+                                                    ↓
+                                            ┌───────┴───────┐
+                                            ↓               ↓
+                                    [예약 확정]    [트레이너 알림]
+                                            ↓               ↓
+                                            └───────┬───────┘
+                                                    ↓
+                                        [/customer/bookings 리다이렉트]
 ```
 
 ### Toss Payments 플로우
 
 ```
-1. 사용자가 "Toss 결제하기" 선택
-2. POST /api/payments/request
+1. 예약 생성 후 /checkout/[bookingId]로 리다이렉트
+2. 사용자가 "Toss 결제하기" 선택
+3. POST /api/payments/request
    - DB에 payment 레코드 생성 (status: pending)
    - orderId 생성 및 반환
-3. Toss SDK로 결제창 호출
+4. Toss SDK로 결제창 호출
    - payment.requestPayment()
-4. 사용자가 결제 완료
-5. /payments/success?paymentKey=...&orderId=...&amount=... 리다이렉트
-6. POST /api/payments/confirm
+5. 사용자가 결제 완료
+6. /payments/success?paymentKey=...&orderId=...&amount=... 리다이렉트
+7. POST /api/payments/toss/confirm
    - Toss API로 결제 승인 요청
    - DB 업데이트 (status: paid)
    - payment_events에 confirmed 이벤트 기록
    - bookings.status → confirmed
-7. 3초 후 /bookings로 자동 리다이렉트
+   - 트레이너에게 예약 알림 전송
+8. 3초 후 /customer/bookings로 자동 리다이렉트
 ```
 
 ### Stripe 플로우
 
 ```
-1. 사용자가 "Stripe 결제하기" 선택
-2. POST /api/payments/request
+1. 예약 생성 후 /checkout/[bookingId]로 리다이렉트
+2. 사용자가 "Stripe 결제하기" 선택
+3. POST /api/payments/request
    - DB에 payment 레코드 생성 (status: pending)
    - orderId 생성 및 반환
-3. POST /api/payments/stripe/create-session
-   - Stripe Checkout Session 생성
+   - Stripe Checkout Session 생성 (통합)
    - session.url 반환
 4. Stripe Checkout 페이지로 리다이렉트
 5. 사용자가 결제 완료
@@ -111,7 +119,8 @@
    - DB 업데이트 (status: paid)
    - payment_events에 confirmed 이벤트 기록
    - bookings.status → confirmed
-8. 3초 후 /bookings로 자동 리다이렉트
+   - 트레이너에게 예약 알림 전송
+8. 3초 후 /customer/bookings로 자동 리다이렉트
 ```
 
 ---
@@ -199,6 +208,19 @@ ADD COLUMN cancellation_deadline TIMESTAMPTZ;
 
 ## API 엔드포인트
 
+### API 구조
+
+```
+app/api/payments/
+├── request/              # 결제 요청 생성 (Toss/Stripe 공통)
+├── stripe/
+│   └── confirm/         # Stripe 결제 확인
+├── toss/
+│   └── confirm/         # Toss Payments 결제 확인
+├── cancel/              # 결제 취소
+└── test/                # 테스트용
+```
+
 ### 1. POST /api/payments/request
 
 결제 요청 생성 (Toss/Stripe 공통)
@@ -239,9 +261,9 @@ ADD COLUMN cancellation_deadline TIMESTAMPTZ;
 
 ---
 
-### 2. POST /api/payments/confirm (Toss)
+### 2. POST /api/payments/toss/confirm
 
-Toss 결제 승인
+Toss Payments 결제 승인
 
 **Request Body**:
 ```typescript
@@ -285,54 +307,11 @@ Toss 결제 승인
 5. DB 업데이트 (status: paid, 카드 정보 저장)
 6. payment_events에 'confirmed' 이벤트 기록
 7. bookings.status → 'confirmed'
+8. 트레이너에게 예약 알림 전송 (notificationTemplates.bookingPending)
 
 ---
 
-### 3. POST /api/payments/stripe/create-session
-
-Stripe Checkout Session 생성
-
-**Request Body**:
-```typescript
-{
-  orderId: string;
-  amount: number;
-  successUrl: string;
-  cancelUrl: string;
-}
-```
-
-**Response**:
-```typescript
-{
-  success: true,
-  data: {
-    sessionId: string;
-    sessionUrl: string;
-  }
-}
-```
-
-**처리 로직**:
-1. 인증 및 권한 확인
-2. DB에서 payment 조회
-3. Stripe SDK로 Checkout Session 생성
-   ```typescript
-   stripe.checkout.sessions.create({
-     payment_method_types: ['card'],
-     line_items: [...],
-     mode: 'payment',
-     success_url: ...,
-     cancel_url: ...,
-     metadata: { orderId, paymentId, bookingId }
-   })
-   ```
-4. session.id를 payment_metadata에 저장
-5. payment_events에 'created' 이벤트 기록
-
----
-
-### 4. POST /api/payments/stripe/confirm
+### 3. POST /api/payments/stripe/confirm
 
 Stripe 결제 승인 확인
 
@@ -370,13 +349,15 @@ Stripe 결제 승인 확인
    ```
 4. payment_status 확인 (must be 'paid')
 5. PaymentIntent 조회 (카드 정보용)
+   - latest_charge로 카드 정보 접근
 6. DB 업데이트 (status: paid, 카드 정보 저장)
 7. payment_events에 'confirmed' 이벤트 기록
 8. bookings.status → 'confirmed'
+9. 트레이너에게 예약 알림 전송 (notificationTemplates.bookingPending)
 
 ---
 
-### 5. GET /api/bookings
+### 4. GET /api/bookings
 
 예약 목록 조회 (결제 정보 포함)
 
@@ -516,6 +497,22 @@ Stripe 결제 승인 확인
 
 ## 페이지 구조
 
+### /checkout/[bookingId] (체크아웃 페이지)
+
+**목적**: 예약 확인 및 결제 수단 선택
+
+**기능**:
+- 예약 상세 정보 표시 (트레이너, 일시, 금액)
+- 이미 결제된 예약 체크
+- 결제 제공자 선택 (Toss/Stripe)
+- 결제 진행
+
+**파일**:
+- `/app/checkout/[bookingId]/page.tsx` - Server Component
+- `/app/checkout/[bookingId]/PaymentProviderButton.tsx` - Client Component
+
+---
+
 ### /test-payment (테스트 페이지)
 
 **목적**: 개발/테스트용 간편 결제 페이지
@@ -562,18 +559,35 @@ Stripe 결제 승인 확인
 
 ---
 
-### /bookings (예약 목록)
+### 역할별 예약 및 결제 정보 페이지
 
-**목적**: 사용자의 예약 및 결제 내역 확인
+#### Customer (고객)
+- `/customer/bookings` - 예약 목록 (결제 상태 포함)
+- `/customer/bookings/[id]` - 예약 상세 (결제 정보 포함)
+- `/customer/payments` - 결제 내역 (통계 및 상세)
+
+**파일**:
+- `/app/(dashboard)/customer/bookings/page.tsx`
+- `/app/(dashboard)/customer/bookings/[id]/page.tsx`
+- `/app/(dashboard)/customer/payments/page.tsx`
+- `/components/customer-booking-detail.tsx`
+
+#### Admin (관리자)
+- `/admin/bookings` - 전체 예약 목록 (결제 상태 포함)
+- `/admin/bookings/[id]` - 예약 상세 (결제 정보 포함, 관리자용)
+
+**파일**:
+- `/app/(dashboard)/admin/bookings/page.tsx`
+- `/app/(dashboard)/admin/bookings/[id]/page.tsx`
 
 **기능**:
-- 예약 목록 표시
-- 결제 정보 표시 (Provider, 금액, 상태)
-- 상태별 배지 (대기중, 확정됨, 취소됨, 완료됨)
-- 결제하기 버튼 (pending 상태)
-- 인증 체크
+- 모든 예약 및 결제 정보 조회 (Service Role)
+- 결제 상태 모니터링
+- 결제 문제 해결 및 조율
 
-**파일**: `/app/bookings/page.tsx`
+#### Trainer (트레이너)
+- 결제 정보 표시 안 함 (프라이버시 보호)
+- 예약 확정 여부만 확인 가능
 
 ---
 
@@ -698,6 +712,16 @@ STRIPE_SECRET_KEY=sk_test_...
 
 ---
 
+## 구현 완료 기능
+
+- ✅ **Multi-Provider 결제 시스템** - Toss Payments + Stripe
+- ✅ **체크아웃 페이지** - 예약 확인 및 결제 수단 선택
+- ✅ **결제 플로우** - 예약 생성 → 결제 → 예약 확정 → 트레이너 알림
+- ✅ **역할별 결제 정보** - Customer (전체), Admin (전체), Trainer (없음)
+- ✅ **결제 내역 페이지** - Customer 전용 통계 및 상세 내역
+- ✅ **알림 시스템** - 결제 완료 후 트레이너 알림 전송
+- ✅ **API 구조화** - /api/payments/{provider}/confirm
+
 ## 다음 단계
 
 ### 구현 필요 기능
@@ -706,7 +730,6 @@ STRIPE_SECRET_KEY=sk_test_...
 - [ ] **환불 시스템** - Admin에서 환불 처리
 - [ ] **정기 결제** - Subscription 지원 (Stripe)
 - [ ] **결제 실패 재시도** - 자동 재결제
-- [ ] **Admin 결제 대시보드** - 전체 결제 현황 조회
 - [ ] **Trainer 정산 시스템** - 트레이너별 수익 정산
 - [ ] **영수증 발급** - PDF 영수증 생성
 
@@ -720,5 +743,6 @@ STRIPE_SECRET_KEY=sk_test_...
 ---
 
 **문서 작성**: 2025-10-09
+**최종 업데이트**: 2025-10-09 (API 경로 구조화, 트레이너 알림 추가)
 **작성자**: Sean Kim
-**버전**: 1.0.0
+**버전**: 1.1.0

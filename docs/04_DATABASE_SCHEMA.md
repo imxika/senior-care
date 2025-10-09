@@ -239,6 +239,7 @@ bookings
 ├── customer_notes: TEXT
 ├── trainer_notes: TEXT
 ├── status: TEXT (enum)
+├── matching_status: TEXT ('pending', 'matched', 'approved') ✨ NEW (추천 예약 매칭 상태)
 ├── admin_matched_at: TIMESTAMPTZ ✨ NEW (추천 예약 매칭 시각)
 ├── admin_matched_by: UUID (FK → profiles.id) ✨ NEW
 ├── cancellation_reason: TEXT
@@ -259,6 +260,11 @@ bookings
 - ✨ **예약 타입**:
   - `direct`: 지정 예약 (고객이 트레이너 선택, +30% 비용)
   - `recommended`: 추천 예약 (관리자 매칭, 기본 비용)
+- ✨ **matching_status** (추천 예약 전용):
+  - `pending`: 매칭 대기 (결제 완료 후)
+  - `matched`: 트레이너 배정됨 (Admin 매칭 완료)
+  - `approved`: 트레이너 승인 완료
+  - 지정 예약은 NULL
 
 **예약 조회 패턴**:
 ```typescript

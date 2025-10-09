@@ -16,7 +16,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
-import { RemoveFavoriteButton } from './remove-favorite-button'
+import { FavoriteButton } from '@/components/favorite-button'
 
 export default async function CustomerFavoritesPage() {
   const supabase = await createClient()
@@ -100,14 +100,21 @@ export default async function CustomerFavoritesPage() {
       </header>
 
       <div className="flex flex-1 flex-col gap-6 p-6 md:gap-8 md:p-8">
-        <div className="space-y-2">
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight flex items-center gap-3">
-            <Heart className="h-8 w-8 md:h-10 md:w-10 text-red-500" />
-            즐겨찾기
-          </h1>
-          <p className="text-lg md:text-xl text-muted-foreground">
-            {profile?.full_name}님이 즐겨찾기한 트레이너 목록입니다
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight flex items-center gap-3">
+              <Heart className="h-8 w-8 md:h-10 md:w-10 text-red-500" />
+              즐겨찾기
+            </h1>
+            <p className="text-lg md:text-xl text-muted-foreground">
+              {profile?.full_name}님이 즐겨찾기한 트레이너 목록입니다
+            </p>
+          </div>
+          <Link href="/trainers">
+            <Button variant="outline" className="h-12 md:h-14 text-base md:text-lg px-4 md:px-6 whitespace-nowrap">
+              트레이너 목록
+            </Button>
+          </Link>
         </div>
 
         {/* 즐겨찾기 목록 */}
@@ -160,7 +167,12 @@ export default async function CustomerFavoritesPage() {
                           </span>
                         </div>
                       </div>
-                      <RemoveFavoriteButton favoriteId={favorite.id} />
+                      <FavoriteButton
+                        trainerId={trainer.id}
+                        variant="ghost"
+                        size="lg"
+                        className="h-16 w-16 md:h-20 md:w-20 rounded-full bg-white hover:bg-gray-50 shadow-md hover:shadow-lg transition-all shrink-0"
+                      />
                     </div>
 
                     {/* 소개 */}

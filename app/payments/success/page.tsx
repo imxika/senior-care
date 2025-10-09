@@ -54,7 +54,7 @@ export default function PaymentSuccessPage() {
         }
         // Toss 결제인 경우
         else if (paymentKey) {
-          response = await fetch('/api/payments/confirm', {
+          response = await fetch('/api/payments/toss/confirm', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -82,7 +82,7 @@ export default function PaymentSuccessPage() {
 
         // 3초 후 예약 목록으로 이동
         setTimeout(() => {
-          router.push('/bookings');
+          router.push('/customer/bookings');
         }, 3000);
 
       } catch (error: any) {
@@ -157,7 +157,7 @@ export default function PaymentSuccessPage() {
                 다시 시도하기
               </button>
               <button
-                onClick={() => router.push('/bookings')}
+                onClick={() => router.push('/customer/bookings')}
                 className="w-full bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 transition"
               >
                 예약 목록으로

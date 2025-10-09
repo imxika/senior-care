@@ -67,7 +67,7 @@ export async function updateTrainerProfile(formData: FormData) {
     const { error: trainerError } = await supabase
       .from('trainers')
       .update({
-        experience_years: yearsExperience,
+        years_experience: yearsExperience,
         hourly_rate: hourlyRate,
         bio: bio,
         specialties: specialties,
