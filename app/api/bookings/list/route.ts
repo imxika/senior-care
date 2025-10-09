@@ -45,15 +45,40 @@ export async function GET() {
       );
     }
 
-    // 3. 각 예약의 결제 정보 조회
+    // 3. 각 예약의 결제 정보 및 트레이너 정보 조회
     const bookingsWithPayments = await Promise.all(
       (bookings || []).map(async (booking: any) => {
+        // 결제 정보 조회
         const { data: payments } = await supabase
           .from('payments')
           .select('id, payment_status, amount')
           .eq('booking_id', booking.id);
 
-        return { ...booking, payments };
+        // 트레이너 정보 조회 (trainers + profiles join)
+        const { data: trainerData } = await supabase
+          .from('trainers')
+          .select('id, profile_id, specialties, hourly_rate')
+          .eq('id', booking.trainer_id)
+          .single();
+
+        let trainer = null;
+        if (trainerData && trainerData.profile_id) {
+          // profiles 테이블에서 이름 가져오기
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', trainerData.profile_id)
+            .single();
+
+          trainer = {
+            id: trainerData.id,
+            full_name: profileData?.full_name || '트레이너',
+            specialties: trainerData.specialties,
+            hourly_rate: trainerData.hourly_rate,
+          };
+        }
+
+        return { ...booking, payments, trainer };
       })
     );
 

@@ -1599,3 +1599,123 @@ Day 8: 98% (+2%) ✅ MVP 거의 완성
   9. 노인친화 UI/UX
 - ✅ **9개의 주요 버그** 해결
 - ✅ **4개의 자동화** 구현 (고객 레코드, 알림, 승인, 평점 계산)
+
+### Day 9 (결제 시스템 구현) 💳
+**날짜**: 2025-10-09
+**목표**: Multi-Provider 결제 시스템 완성
+
+#### 구현 완료
+- ✅ **Toss Payments 통합**
+  - 결제 요청 API (`/api/payments/request`)
+  - 결제 승인 API (`/api/payments/confirm`)
+  - Toss SDK 연동
+  - 성공/실패 페이지 리다이렉트
+
+- ✅ **Stripe 통합**
+  - Checkout Session 생성 API (`/api/payments/stripe/create-session`)
+  - 결제 승인 확인 API (`/api/payments/stripe/confirm`)
+  - Stripe SDK 연동
+  - 테스트 카드 지원
+
+- ✅ **Multi-Provider 지원**
+  - `payment_provider` 컬럼 추가 (toss/stripe)
+  - 사용자 결제 수단 선택 UI (Radio Button)
+  - 통합 success/fail 페이지
+  - Provider별 핸들러 분기
+
+- ✅ **결제 이벤트 추적**
+  - `payment_events` 테이블 활용
+  - 결제 라이프사이클 로깅 (created, confirmed, failed)
+  - 이벤트 메타데이터 저장
+
+- ✅ **예약-결제 연동**
+  - 결제 완료 시 bookings.status → 'confirmed'
+  - confirmed_at 타임스탬프 자동 저장
+  - 취소 마감 시각 자동 계산 (24시간 전)
+
+- ✅ **예약 목록 페이지**
+  - `/bookings` 페이지 생성
+  - 예약 정보 + 결제 정보 통합 표시
+  - Provider 구분 표시 (💳 Toss / 💵 Stripe)
+  - 결제 상태 배지 (대기중, 결제완료, 결제실패)
+  - 인증 체크 및 에러 처리
+
+#### 생성/수정 파일
+- ✅ **신규 파일 (7개)**
+  1. `/app/payments/success/page.tsx` - 결제 성공 페이지
+  2. `/app/payments/fail/page.tsx` - 결제 실패 페이지
+  3. `/app/api/payments/stripe/create-session/route.ts` - Stripe Session 생성
+  4. `/app/api/payments/stripe/confirm/route.ts` - Stripe 결제 승인
+  5. `/app/bookings/page.tsx` - 예약 목록 페이지
+  6. `/app/api/bookings/route.ts` - 예약 목록 API
+  7. `/docs/08_PAYMENT_SYSTEM_IMPLEMENTATION.md` - 결제 시스템 문서
+
+- ✅ **수정 파일 (2개)**
+  1. `/app/test-payment/page.tsx` - Multi-Provider 선택 UI 추가
+  2. `/app/api/payments/request/route.ts` - paymentProvider 파라미터 추가
+
+- ✅ **마이그레이션 (1개)**
+  1. `28-add-payment-provider.sql` - payment_provider 컬럼 추가
+
+#### 해결한 기술적 문제
+1. ✅ **Stripe SDK 버전 호환성**
+   - `redirectToCheckout()` deprecated → `session.url` 직접 리다이렉트
+   - Stripe API 버전: 2024-12-18.acacia
+
+2. ✅ **Supabase 관계 쿼리 명확성**
+   - `bookings_customer_id_fkey` 명시적 지정
+   - `profiles` 테이블 조인 (customers/trainers → profiles)
+
+3. ✅ **데이터 구조 설계**
+   - 단일 `payments` 테이블로 Toss/Stripe 통합 관리
+   - `payment_provider` 컬럼으로 구분
+   - JSONB 메타데이터로 Provider별 특수 필드 저장
+
+4. ✅ **날짜 필드 처리**
+   - `session_date` → `booking_date` 수정
+   - Invalid Date 안전 처리
+   - `formatDate()` null 체크 추가
+
+5. ✅ **인증 및 권한**
+   - Customer 레코드 존재 여부 확인
+   - 본인 예약만 접근 가능
+   - RLS 정책 준수
+
+#### 결제 플로우 요약
+```
+[Customer] → [예약 생성] → [결제 수단 선택: Toss/Stripe]
+                                ↓
+                    ┌───────────┴───────────┐
+                    ↓                       ↓
+            [Toss SDK]              [Stripe Checkout]
+                    ↓                       ↓
+            [/api/payments/confirm]  [/api/payments/stripe/confirm]
+                    ↓                       ↓
+                    └───────────┬───────────┘
+                                ↓
+                        [Success 페이지]
+                                ↓
+                        [예약 confirmed]
+                                ↓
+                        [/bookings 리다이렉트]
+```
+
+#### 통계
+- **신규 파일**: 7개
+- **수정 파일**: 2개
+- **마이그레이션**: 1개
+- **API 엔드포인트**: 5개 (request, confirm, stripe/create-session, stripe/confirm, bookings)
+- **페이지**: 3개 (success, fail, bookings)
+- **Provider 지원**: 2개 (Toss Payments, Stripe)
+
+#### 다음 우선순위
+1. **Admin 대시보드** - 전체 결제/예약 현황 조회
+2. **Trainer 대시보드** - 자신의 예약만 조회 (결제 정보 비공개)
+3. **Customer 예약 플로우** - 트레이너 선택 → 예약 생성 → 결제
+
+---
+
+**마지막 업데이트**: 2025-10-09 (Day 9 완료)
+**프로젝트 상태**: 🚀 결제 시스템 완성 (Day 9: 99% 달성)
+**다음 목표**: Admin/Trainer/Customer 대시보드 완성 (Day 10-12)
+

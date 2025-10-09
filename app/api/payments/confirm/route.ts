@@ -137,7 +137,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 9. Booking 상태 업데이트 - 결제 완료 → 예약 확정
+    // 9. payment_events에 confirmed 이벤트 기록
+    await supabase.rpc('log_payment_event', {
+      p_payment_id: payment.id,
+      p_event_type: 'confirmed',
+      p_metadata: {
+        confirmedAt: tossPayment.approvedAt,
+        paymentKey: tossPayment.paymentKey,
+        amount: tossPayment.totalAmount,
+        method: tossPayment.method,
+        confirmedBy: user.id
+      }
+    });
+
+    // 10. Booking 상태 업데이트 - 결제 완료 → 예약 확정
     await supabase
       .from('bookings')
       .update({
@@ -146,7 +159,7 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', payment.booking_id);
 
-    // 10. 성공 응답
+    // 11. 성공 응답
     return NextResponse.json({
       success: true,
       data: {

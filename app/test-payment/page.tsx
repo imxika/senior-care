@@ -9,16 +9,51 @@ import { useState, useEffect } from 'react';
 export default function TestPaymentPage() {
   const [bookingId, setBookingId] = useState('');
   const [amount, setAmount] = useState('100000');
+  const [paymentProvider, setPaymentProvider] = useState<'toss' | 'stripe'>('toss');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [bookings, setBookings] = useState<any[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
+  const [authStatus, setAuthStatus] = useState<{
+    isAuthenticated: boolean;
+    user: any;
+    customer: any;
+    loading: boolean;
+  }>({
+    isAuthenticated: false,
+    user: null,
+    customer: null,
+    loading: true,
+  });
 
-  // 페이지 로드 시 Booking 목록 가져오기
+  // 페이지 로드 시 인증 상태 및 Booking 목록 가져오기
   useEffect(() => {
+    checkAuthStatus();
     fetchBookings();
   }, []);
+
+  const checkAuthStatus = async () => {
+    try {
+      const response = await fetch('/api/auth/status');
+      const data = await response.json();
+
+      setAuthStatus({
+        isAuthenticated: data.isAuthenticated || false,
+        user: data.user || null,
+        customer: data.customer || null,
+        loading: false,
+      });
+    } catch (err) {
+      console.error('Failed to check auth status:', err);
+      setAuthStatus({
+        isAuthenticated: false,
+        user: null,
+        customer: null,
+        loading: false,
+      });
+    }
+  };
 
   const fetchBookings = async () => {
     setLoadingBookings(true);
@@ -72,13 +107,73 @@ export default function TestPaymentPage() {
     }
   };
 
-  // 1. 결제 요청 테스트
-  const handlePaymentRequest = async () => {
+  // Toss Payments 처리
+  const handleTossPayment = async (orderId: string, amountValue: number) => {
+    const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
+    if (!clientKey) {
+      throw new Error('Toss Client Key가 설정되지 않았습니다.');
+    }
+
+    const { loadTossPayments } = await import('@tosspayments/tosspayments-sdk');
+    const tossPayments = await loadTossPayments(clientKey);
+
+    // @ts-ignore
+    const payment = tossPayments.payment({ customerKey: 'ANONYMOUS' });
+
+    // @ts-ignore
+    await payment.requestPayment({
+      method: 'CARD',
+      amount: { currency: 'KRW', value: amountValue },
+      orderId: orderId,
+      orderName: '시니어케어 트레이닝 세션',
+      successUrl: `${window.location.origin}/payments/success`,
+      failUrl: `${window.location.origin}/payments/fail`,
+      customerEmail: authStatus.user?.email,
+      customerName: authStatus.customer?.full_name || '테스트 고객',
+    });
+  };
+
+  // Stripe 처리
+  const handleStripePayment = async (orderId: string, amountValue: number) => {
+    // Stripe Checkout Session 생성 API 호출
+    const response = await fetch('/api/payments/stripe/create-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        orderId,
+        amount: amountValue,
+        successUrl: `${window.location.origin}/payments/success`,
+        cancelUrl: `${window.location.origin}/payments/fail`,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Stripe session creation failed');
+    }
+
+    // Stripe Checkout URL로 직접 리다이렉트 (최신 방식)
+    if (data.data?.sessionUrl) {
+      window.location.href = data.data.sessionUrl;
+    } else {
+      throw new Error('Session URL not found');
+    }
+  };
+
+  // 1. 결제하기 (Provider별 분기)
+  const handlePayment = async () => {
+    if (!bookingId || !amount) {
+      setError('예약을 선택하고 금액을 입력해주세요');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setResult(null);
 
     try {
+      // 1) 결제 요청 생성 (orderId 발급)
       const response = await fetch('/api/payments/request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -86,7 +181,8 @@ export default function TestPaymentPage() {
           bookingId: bookingId,
           amount: parseInt(amount),
           orderName: '시니어케어 트레이닝 세션',
-          customerName: '테스트 고객',
+          customerName: authStatus.customer?.full_name || '테스트 고객',
+          paymentProvider: paymentProvider, // 선택된 결제 수단
         }),
       });
 
@@ -96,10 +192,34 @@ export default function TestPaymentPage() {
         throw new Error(data.error || 'Failed to create payment request');
       }
 
-      setResult(data);
+      const { orderId, paymentProvider: selectedProvider } = data.data;
+
+      // 2) Provider별 분기
+      if (selectedProvider === 'stripe') {
+        // Stripe 결제
+        await handleStripePayment(orderId, parseInt(amount));
+      } else {
+        // Toss 결제
+        await handleTossPayment(orderId, parseInt(amount));
+      }
+
     } catch (err: any) {
-      setError(err.message);
-    } finally {
+      console.error('Toss Payment Error:', err);
+
+      // 사용자가 결제를 취소한 경우 payment 상태를 cancelled로 업데이트
+      if (err.code === 'USER_CANCEL' || err.message?.includes('취소')) {
+        try {
+          await fetch('/api/payments/cancel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ bookingId }),
+          });
+        } catch (cancelErr) {
+          console.error('Failed to update payment status:', cancelErr);
+        }
+      }
+
+      setError(err.message || '결제 요청 중 오류가 발생했습니다.');
       setLoading(false);
     }
   };
@@ -163,6 +283,55 @@ export default function TestPaymentPage() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <h1 className="text-3xl font-bold mb-8">💳 결제 API 테스트</h1>
+
+      {/* 로그인 상태 표시 */}
+      <div className="bg-white border rounded-lg p-6 mb-6">
+        <h2 className="text-xl font-semibold mb-4">👤 로그인 상태</h2>
+        {authStatus.loading ? (
+          <p className="text-gray-500">확인 중...</p>
+        ) : authStatus.isAuthenticated ? (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="inline-block w-3 h-3 bg-green-500 rounded-full"></span>
+              <span className="font-medium text-green-700">로그인됨</span>
+            </div>
+            <div className="text-sm text-gray-600 space-y-1">
+              <p><strong>이메일:</strong> {authStatus.user?.email}</p>
+              <p><strong>User ID:</strong> <code className="bg-gray-100 px-2 py-1 rounded text-xs">{authStatus.user?.id}</code></p>
+              {authStatus.customer ? (
+                <>
+                  <p><strong>고객명:</strong> {authStatus.customer.full_name || '미설정'}</p>
+                  {authStatus.customer.guardian_name && (
+                    <p><strong>보호자:</strong> {authStatus.customer.guardian_name}</p>
+                  )}
+                  <p><strong>Customer ID:</strong> <code className="bg-gray-100 px-2 py-1 rounded text-xs">{authStatus.customer.id}</code></p>
+                  {authStatus.customer.mobility_level && (
+                    <p><strong>이동 능력:</strong> {authStatus.customer.mobility_level}</p>
+                  )}
+                </>
+              ) : (
+                <p className="text-amber-600">⚠️ 연결된 고객 정보 없음 (customers 테이블에 profile_id 매칭 필요)</p>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="inline-block w-3 h-3 bg-red-500 rounded-full"></span>
+              <span className="font-medium text-red-700">로그인 안됨</span>
+            </div>
+            <p className="text-sm text-gray-600">
+              로그인하지 않으면 예약 목록이 보이지 않을 수 있습니다 (RLS 정책).
+            </p>
+            <a
+              href="/login"
+              className="inline-block mt-2 bg-blue-500 text-white px-4 py-2 rounded text-sm hover:bg-blue-600"
+            >
+              로그인하러 가기
+            </a>
+          </div>
+        )}
+      </div>
 
       {/* API 연결 테스트 */}
       <div className="bg-white border rounded-lg p-6 mb-6">
@@ -266,12 +435,42 @@ export default function TestPaymentPage() {
             />
           </div>
 
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              결제 수단 선택
+            </label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="paymentProvider"
+                  value="toss"
+                  checked={paymentProvider === 'toss'}
+                  onChange={(e) => setPaymentProvider(e.target.value as 'toss' | 'stripe')}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm">💳 Toss Payments</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="paymentProvider"
+                  value="stripe"
+                  checked={paymentProvider === 'stripe'}
+                  onChange={(e) => setPaymentProvider(e.target.value as 'toss' | 'stripe')}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm">💵 Stripe</span>
+              </label>
+            </div>
+          </div>
+
           <button
-            onClick={handlePaymentRequest}
+            onClick={handlePayment}
             disabled={loading || !bookingId}
             className="bg-green-500 text-white px-6 py-2 rounded hover:bg-green-600 disabled:bg-gray-400"
           >
-            {loading ? '처리 중...' : '결제 요청 생성'}
+            {loading ? '처리 중...' : `💳 ${paymentProvider === 'toss' ? 'Toss' : 'Stripe'} 결제하기`}
           </button>
         </div>
       </div>
