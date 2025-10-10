@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
   } catch (error: unknown) {
     console.error('Bookings API error:', error);
     return NextResponse.json(
-      { error: 'Internal server error', message: error.message },
+      { error: 'Internal server error', message: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

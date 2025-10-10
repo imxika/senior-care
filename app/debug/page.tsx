@@ -69,7 +69,7 @@ export default function DebugPage() {
   }
 
   const createAdminProfile = async () => {
-    if (!info?.user) {
+    if (!info?.session?.user) {
       alert('먼저 회원가입/로그인을 해주세요')
       return
     }
@@ -77,8 +77,8 @@ export default function DebugPage() {
     const { error } = await supabase
       .from('profiles')
       .upsert({
-        id: info.user.id,
-        email: info.user.email,
+        id: info.session.user.id,
+        email: info.session.user.email,
         user_type: 'admin',
         full_name: 'Admin User',
         phone: '010-0000-0000'
@@ -119,7 +119,7 @@ export default function DebugPage() {
           <Button onClick={forceLogout} variant="destructive">
             🚪 강제 로그아웃
           </Button>
-          {info?.user && !info?.profile && (
+          {info?.session?.user && !info?.profile && (
             <Button onClick={createAdminProfile} className="bg-green-600">
               ✨ Admin 프로필 생성
             </Button>

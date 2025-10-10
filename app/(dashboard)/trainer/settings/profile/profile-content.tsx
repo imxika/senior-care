@@ -113,7 +113,26 @@ export function ProfileContent({ profile, trainer, userId }: ProfileContentProps
       )}
 
       {/* 편집 가능한 프로필 정보 */}
-      <ProfileEditForm profile={profile} trainer={trainer} isEditing={isEditing} setIsEditing={setIsEditing} />
+      {profile && trainer && (
+        <ProfileEditForm
+          profile={{
+            full_name: profile.full_name || undefined,
+            phone: profile.phone || undefined,
+            email: profile.email || undefined
+          }}
+          trainer={{
+            years_experience: trainer.years_experience || undefined,
+            hourly_rate: trainer.hourly_rate || undefined,
+            bio: trainer.bio || undefined,
+            specialties: trainer.specialties || undefined,
+            certifications: trainer.certifications || undefined,
+            service_areas: trainer.service_areas || undefined,
+            max_group_size: trainer.max_group_size || undefined
+          }}
+          isEditing={isEditing}
+          setIsEditing={setIsEditing}
+        />
+      )}
 
       {/* 편집/저장 버튼 - 하단 고정 */}
       <div

@@ -92,7 +92,7 @@ export async function cancelBooking(bookingId: string) {
     await createNotification({
       userId: booking.trainer.profile_id,
       ...notification,
-      relatedId: bookingId
+      link: `/trainer/bookings/${bookingId}`
     })
   }
 

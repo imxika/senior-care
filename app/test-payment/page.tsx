@@ -26,6 +26,12 @@ interface Booking {
   };
 }
 
+interface PaymentRequestData {
+  orderId?: string;
+  amount?: number;
+  checkoutUrl?: string;
+}
+
 interface AuthStatus {
   isAuthenticated: boolean;
   user: User | null;
@@ -42,7 +48,7 @@ export default function TestPaymentPage() {
   const [amount, setAmount] = useState('100000');
   const [paymentProvider, setPaymentProvider] = useState<'toss' | 'stripe'>('toss');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<Record<string, unknown> | null>(null);
+  const [result, setResult] = useState<{ data?: PaymentRequestData } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
@@ -143,10 +149,8 @@ export default function TestPaymentPage() {
     const { loadTossPayments } = await import('@tosspayments/tosspayments-sdk');
     const tossPayments = await loadTossPayments(clientKey);
 
-    // @ts-expect-error - Toss Payments SDK 타입 정의 불완전
     const payment = tossPayments.payment({ customerKey: 'ANONYMOUS' });
 
-    // @ts-expect-error - Toss Payments SDK 타입 정의 불완전
     await payment.requestPayment({
       method: 'CARD',
       amount: { currency: 'KRW', value: amountValue },
@@ -415,8 +419,8 @@ export default function TestPaymentPage() {
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className={`font-semibold ${booking.total_price > 0 ? 'text-blue-600' : 'text-red-500'}`}>
-                      {booking.total_price > 0 ? `${booking.total_price?.toLocaleString()}원` : '금액 미설정'}
+                    <p className={`font-semibold ${(booking.total_price ?? 0) > 0 ? 'text-blue-600' : 'text-red-500'}`}>
+                      {(booking.total_price ?? 0) > 0 ? `${(booking.total_price ?? 0).toLocaleString()}원` : '금액 미설정'}
                     </p>
                     <span className="text-xs bg-gray-100 px-2 py-1 rounded">
                       {booking.status}

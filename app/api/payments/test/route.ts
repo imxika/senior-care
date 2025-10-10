@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         error: 'API 테스트 실패',
-        message: error.message
+        message: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }
     );

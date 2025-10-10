@@ -74,7 +74,7 @@ export default async function TrainerDetailPage({ params }: PageProps) {
   const experienceYears = trainer.years_experience || trainer.experience_years || 0
 
   // 리뷰 목록 조회
-  const { data: reviews } = await supabase
+  const { data: rawReviews } = await supabase
     .from('reviews')
     .select(`
       *,
@@ -92,6 +92,71 @@ export default async function TrainerDetailPage({ params }: PageProps) {
     .eq('trainer_id', id)
     .order('created_at', { ascending: false })
     .limit(10)
+
+  // Normalize review data (Supabase foreign keys return arrays)
+  interface SupabaseReviewResult {
+    id: string
+    rating: number
+    comment: string | null
+    created_at: string
+    customer: Array<{
+      profiles: Array<{
+        full_name: string | null
+        avatar_url: string | null
+      }>
+    }>
+    booking: Array<{
+      booking_date: string
+      service_type: string
+    }>
+    trainer_response?: string | null
+    trainer_response_at?: string | null
+  }
+
+  interface NormalizedReview {
+    id: string
+    rating: number
+    comment: string | null
+    created_at: string
+    customer: {
+      profiles: {
+        full_name: string | null
+        avatar_url: string | null
+      }
+    } | null
+    booking: {
+      booking_date: string
+      service_type: string
+    } | null
+    trainer_response?: string | null
+    trainer_response_at?: string | null
+  }
+
+  const reviews: NormalizedReview[] = (rawReviews || []).map((review: unknown) => {
+    const r = review as SupabaseReviewResult
+    const customerData = Array.isArray(r.customer) ? r.customer[0] : undefined
+    const profileData = customerData?.profiles ? (Array.isArray(customerData.profiles) ? customerData.profiles[0] : customerData.profiles) : undefined
+    const bookingData = Array.isArray(r.booking) ? r.booking[0] : undefined
+
+    return {
+      id: r.id,
+      rating: r.rating,
+      comment: r.comment,
+      created_at: r.created_at,
+      customer: profileData ? {
+        profiles: {
+          full_name: profileData.full_name,
+          avatar_url: profileData.avatar_url
+        }
+      } : null,
+      booking: bookingData ? {
+        booking_date: bookingData.booking_date,
+        service_type: bookingData.service_type
+      } : null,
+      trainer_response: r.trainer_response,
+      trainer_response_at: r.trainer_response_at
+    }
+  })
 
   return (
     <div className="container mx-auto px-4 py-4 md:py-8 max-w-6xl">
@@ -272,7 +337,7 @@ export default async function TrainerDetailPage({ params }: PageProps) {
             <CardContent>
               {reviews && reviews.length > 0 ? (
                 <div className="space-y-4">
-                  {reviews.map((review: Record<string, unknown>) => (
+                  {reviews.map((review) => (
                     <div key={review.id} className="border-b last:border-0 pb-4 last:pb-0">
                       <div className="flex items-start gap-3 mb-2">
                         <Avatar className="h-10 w-10">

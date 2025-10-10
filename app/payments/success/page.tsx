@@ -140,11 +140,11 @@ export default function PaymentSuccessPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">결제 방법:</span>
-                    <span className="font-semibold">{paymentData.method || '카드'}</span>
+                    <span className="font-semibold">{String(paymentData.method) || '카드'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">주문번호:</span>
-                    <span className="font-mono text-xs">{paymentData.orderId}</span>
+                    <span className="font-mono text-xs">{String(paymentData.orderId)}</span>
                   </div>
                 </div>
               </div>

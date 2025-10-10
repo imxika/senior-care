@@ -62,7 +62,88 @@ export default async function CustomerPaymentsPage() {
     console.error('Error fetching payments:', paymentsError)
   }
 
-  const paymentsList = payments || []
+  // Normalize Supabase results (foreign keys return arrays)
+  interface SupabasePaymentResult {
+    id: string
+    booking_id: string
+    amount: string
+    currency: string
+    payment_method: string
+    payment_status: string
+    payment_provider: string
+    paid_at: string | null
+    created_at: string
+    payment_metadata: Record<string, unknown> | null
+    booking: Array<{
+      id: string
+      booking_date: string
+      start_time: string
+      service_type: string
+      trainer: Array<{
+        id: string
+        profiles: Array<{
+          full_name: string | null
+        }>
+      }>
+    }>
+  }
+
+  interface NormalizedPayment {
+    id: string
+    booking_id: string
+    amount: string
+    currency: string
+    payment_method: string
+    payment_status: string
+    payment_provider: string
+    paid_at: string | null
+    created_at: string
+    payment_metadata: Record<string, unknown> | null
+    booking: {
+      id: string
+      booking_date: string
+      start_time: string
+      service_type: string
+      trainer?: {
+        id: string
+        profiles?: {
+          full_name?: string
+        }
+      }
+    }
+  }
+
+  const rawPayments = (payments || []) as unknown as SupabasePaymentResult[]
+  const paymentsList: NormalizedPayment[] = rawPayments.map((payment) => {
+    const bookingData = Array.isArray(payment.booking) ? payment.booking[0] : undefined
+    const trainerData = bookingData?.trainer ? (Array.isArray(bookingData.trainer) ? bookingData.trainer[0] : bookingData.trainer) : undefined
+    const profileData = trainerData?.profiles ? (Array.isArray(trainerData.profiles) ? trainerData.profiles[0] : trainerData.profiles) : undefined
+
+    return {
+      id: payment.id,
+      booking_id: payment.booking_id,
+      amount: payment.amount,
+      currency: payment.currency,
+      payment_method: payment.payment_method,
+      payment_status: payment.payment_status,
+      payment_provider: payment.payment_provider,
+      paid_at: payment.paid_at,
+      created_at: payment.created_at,
+      payment_metadata: payment.payment_metadata,
+      booking: {
+        id: bookingData?.id || '',
+        booking_date: bookingData?.booking_date || '',
+        start_time: bookingData?.start_time || '',
+        service_type: bookingData?.service_type || '',
+        trainer: trainerData ? {
+          id: trainerData.id,
+          profiles: profileData ? {
+            full_name: profileData.full_name || undefined
+          } : undefined
+        } : undefined
+      }
+    }
+  })
 
   // Calculate statistics
   const totalPaid = paymentsList
@@ -99,22 +180,8 @@ export default async function CustomerPaymentsPage() {
     }).format(date)
   }
 
-  interface BookingTrainer {
-    trainer?: Array<{
-      profiles?: Array<{
-        full_name?: string
-      }>
-    }> | {
-      profiles?: {
-        full_name?: string
-      }
-    }
-  }
-
-  const getTrainerName = (booking: BookingTrainer) => {
-    const trainer = Array.isArray(booking?.trainer) ? booking.trainer[0] : booking?.trainer
-    const profile = Array.isArray(trainer?.profiles) ? trainer.profiles[0] : trainer?.profiles
-    return profile?.full_name || '트레이너'
+  const getTrainerName = (booking: NormalizedPayment['booking']) => {
+    return booking.trainer?.profiles?.full_name || '트레이너'
   }
 
   return (

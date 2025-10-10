@@ -84,17 +84,17 @@ export async function GET() {
     );
 
     // 4. 예약 분류
-    const payableBookings = bookingsWithPayments.filter((booking: Booking & { payments?: { payment_status: string }[] }) => {
+    const payableBookings = bookingsWithPayments.filter((booking) => {
       // 이미 결제된 예약 제외
       const hasPaidPayment = booking.payments?.some(
         (p: { payment_status: string }) => p.payment_status === 'paid'
       );
 
       // 결제 대기 중이거나 결제되지 않은 예약만
-      return !hasPaidPayment && ['pending', 'confirmed'].includes(booking.status);
+      return !hasPaidPayment && booking.status && ['pending', 'confirmed'].includes(booking.status);
     });
 
-    const paidBookings = bookingsWithPayments.filter((booking: Booking & { payments?: { payment_status: string }[] }) => {
+    const paidBookings = bookingsWithPayments.filter((booking) => {
       // 결제 완료된 예약
       const hasPaidPayment = booking.payments?.some(
         (p: { payment_status: string }) => p.payment_status === 'paid'

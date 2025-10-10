@@ -57,7 +57,7 @@ export function PaymentAnalyticsCharts({ payments }: PaymentAnalyticsChartsProps
     payments
       .filter(p => p.payment_status === 'paid' && p.paid_at)
       .forEach(payment => {
-        const date = new Date(payment.paid_at)
+        const date = payment.paid_at ? new Date(payment.paid_at) : new Date()
         const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 
         if (!monthMap.has(key)) {
@@ -164,7 +164,7 @@ export function PaymentAnalyticsCharts({ payments }: PaymentAnalyticsChartsProps
     payments
       .filter(p => p.payment_status === 'paid' && p.paid_at)
       .forEach(payment => {
-        const date = new Date(payment.paid_at)
+        const date = payment.paid_at ? new Date(payment.paid_at) : new Date()
         if (date >= thirtyDaysAgo) {
           const key = date.toISOString().split('T')[0]
           dayMap.set(key, (dayMap.get(key) || 0) + 1)

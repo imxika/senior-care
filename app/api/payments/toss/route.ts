@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
           payment_status: 'failed',
           failed_at: new Date().toISOString(),
           failure_code: error.code,
-          failure_message: error.message,
+          failure_message: error instanceof Error ? error.message : 'Unknown error',
         })
         .eq('id', payment.id);
 
@@ -237,7 +237,7 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     console.error('Payment confirm error:', error);
     return NextResponse.json(
-      { error: 'Internal server error', message: error.message },
+      { error: 'Internal server error', message: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

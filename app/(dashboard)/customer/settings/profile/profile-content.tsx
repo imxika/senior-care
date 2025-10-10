@@ -94,7 +94,27 @@ export function ProfileContent({ profile, customer, userId }: ProfileContentProp
       </Card>
 
       {/* 편집 가능한 프로필 정보 */}
-      <ProfileEditForm profile={profile} customer={customer} isEditing={isEditing} setIsEditing={setIsEditing} />
+      {profile && customer && (
+        <ProfileEditForm
+          profile={{
+            full_name: profile.full_name || undefined,
+            phone: profile.phone || undefined
+          }}
+          customer={{
+            birth_date: customer.birth_date || undefined,
+            gender: customer.gender || undefined,
+            address: customer.address || undefined,
+            address_detail: customer.address_detail || undefined,
+            guardian_name: customer.guardian_name || undefined,
+            guardian_relationship: customer.guardian_relationship || undefined,
+            guardian_phone: customer.guardian_phone || undefined,
+            mobility_level: customer.mobility_level || undefined,
+            notes: customer.notes || undefined
+          }}
+          isEditing={isEditing}
+          setIsEditing={setIsEditing}
+        />
+      )}
 
       {/* 편집/저장 버튼 - 하단 고정 */}
       <div
