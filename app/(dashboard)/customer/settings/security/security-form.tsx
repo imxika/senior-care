@@ -14,7 +14,7 @@ interface SecuritySettingsFormProps {
 }
 
 export function SecuritySettingsForm({ currentEmail }: SecuritySettingsFormProps) {
-  const [loading, setLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // 비밀번호 표시 상태
@@ -29,31 +29,31 @@ export function SecuritySettingsForm({ currentEmail }: SecuritySettingsFormProps
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
+    setIsLoading(true)
     setError(null)
 
     // 클라이언트 측 유효성 검사
     if (!currentPassword || !newPassword || !confirmPassword) {
       setError('모든 필드를 입력해주세요')
-      setLoading(false)
+      setIsLoading(false)
       return
     }
 
     if (newPassword.length < 8) {
       setError('새 비밀번호는 최소 8자 이상이어야 합니다')
-      setLoading(false)
+      setIsLoading(false)
       return
     }
 
     if (newPassword !== confirmPassword) {
       setError('새 비밀번호가 일치하지 않습니다')
-      setLoading(false)
+      setIsLoading(false)
       return
     }
 
     if (currentPassword === newPassword) {
       setError('새 비밀번호는 현재 비밀번호와 달라야 합니다')
-      setLoading(false)
+      setIsLoading(false)
       return
     }
 
@@ -68,13 +68,13 @@ export function SecuritySettingsForm({ currentEmail }: SecuritySettingsFormProps
       toast.error('비밀번호 변경 실패', {
         description: result.error
       })
-      setLoading(false)
+      setIsLoading(false)
     } else {
       toast.success('비밀번호가 성공적으로 변경되었습니다')
       setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
@@ -209,9 +209,15 @@ export function SecuritySettingsForm({ currentEmail }: SecuritySettingsFormProps
               >
                 취소
               </Button>
-              <Button type="submit" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                비밀번호 변경
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    변경 중...
+                  </>
+                ) : (
+                  "비밀번호 변경"
+                )}
               </Button>
             </div>
           </form>

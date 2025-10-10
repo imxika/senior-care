@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,7 +16,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
 import { updateCustomerProfile } from './actions'
 
 interface Profile {
@@ -41,11 +41,12 @@ interface ProfileEditFormProps {
   customer: Customer
   isEditing: boolean
   setIsEditing: (value: boolean) => void
+  onLoadingChange?: (loading: boolean) => void
 }
 
-export function ProfileEditForm({ profile, customer, isEditing, setIsEditing }: ProfileEditFormProps) {
+export function ProfileEditForm({ profile, customer, isEditing, setIsEditing, onLoadingChange }: ProfileEditFormProps) {
   const router = useRouter()
-  const [loading, setLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // 기본 정보
@@ -66,6 +67,11 @@ export function ProfileEditForm({ profile, customer, isEditing, setIsEditing }: 
     !!(customer?.guardian_name || customer?.guardian_relationship || customer?.guardian_phone)
   )
 
+  // Sync loading state with parent
+  useEffect(() => {
+    onLoadingChange?.(isLoading)
+  }, [isLoading, onLoadingChange])
+
   // Calculate age from birth_date
   const calculateAge = (birthDate: string) => {
     if (!birthDate) return ''
@@ -81,7 +87,7 @@ export function ProfileEditForm({ profile, customer, isEditing, setIsEditing }: 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
+    setIsLoading(true)
     setError(null)
 
     const formData = new FormData()
@@ -101,9 +107,9 @@ export function ProfileEditForm({ profile, customer, isEditing, setIsEditing }: 
 
     if (result.error) {
       setError(result.error)
-      setLoading(false)
+      setIsLoading(false)
     } else {
-      setLoading(false)
+      setIsLoading(false)
       setIsEditing(false)
       router.refresh()
     }

@@ -4,19 +4,19 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { User, Dumbbell, ArrowRight } from 'lucide-react'
+import { User, Dumbbell, ArrowRight, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 export default function SelectTypePage() {
   const router = useRouter()
   const supabase = createClient()
   const [selectedType, setSelectedType] = useState<'customer' | 'trainer' | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleContinue = async () => {
     if (!selectedType) return
 
-    setLoading(true)
+    setIsLoading(true)
 
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -45,7 +45,7 @@ export default function SelectTypePage() {
       console.error('Error creating profile:', error)
       alert('프로필 생성 중 오류가 발생했습니다.')
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
@@ -146,12 +146,21 @@ export default function SelectTypePage() {
         <div className="flex justify-center">
           <Button
             onClick={handleContinue}
-            disabled={!selectedType || loading}
+            disabled={!selectedType || isLoading}
             className="h-16 md:h-20 px-12 text-xl md:text-2xl font-bold"
             size="lg"
           >
-            계속하기
-            <ArrowRight className="w-6 h-6 md:w-8 md:h-8 ml-3" />
+            {isLoading ? (
+              <>
+                <Loader2 className="w-6 h-6 md:w-8 md:h-8 mr-3 animate-spin" />
+                처리 중...
+              </>
+            ) : (
+              <>
+                계속하기
+                <ArrowRight className="w-6 h-6 md:w-8 md:h-8 ml-3" />
+              </>
+            )}
           </Button>
         </div>
       </div>

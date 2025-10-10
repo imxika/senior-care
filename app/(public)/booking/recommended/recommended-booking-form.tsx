@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Loader2 } from "lucide-react"
 import { BookingCalendar } from "@/components/booking-calendar"
 import { AddressSelector } from "@/components/address-selector"
 import { createRecommendedBooking } from "./actions"
@@ -204,7 +205,14 @@ export function RecommendedBookingForm({
           disabled={isSubmitting}
           className="flex-1"
         >
-          {isSubmitting ? "예약 요청 중..." : "예약 요청하기"}
+          {isSubmitting ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              예약 요청 중...
+            </>
+          ) : (
+            "예약 요청하기"
+          )}
         </Button>
       </div>
     </form>

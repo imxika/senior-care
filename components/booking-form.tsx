@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { MapPin, Home, Building, Users } from 'lucide-react'
+import { MapPin, Home, Building, Users, Loader2 } from 'lucide-react'
 import { BookingCalendar } from '@/components/booking-calendar'
 import { BookingParticipantsManager } from '@/components/booking-participants-manager'
 import { AddressSelector } from '@/components/address-selector'
@@ -52,7 +52,7 @@ export function BookingForm({
   hourlyRate = 100000
 }: BookingFormProps) {
   const router = useRouter()
-  const [loading, setLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // Form state
@@ -78,34 +78,34 @@ export function BookingForm({
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    setLoading(true)
+    setIsLoading(true)
     setError(null)
 
     // 날짜와 시간 검증
     if (!selectedDate || !selectedTime) {
       setError('날짜와 시간을 선택해주세요.')
-      setLoading(false)
+      setIsLoading(false)
       return
     }
 
     // 트레이너 최대 인원 검증
     if (sessionTypeExceedsLimit) {
       setError(`이 트레이너는 최대 ${trainerMaxGroupSize}명까지만 그룹 세션을 제공합니다. 다른 세션 유형을 선택해주세요.`)
-      setLoading(false)
+      setIsLoading(false)
       return
     }
 
     // 그룹 세션 참가자 검증
     if (isGroupSession && participants.length === 0) {
       setError('참가자를 추가해주세요.')
-      setLoading(false)
+      setIsLoading(false)
       return
     }
 
     // 그룹 세션 참가자 수 검증
     if (isGroupSession && participants.length > maxParticipants) {
       setError(`최대 ${maxParticipants}명까지만 참가할 수 있습니다.`)
-      setLoading(false)
+      setIsLoading(false)
       return
     }
 
@@ -129,7 +129,7 @@ export function BookingForm({
 
       if (result?.error) {
         setError(result.error)
-        setLoading(false)
+        setIsLoading(false)
       }
       // Success case - redirect is handled by server action
       // redirect() throws an error internally, which is expected behavior
@@ -142,7 +142,7 @@ export function BookingForm({
       // Only handle actual errors
       console.error('Booking error:', err)
       setError('예약 처리 중 오류가 발생했습니다.')
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
@@ -321,8 +321,15 @@ export function BookingForm({
 
       {/* Submit */}
       <div className="pt-4">
-        <Button type="submit" className="w-full" size="lg" disabled={loading}>
-          {loading ? '예약 처리 중...' : '예약 요청하기'}
+        <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+          {isLoading ? (
+            <>
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              예약 처리 중...
+            </>
+          ) : (
+            '예약 요청하기'
+          )}
         </Button>
         <p className="text-sm text-muted-foreground text-center mt-3">
           예약 요청 후 트레이너가 확인하면 알림을 받게 됩니다

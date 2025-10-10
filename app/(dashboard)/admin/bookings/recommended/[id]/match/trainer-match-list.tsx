@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { User, Briefcase, Home, Building2, CheckCircle2 } from "lucide-react"
+import { User, Briefcase, Home, Building2, CheckCircle2, Loader2 } from "lucide-react"
 import { formatPrice } from "@/lib/utils"
 import { PRICING } from "@/lib/constants"
 import { matchTrainerToBooking } from "./actions"
@@ -357,7 +357,14 @@ export function TrainerMatchList({
               className="w-full"
               variant={index === 0 ? "default" : "outline"}
             >
-              {matchingId === trainer.id ? "매칭 중..." : "이 트레이너로 매칭"}
+              {matchingId === trainer.id ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  매칭 중...
+                </>
+              ) : (
+                "이 트레이너로 매칭"
+              )}
             </Button>
           </CardContent>
         </Card>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Star, Calendar } from 'lucide-react'
+import { Star, Calendar, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -43,6 +43,7 @@ interface ProfileContentProps {
 
 export function ProfileContent({ profile, trainer, userId }: ProfileContentProps) {
   const [isEditing, setIsEditing] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
   return (
     <div className="flex flex-1 flex-col gap-3 p-4 md:gap-6 md:p-6">
@@ -131,6 +132,7 @@ export function ProfileContent({ profile, trainer, userId }: ProfileContentProps
           }}
           isEditing={isEditing}
           setIsEditing={setIsEditing}
+          onLoadingChange={setIsLoading}
         />
       )}
 
@@ -155,9 +157,17 @@ export function ProfileContent({ profile, trainer, userId }: ProfileContentProps
             <Button
               type="submit"
               form="profile-form"
+              disabled={isLoading}
               className="h-11 md:h-12 flex-1 relative z-10"
             >
-              저장
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  저장 중...
+                </>
+              ) : (
+                "저장"
+              )}
             </Button>
           </>
         ) : (

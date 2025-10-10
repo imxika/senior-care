@@ -8,13 +8,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Dumbbell, Award, MapPin, Home, Building } from 'lucide-react'
+import { ArrowRight, Dumbbell, Award, MapPin, Home, Building, Loader2 } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 
 export default function TrainerSetupPage() {
   const router = useRouter()
   const supabase = createClient()
-  const [loading, setLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     bio: '',
     specialties: '',
@@ -30,7 +30,7 @@ export default function TrainerSetupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
+    setIsLoading(true)
 
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -72,7 +72,7 @@ export default function TrainerSetupPage() {
       console.error('Error creating trainer profile:', error)
       alert('프로필 생성 중 오류가 발생했습니다.')
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
@@ -262,12 +262,21 @@ export default function TrainerSetupPage() {
 
               <Button
                 type="submit"
-                disabled={loading}
+                disabled={isLoading}
                 className="w-full h-16 md:h-20 text-xl md:text-2xl font-bold bg-green-600 hover:bg-green-700"
                 size="lg"
               >
-                등록 신청하기
-                <ArrowRight className="w-6 h-6 md:w-8 md:h-8 ml-3" />
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-6 h-6 md:w-8 md:h-8 mr-3 animate-spin" />
+                    등록 중...
+                  </>
+                ) : (
+                  <>
+                    등록 신청하기
+                    <ArrowRight className="w-6 h-6 md:w-8 md:h-8 ml-3" />
+                  </>
+                )}
               </Button>
             </form>
           </CardContent>

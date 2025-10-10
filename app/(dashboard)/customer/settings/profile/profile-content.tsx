@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Calendar } from 'lucide-react'
+import { Calendar, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { AvatarUpload } from '@/components/avatar-upload'
@@ -41,6 +41,7 @@ interface ProfileContentProps {
 
 export function ProfileContent({ profile, customer, userId }: ProfileContentProps) {
   const [isEditing, setIsEditing] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6 md:gap-8 md:p-8 pb-32 max-w-[1400px] mx-auto w-full">
@@ -113,6 +114,7 @@ export function ProfileContent({ profile, customer, userId }: ProfileContentProp
           }}
           isEditing={isEditing}
           setIsEditing={setIsEditing}
+          onLoadingChange={setIsLoading}
         />
       )}
 
@@ -137,9 +139,17 @@ export function ProfileContent({ profile, customer, userId }: ProfileContentProp
             <Button
               type="submit"
               form="profile-form"
+              disabled={isLoading}
               className="h-14 flex-1 relative z-10 text-lg md:text-xl"
             >
-              저장
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  저장 중...
+                </>
+              ) : (
+                "저장"
+              )}
             </Button>
           </>
         ) : (

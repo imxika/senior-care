@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -50,17 +50,23 @@ interface ProfileEditFormProps {
   trainer: Trainer
   isEditing: boolean
   setIsEditing: (value: boolean) => void
+  onLoadingChange?: (loading: boolean) => void
 }
 
-export function ProfileEditForm({ profile, trainer, isEditing, setIsEditing }: ProfileEditFormProps) {
+export function ProfileEditForm({ profile, trainer, isEditing, setIsEditing, onLoadingChange }: ProfileEditFormProps) {
   const router = useRouter()
-  const [loading, setLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [maxGroupSizeError, setMaxGroupSizeError] = useState<string | null>(null)
 
   // 기본 정보
   const [fullName, setFullName] = useState(profile?.full_name || '')
   const [phone, setPhone] = useState(profile?.phone || '')
+
+  // Sync loading state with parent
+  useEffect(() => {
+    onLoadingChange?.(isLoading)
+  }, [isLoading, onLoadingChange])
 
   // 트레이너 정보 - 숫자는 문자열로 관리
   const [yearsExperience, setYearsExperience] = useState(trainer?.years_experience?.toString() || '')
@@ -85,7 +91,7 @@ export function ProfileEditForm({ profile, trainer, isEditing, setIsEditing }: P
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
+    setIsLoading(true)
     setError(null)
     setMaxGroupSizeError(null)
 
@@ -93,21 +99,21 @@ export function ProfileEditForm({ profile, trainer, isEditing, setIsEditing }: P
     const groupSize = parseInt(maxGroupSize || '1')
     if (groupSize < 1 || groupSize > 3) {
       setMaxGroupSizeError('1명에서 3명 사이여야 합니다')
-      setLoading(false)
+      setIsLoading(false)
       return
     }
 
     // 최소 1개 이상의 서비스 선택 검증
     if (!homeVisitAvailable && !centerVisitAvailable) {
       setError('최소 1개 이상의 서비스를 선택해주세요')
-      setLoading(false)
+      setIsLoading(false)
       return
     }
 
     // 센터 방문 선택 시 센터 이름 필수 검증
     if (centerVisitAvailable && !centerName.trim()) {
       setError('센터 방문 서비스를 선택하셨습니다. 센터 이름을 입력해주세요.')
-      setLoading(false)
+      setIsLoading(false)
       return
     }
 
@@ -140,9 +146,9 @@ export function ProfileEditForm({ profile, trainer, isEditing, setIsEditing }: P
       toast.error('프로필 업데이트 실패', {
         description: result.error
       })
-      setLoading(false)
+      setIsLoading(false)
     } else {
-      setLoading(false)
+      setIsLoading(false)
       setIsEditing(false)
       toast.success('프로필이 성공적으로 업데이트되었습니다')
       router.refresh()

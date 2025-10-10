@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Input } from '@/components/ui/input'
-import { RefreshCw, AlertCircle } from 'lucide-react'
+import { RefreshCw, AlertCircle, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { calculateCancellationFee } from '@/lib/utils'
@@ -244,7 +244,14 @@ export function RefundPaymentDialog({ paymentId, amount, provider, bookingDate, 
             onClick={handleRefund}
             disabled={isLoading}
           >
-            {isLoading ? '처리 중...' : '환불 진행'}
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                처리 중...
+              </>
+            ) : (
+              '환불 진행'
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

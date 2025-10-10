@@ -1,5 +1,8 @@
 'use client'
 
+import { useState } from 'react'
+import { Loader2 } from 'lucide-react'
+
 interface PaymentProviderButtonProps {
   provider: 'toss' | 'stripe'
   bookingId: string
@@ -15,14 +18,12 @@ export default function PaymentProviderButton({
   label,
   description,
 }: PaymentProviderButtonProps) {
-  const handlePayment = async () => {
-    try {
-      const button = document.getElementById(`pay-${provider}`) as HTMLButtonElement
-      if (button) {
-        button.disabled = true
-        button.textContent = '처리 중...'
-      }
+  const [isLoading, setIsLoading] = useState(false)
 
+  const handlePayment = async () => {
+    setIsLoading(true)
+
+    try {
       const response = await fetch('/api/payments/request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -52,21 +53,16 @@ export default function PaymentProviderButton({
     } catch (error) {
       console.error('Payment error:', error)
       alert(error instanceof Error ? error.message : '결제 요청 중 오류가 발생했습니다')
-
-      // Re-enable button
-      const button = document.getElementById(`pay-${provider}`) as HTMLButtonElement
-      if (button) {
-        button.disabled = false
-        button.textContent = label
-      }
+    } finally {
+      setIsLoading(false)
     }
   }
 
   return (
     <button
-      id={`pay-${provider}`}
       onClick={handlePayment}
-      className="w-full p-6 border-2 border-gray-300 rounded-lg hover:border-blue-600 hover:bg-blue-50 transition-all duration-200 text-left group"
+      disabled={isLoading}
+      className="w-full p-6 border-2 border-gray-300 rounded-lg hover:border-blue-600 hover:bg-blue-50 transition-all duration-200 text-left group disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <div className="flex flex-col items-center text-center">
         <span className="text-3xl mb-2">{label.split(' ')[0]}</span>
@@ -74,8 +70,15 @@ export default function PaymentProviderButton({
           {label.split(' ').slice(1).join(' ')}
         </span>
         <span className="text-sm text-gray-500 mt-1">{description}</span>
-        <span className="mt-4 inline-block bg-blue-600 text-white px-6 py-2 rounded-lg group-hover:bg-blue-700">
-          {amount.toLocaleString('ko-KR')}원 결제하기
+        <span className="mt-4 inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-lg group-hover:bg-blue-700">
+          {isLoading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              처리 중...
+            </>
+          ) : (
+            `${amount.toLocaleString('ko-KR')}원 결제하기`
+          )}
         </span>
       </div>
     </button>

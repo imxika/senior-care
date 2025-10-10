@@ -8,12 +8,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, User, MapPin, Phone, Heart } from 'lucide-react'
+import { ArrowRight, User, MapPin, Phone, Heart, Loader2 } from 'lucide-react'
 
 export default function CustomerSetupPage() {
   const router = useRouter()
   const supabase = createClient()
-  const [loading, setLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     age: '',
     gender: 'male' as 'male' | 'female' | 'other',
@@ -28,7 +28,7 @@ export default function CustomerSetupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
+    setIsLoading(true)
 
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -67,7 +67,7 @@ export default function CustomerSetupPage() {
       console.error('Error creating customer profile:', error)
       alert('프로필 생성 중 오류가 발생했습니다.')
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
@@ -235,12 +235,21 @@ export default function CustomerSetupPage() {
 
               <Button
                 type="submit"
-                disabled={loading}
+                disabled={isLoading}
                 className="w-full h-16 md:h-20 text-xl md:text-2xl font-bold"
                 size="lg"
               >
-                완료하기
-                <ArrowRight className="w-6 h-6 md:w-8 md:h-8 ml-3" />
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-6 h-6 md:w-8 md:h-8 mr-3 animate-spin" />
+                    처리 중...
+                  </>
+                ) : (
+                  <>
+                    완료하기
+                    <ArrowRight className="w-6 h-6 md:w-8 md:h-8 ml-3" />
+                  </>
+                )}
               </Button>
             </form>
           </CardContent>

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
+import { Loader2 } from 'lucide-react'
 import { becomeTrainer } from '@/app/(dashboard)/customer/become-trainer/actions'
 
 interface BecomeTrainerFormProps {
@@ -14,7 +15,7 @@ interface BecomeTrainerFormProps {
 
 export function BecomeTrainerForm({ userId }: BecomeTrainerFormProps) {
   const router = useRouter()
-  const [loading, setLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmed, setConfirmed] = useState(false)
 
@@ -26,14 +27,14 @@ export function BecomeTrainerForm({ userId }: BecomeTrainerFormProps) {
       return
     }
 
-    setLoading(true)
+    setIsLoading(true)
     setError(null)
 
     const result = await becomeTrainer(userId)
 
     if (result.error) {
       setError(result.error)
-      setLoading(false)
+      setIsLoading(false)
     } else {
       // 성공 시 트레이너 대시보드로 리다이렉트
       router.push('/trainer')
@@ -85,17 +86,24 @@ export function BecomeTrainerForm({ userId }: BecomeTrainerFormProps) {
           type="button"
           variant="outline"
           onClick={() => router.back()}
-          disabled={loading}
+          disabled={isLoading}
           className="flex-1 h-11"
         >
           취소
         </Button>
         <Button
           type="submit"
-          disabled={loading || !confirmed}
+          disabled={isLoading || !confirmed}
           className="flex-1 h-11"
         >
-          {loading ? '처리 중...' : '트레이너로 전환하기'}
+          {isLoading ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              처리 중...
+            </>
+          ) : (
+            '트레이너로 전환하기'
+          )}
         </Button>
       </div>
     </form>

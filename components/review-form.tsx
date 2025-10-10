@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { Star, MessageSquare } from 'lucide-react'
+import { Star, MessageSquare, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface ReviewFormProps {
@@ -31,7 +31,7 @@ export function ReviewForm({ bookingId, trainerId, existingReview }: ReviewFormP
   const [rating, setRating] = useState(existingReview?.rating || 0)
   const [hoveredRating, setHoveredRating] = useState(0)
   const [comment, setComment] = useState(existingReview?.comment || '')
-  const [loading, setLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -41,7 +41,7 @@ export function ReviewForm({ bookingId, trainerId, existingReview }: ReviewFormP
       return
     }
 
-    setLoading(true)
+    setIsLoading(true)
 
     try {
       const response = await fetch('/api/reviews', {
@@ -68,7 +68,7 @@ export function ReviewForm({ bookingId, trainerId, existingReview }: ReviewFormP
       const errorMessage = error instanceof Error ? error.message : '오류가 발생했습니다';
       toast.error(errorMessage)
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
@@ -76,7 +76,7 @@ export function ReviewForm({ bookingId, trainerId, existingReview }: ReviewFormP
     if (!existingReview) return
     if (!confirm('리뷰를 삭제하시겠습니까?')) return
 
-    setLoading(true)
+    setIsLoading(true)
 
     try {
       const response = await fetch('/api/reviews', {
@@ -99,7 +99,7 @@ export function ReviewForm({ bookingId, trainerId, existingReview }: ReviewFormP
       const errorMessage = error instanceof Error ? error.message : '오류가 발생했습니다';
       toast.error(errorMessage)
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
@@ -159,17 +159,24 @@ export function ReviewForm({ bookingId, trainerId, existingReview }: ReviewFormP
           <div className="flex gap-2 lg:gap-3">
             <Button
               type="submit"
-              disabled={loading || rating === 0}
+              disabled={isLoading || rating === 0}
               className="flex-1 h-10 lg:h-12 text-sm lg:text-base"
             >
-              {loading ? '저장 중...' : existingReview ? '수정' : '등록'}
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  저장 중...
+                </>
+              ) : (
+                existingReview ? '수정' : '등록'
+              )}
             </Button>
             {existingReview && (
               <Button
                 type="button"
                 variant="destructive"
                 onClick={handleDelete}
-                disabled={loading}
+                disabled={isLoading}
                 className="h-10 lg:h-12 text-sm lg:text-base"
               >
                 삭제
