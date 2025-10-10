@@ -150,7 +150,7 @@ export function BookingProgressSimple({
           label: '트레이너\n매칭',
           description: hasTrainer ? '매칭이 완료되었습니다' : '최적의 트레이너를 찾는 중입니다',
           icon: <UserCheck className="h-5 w-5" />,
-          status: matchingStatus as const
+          status: matchingStatus
         },
         {
           label: '트레이너\n승인',

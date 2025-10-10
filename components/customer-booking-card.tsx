@@ -56,7 +56,7 @@ export function CustomerBookingCard({ booking }: CustomerBookingCardProps) {
   }
 
   // 상태 설정 가져오기 (constants 사용)
-  const status = BOOKING_STATUS_CONFIG[booking.status] || BOOKING_STATUS_CONFIG.pending
+  const status = booking.status ? (BOOKING_STATUS_CONFIG[booking.status as keyof typeof BOOKING_STATUS_CONFIG] || BOOKING_STATUS_CONFIG.pending) : BOOKING_STATUS_CONFIG.pending
 
   return (
     <Card className="hover:shadow-md transition-all cursor-pointer" onClick={() => router.push(`/customer/bookings/${booking.id}`)}>
