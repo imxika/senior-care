@@ -1,9 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -14,11 +12,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
-import Link from 'next/link'
-import { BOOKING_STATUS_CONFIG } from '@/lib/constants'
-import { BookingFilters } from './booking-filters'
 import { BookingsTable } from './bookings-table'
-import { Eye } from 'lucide-react'
 
 interface PageProps {
   searchParams: Promise<{
@@ -248,10 +242,7 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
   // 페이지네이션
   const currentPage = parseInt(params.page || '1')
   const totalPages = Math.ceil(filteredBookings.length / ITEMS_PER_PAGE)
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
-  const endIndex = startIndex + ITEMS_PER_PAGE
-  const paginatedBookings = filteredBookings.slice(startIndex, endIndex)
-
+  // Pagination will be handled by BookingsTable component
   return (
     <>
       {/* Header */}

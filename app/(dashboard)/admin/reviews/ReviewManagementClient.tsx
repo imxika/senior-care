@@ -21,7 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Star, MessageSquare, AlertCircle, Search, Eye, EyeOff, Trash2, ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, X, Image as ImageIcon, Video } from 'lucide-react'
+import { Star, MessageSquare, AlertCircle, Search, Eye, EyeOff, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 
@@ -70,10 +70,6 @@ export default function ReviewManagementClient({ reviews: initialReviews }: Prop
   const [sortBy, setSortBy] = useState<'created_at' | 'rating'>('created_at')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
-  const [detailDialog, setDetailDialog] = useState<{ open: boolean; review: Review | null }>({
-    open: false,
-    review: null,
-  })
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; reviewId: string | null }>({
     open: false,
     reviewId: null,
@@ -125,7 +121,7 @@ export default function ReviewManagementClient({ reviews: initialReviews }: Prop
         !currentHiddenState ? '리뷰가 숨겨졌습니다' : '리뷰가 다시 표시됩니다',
         { description: !currentHiddenState ? '고객과 트레이너 페이지에서 보이지 않습니다' : '고객과 트레이너 페이지에서 표시됩니다' }
       )
-    } catch (error) {
+    } catch {
       toast.error('처리 중 오류가 발생했습니다')
     } finally {
       setLoading(null)
@@ -151,7 +147,7 @@ export default function ReviewManagementClient({ reviews: initialReviews }: Prop
       toast.success('리뷰가 삭제되었습니다', {
         description: '복구할 수 없습니다'
       })
-    } catch (error) {
+    } catch {
       toast.error('삭제 중 오류가 발생했습니다')
     } finally {
       setLoading(null)
@@ -320,7 +316,6 @@ export default function ReviewManagementClient({ reviews: initialReviews }: Prop
                 <tbody className="divide-y">
                   {filteredReviews.map((review) => {
                     const isExpanded = expandedRows.has(review.id)
-                    const hasContent = review.comment || review.trainer_response
 
                     return (
                       <Fragment key={review.id}>

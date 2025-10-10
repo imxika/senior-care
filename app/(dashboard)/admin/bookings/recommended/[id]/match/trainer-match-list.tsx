@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { User, Star, Briefcase, DollarSign, Home, Building2, CheckCircle2 } from "lucide-react"
+import { User, Briefcase, Home, Building2, CheckCircle2 } from "lucide-react"
 import { formatPrice } from "@/lib/utils"
 import { PRICING } from "@/lib/constants"
 import { matchTrainerToBooking } from "./actions"
@@ -50,9 +50,6 @@ export function TrainerMatchList({
   serviceType,
   specialty,
   address,
-  bookingDate,
-  startTime,
-  endTime,
   trainerBookingCounts
 }: TrainerMatchListProps) {
   const router = useRouter()

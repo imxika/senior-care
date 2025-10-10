@@ -2,7 +2,6 @@ import { createClient } from "@/lib/supabase/server"
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { redirect } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Calendar, Clock, MapPin, FileText, Users } from "lucide-react"
 import { formatDate } from "date-fns"
 import { ko } from "date-fns/locale"
