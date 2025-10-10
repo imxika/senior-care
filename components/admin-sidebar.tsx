@@ -70,6 +70,10 @@ const data = {
           title: "승인 대기",
           url: "/admin/bookings?status=pending",
         },
+        {
+          title: "자동 매칭 모니터",
+          url: "/admin/bookings/auto-matching",
+        },
       ],
     },
     {

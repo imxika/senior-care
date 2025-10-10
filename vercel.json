@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/auto-approve",
       "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/check-auto-match-timeout",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

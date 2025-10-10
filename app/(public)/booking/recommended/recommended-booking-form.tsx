@@ -107,10 +107,14 @@ export function RecommendedBookingForm({
             <SelectValue placeholder="서비스 유형을 선택하세요" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="home">방문 서비스</SelectItem>
-            <SelectItem value="center">센터 방문</SelectItem>
+            <SelectItem value="home_visit">🏠 방문 서비스</SelectItem>
+            <SelectItem value="center_visit">🏢 센터 방문</SelectItem>
+            <SelectItem value="online">💻 온라인 세션</SelectItem>
           </SelectContent>
         </Select>
+        <p className="text-xs text-gray-500">
+          💡 온라인: 집에서 편하게 화상으로 진행해요
+        </p>
       </div>
 
       {/* 예상 시간 */}
@@ -132,7 +136,7 @@ export function RecommendedBookingForm({
       </div>
 
       {/* Address Selector - Only show for home visit */}
-      {serviceType === 'home' && (
+      {serviceType === 'home_visit' && (
         <AddressSelector
           customerId={customerId}
           serviceType={serviceType}

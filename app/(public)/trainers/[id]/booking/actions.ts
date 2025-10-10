@@ -173,7 +173,7 @@ export async function createBooking(formData: FormData) {
       total_price: pricingInfo.total_price,
       customer_notes: customerNotes || null,
       address_id: finalAddressId,
-      status: BOOKING_STATUS.PENDING
+      status: 'pending_payment' // 🆕 결제 대기 상태로 시작 (결제 완료 후 pending으로 변경)
     })
     .select()
     .single()

@@ -2,11 +2,11 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
-import { mapFormServiceTypeToDb, calculateTimeRange } from "@/lib/utils"
+import { redirect } from "next/navigation"
+import { calculateTimeRange } from "@/lib/utils"
 import { BOOKING_TYPE, BOOKING_TYPE_CONFIG } from "@/lib/constants"
 import type { ActionResponse } from "@/lib/types"
-import { createNotification } from "@/lib/notifications"
-import { isNotificationEnabled } from "@/lib/notification-settings"
+import { notifySuitableTrainers } from "@/lib/auto-matching"
 
 export async function createRecommendedBooking(formData: FormData): Promise<ActionResponse> {
   const supabase = await createClient()
@@ -21,7 +21,7 @@ export async function createRecommendedBooking(formData: FormData): Promise<Acti
   const date = formData.get('date') as string
   const time = formData.get('time') as string
   const session_type = (formData.get('session_type') as string) || '1:1'
-  const service_type = formData.get('service_type') as 'home' | 'center'
+  const service_type = formData.get('service_type') as 'home_visit' | 'center_visit' | 'online'
   const duration = parseInt(formData.get('duration') as string)
   const notes = formData.get('notes') as string || ''
   const specialty_needed = formData.get('specialty_needed') as string || ''
@@ -52,8 +52,7 @@ export async function createRecommendedBooking(formData: FormData): Promise<Acti
     if (customerError || !newCustomer) {
       console.error('[ERROR] Customer creation failed:', customerError)
       return {
-        error: `고객 정보 생성에 실패했습니다. ${customerError?.message || ''}`,
-        details: customerError
+        error: `고객 정보 생성에 실패했습니다. ${customerError?.message || ''}`
       }
     }
     console.log('[DEBUG] Customer created:', newCustomer)
@@ -65,15 +64,12 @@ export async function createRecommendedBooking(formData: FormData): Promise<Acti
   const booking_datetime = new Date(`${date}T${time}`)
   const { start_time, end_time } = calculateTimeRange(booking_datetime, duration)
 
-  // 서비스 타입 변환
-  const db_service_type = mapFormServiceTypeToDb(service_type)
-
   // 세션 타입에 따른 max_participants 설정
   const max_participants = session_type === '1:1' ? 1 : session_type === '2:1' ? 2 : 3
 
   // Handle address for home visit
   let finalAddressId: string | null = null
-  if (service_type === 'home') {
+  if (service_type === 'home_visit') {
     if (addressMode === 'existing' && addressId) {
       // Use existing address
       finalAddressId = addressId
@@ -106,7 +102,7 @@ export async function createRecommendedBooking(formData: FormData): Promise<Acti
     customerNotes += `\n\n[요청 정보]\n필요 전문분야: ${specialty_needed}`
   }
 
-  // 추천 예약 생성 (trainer_id는 NULL, 관리자가 나중에 매칭)
+  // 추천 예약 생성 (trainer_id는 NULL, 결제 후 자동 매칭 시작)
   const bookingData = {
     customer_id: customerData.id,
     trainer_id: null, // 추천 예약은 trainer_id가 NULL
@@ -116,13 +112,13 @@ export async function createRecommendedBooking(formData: FormData): Promise<Acti
     start_time,
     end_time,
     duration_minutes: duration,
-    service_type: db_service_type,
+    service_type: service_type, // DB 기준 값 직접 사용 (home_visit, center_visit, online)
     session_type,
     max_participants,
     current_participants: 1, // 예약자 본인
     group_size: 1, // 추천 예약은 기본 1:1 (deprecated, session_type 사용)
-    status: 'pending',
-    matching_status: 'pending', // 추천 예약은 매칭 대기 상태로 시작
+    status: 'pending_payment', // 🆕 결제 대기 상태로 시작 (결제 완료 후 pending으로 변경)
+    matching_status: 'pending', // 매칭은 결제 완료 후 시작
     price_per_person: 0, // 매칭 후 설정
     total_price: 0, // 매칭 후 설정
     customer_notes: customerNotes,
@@ -140,8 +136,7 @@ export async function createRecommendedBooking(formData: FormData): Promise<Acti
   if (bookingError) {
     console.error('Booking creation error:', bookingError)
     return {
-      error: `예약 생성에 실패했습니다. ${bookingError.message || ''}`,
-      details: bookingError
+      error: `예약 생성에 실패했습니다. ${bookingError.message || ''}`
     }
   }
 
@@ -163,35 +158,10 @@ export async function createRecommendedBooking(formData: FormData): Promise<Acti
     console.warn('[WARN] Booking created but participant creation failed')
   }
 
-  // 관리자에게 알림 전송 (user_type이 'admin'인 모든 사용자)
-  const { data: adminProfiles } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('user_type', 'admin')
-
-  if (adminProfiles && adminProfiles.length > 0) {
-    console.log('📧 Sending notifications to', adminProfiles.length, 'admin(s)')
-
-    // 모든 관리자에게 알림 전송 (설정 확인 후)
-    for (const admin of adminProfiles) {
-      // 해당 관리자의 추천 예약 알림 설정 확인
-      const isEnabled = await isNotificationEnabled(admin.id, 'recommended_booking_enabled')
-
-      if (isEnabled) {
-        const notificationResult = await createNotification({
-          userId: admin.id,
-          type: 'booking_pending',
-          title: '새로운 추천 예약 요청',
-          message: `새로운 추천 예약 요청이 접수되었습니다. 트레이너 매칭이 필요합니다.`,
-          link: `/admin/bookings/recommended/${booking.id}/match`
-        })
-
-        console.log('Admin notification result:', notificationResult)
-      } else {
-        console.log('Admin notification skipped (disabled):', admin.id)
-      }
-    }
-  }
+  // 🆕 자동 매칭은 결제 완료 후에 실행됨
+  // payment completion handler에서 notifySuitableTrainers() 호출
+  console.log('📝 [CREATE-BOOKING] Booking created with pending_payment status:', booking.id)
+  console.log('⏳ [CREATE-BOOKING] Auto-matching will start after payment completion')
 
   revalidatePath('/customer/bookings')
 

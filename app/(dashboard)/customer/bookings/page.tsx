@@ -66,7 +66,19 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
     redirect('/customer/dashboard')
   }
 
+  // ⏰ 만료된 예약 자동 정리 (10분/24시간 경과 체크)
+  try {
+    const { data: cleanupResult } = await supabase.rpc('cleanup_expired_bookings')
+    if (cleanupResult && cleanupResult[0]?.expired_count > 0) {
+      console.log(`✅ [CLEANUP] ${cleanupResult[0].expired_count} bookings marked as expired`)
+    }
+  } catch (cleanupError) {
+    console.error('❌ [CLEANUP] Failed to run cleanup:', cleanupError)
+    // Cleanup 실패해도 페이지는 계속 로드
+  }
+
   // 예약 목록 가져오기 (트레이너 정보 + 결제 정보 포함)
+  // Note: expired 예약은 기본적으로 제외 (별도 탭에서 확인 가능)
   const { data: bookings, error } = await supabase
     .from('bookings')
     .select(`
@@ -103,6 +115,7 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
       )
     `)
     .eq('customer_id', customer.id)
+    .neq('status', 'expired')  // 만료된 예약 제외
     .order('booking_date', { ascending: false })
     .limit(100)
 

@@ -11,6 +11,7 @@ import { User, Star, Briefcase, DollarSign, Home, Building2, CheckCircle2 } from
 import { formatPrice } from "@/lib/utils"
 import { PRICING } from "@/lib/constants"
 import { matchTrainerToBooking } from "./actions"
+import { toast } from "sonner"
 
 interface Trainer {
   id: string
@@ -183,12 +184,18 @@ export function TrainerMatchList({
     if ('error' in result) {
       setError(result.error)
       setMatchingId(null)
+      toast.error(result.error)
     } else {
-      // 성공 - 피드백 표시 후 매칭된 예약 상세 페이지로 이동
+      // 성공 - 토스트 메시지 표시
+      toast.success('트레이너 매칭 완료!', {
+        description: '트레이너에게 승인 요청을 보냈습니다.'
+      })
       setSuccess(true)
+      setMatchingId(null)
+
+      // 페이지 이동 (Next.js router 사용)
       setTimeout(() => {
-        // Navigate to the matched booking detail page
-        window.location.href = `/admin/bookings/${bookingId}`
+        router.push(`/admin/bookings/${bookingId}`)
       }, 1500)
     }
   }

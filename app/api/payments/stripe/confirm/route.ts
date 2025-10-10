@@ -158,56 +158,71 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // 12. Booking 상태 업데이트 - 결제 완료 → 예약 확정
+    // 12. Booking 상태 업데이트 - 결제 완료 → 트레이너 승인 대기
     await supabase
       .from('bookings')
       .update({
-        status: 'confirmed',
-        confirmed_at: new Date().toISOString(),
+        status: 'pending', // 🆕 결제 완료 후 트레이너 승인 대기 상태로 변경
       })
       .eq('id', payment.booking_id);
 
-    // 13. 트레이너에게 알림 전송 (결제 완료 후)
-    // Booking 정보와 트레이너 정보 조회
-    const { data: bookingWithTrainer } = await supabase
+    // 13. 예약 타입에 따라 후속 처리
+    const { data: booking } = await supabase
       .from('bookings')
-      .select(`
-        booking_date,
-        start_time,
-        trainer:trainers!inner(
-          id,
-          profile_id
-        )
-      `)
+      .select('id, booking_type, booking_date, start_time, trainer_id')
       .eq('id', payment.booking_id)
       .single();
 
-    // 고객 이름 조회
+    if (!booking) {
+      console.error('Booking not found after payment');
+      return NextResponse.json(
+        { error: 'Booking not found' },
+        { status: 404 }
+      );
+    }
+
+    // 고객 이름 조회 (알림용)
     const { data: profile } = await supabase
       .from('profiles')
       .select('full_name')
       .eq('id', user.id)
       .single();
 
-    // 알림 생성 및 전송
-    if (bookingWithTrainer?.trainer) {
-      const trainerData = Array.isArray(bookingWithTrainer.trainer)
-        ? bookingWithTrainer.trainer[0]
-        : bookingWithTrainer.trainer;
+    if (booking.booking_type === 'direct' && booking.trainer_id) {
+      // 🆕 지정 예약: 트레이너에게 승인 요청 알림 전송
+      const { data: trainer } = await supabase
+        .from('trainers')
+        .select('id, profile_id')
+        .eq('id', booking.trainer_id)
+        .single();
 
-      if (trainerData?.profile_id) {
-        const scheduledAt = new Date(
-          `${bookingWithTrainer.booking_date}T${bookingWithTrainer.start_time}`
-        );
+      if (trainer?.profile_id) {
+        const scheduledAt = new Date(`${booking.booking_date}T${booking.start_time}`);
         const customerName = profile?.full_name || '고객';
 
         const notification = notificationTemplates.bookingPending(customerName, scheduledAt);
 
         await createNotification({
-          userId: trainerData.profile_id,
+          userId: trainer.profile_id,
           ...notification,
           link: `/trainer/bookings/${payment.booking_id}`,
         });
+
+        console.log('✅ [PAYMENT] Direct booking - Trainer notification sent');
+      }
+    } else if (booking.booking_type === 'recommended') {
+      // 🆕 추천 예약: 자동 매칭 시작
+      console.log('🚀 [PAYMENT] Recommended booking - Starting auto-matching');
+
+      // 자동 매칭 함수 호출 (동적 import로 순환 참조 방지)
+      const { notifySuitableTrainers } = await import('@/lib/auto-matching');
+      const autoMatchResult = await notifySuitableTrainers(booking.id);
+
+      if (autoMatchResult.error) {
+        console.error('❌ [PAYMENT] Auto-matching failed:', autoMatchResult.error);
+        // 자동 매칭 실패해도 결제는 성공 처리 - Admin이 수동 매칭 가능
+      } else {
+        console.log('✅ [PAYMENT] Auto-matching successful:', autoMatchResult);
       }
     }
 

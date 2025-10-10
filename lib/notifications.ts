@@ -1,4 +1,3 @@
-import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient } from '@supabase/supabase-js'
 
 export type NotificationType =
@@ -8,6 +7,9 @@ export type NotificationType =
   | 'booking_pending'
   | 'booking_rejected'
   | 'booking_matched'
+  | 'booking_request'        // 자동 매칭: 트레이너에게 요청 알림
+  | 'booking_request_closed' // 자동 매칭: 다른 트레이너가 수락함
+  | 'auto_match_timeout'     // 자동 매칭: 30분 타임아웃, Admin 개입 필요
   | 'system'
 
 // 알림용 시간 포맷 (초 제외)
@@ -125,5 +127,26 @@ export const notificationTemplates = {
     title: '새 예약 배정',
     message: `${customerName}님의 예약이 배정되었습니다. 예약 일시: ${formatScheduledTime(scheduledAt)}`,
     type: 'booking_matched' as NotificationType
+  }),
+
+  // 🆕 자동 매칭: 새로운 예약 요청 (트레이너에게)
+  newBookingRequest: (customerName: string, scheduledAt: Date, serviceType: string, duration: string) => ({
+    title: '새로운 예약 요청 (선착순)',
+    message: `${customerName}님의 ${serviceType} 예약 요청 (${duration}). 일시: ${formatScheduledTime(scheduledAt)}. 먼저 승인하면 매칭됩니다!`,
+    type: 'booking_request' as NotificationType
+  }),
+
+  // 🆕 자동 매칭: 다른 트레이너가 수락함 (트레이너에게)
+  bookingRequestClosed: (customerName: string) => ({
+    title: '예약이 마감되었습니다',
+    message: `${customerName}님의 예약이 다른 트레이너에게 배정되었습니다.`,
+    type: 'booking_request_closed' as NotificationType
+  }),
+
+  // 🆕 자동 매칭: 30분 타임아웃 (Admin에게)
+  autoMatchTimeout: (customerName: string, scheduledAt: Date) => ({
+    title: '⚠️ 자동 매칭 실패',
+    message: `${customerName}님의 ${formatScheduledTime(scheduledAt)} 예약이 30분 내에 매칭되지 않았습니다. 수동 매칭이 필요합니다.`,
+    type: 'auto_match_timeout' as NotificationType
   })
 }

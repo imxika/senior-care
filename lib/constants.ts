@@ -63,18 +63,25 @@ export const BOOKING_TYPE_CONFIG = {
 // 예약 상태 (Booking Status)
 // ====================================
 export const BOOKING_STATUS = {
-  PENDING: "pending",
+  PENDING_PAYMENT: "pending_payment",  // 결제 대기 (예약 생성됨, 결제 미완료)
+  PENDING: "pending",                  // 트레이너 승인 대기 (결제 완료됨)
   CONFIRMED: "confirmed",
   CANCELLED: "cancelled",
   COMPLETED: "completed",
   REJECTED: "rejected",
-  NO_SHOW: "no_show"
+  NO_SHOW: "no_show",
+  EXPIRED: "expired"                   // 만료됨 (결제 시간 초과)
 } as const
 
 export type BookingStatus = typeof BOOKING_STATUS[keyof typeof BOOKING_STATUS]
 
 // 예약 상태 설정
 export const BOOKING_STATUS_CONFIG = {
+  [BOOKING_STATUS.PENDING_PAYMENT]: {
+    label: "결제 대기",
+    variant: "outline" as const,
+    color: "text-blue-600"
+  },
   [BOOKING_STATUS.PENDING]: {
     label: "승인 대기",
     variant: "secondary" as const,
@@ -104,6 +111,11 @@ export const BOOKING_STATUS_CONFIG = {
     label: "노쇼",
     variant: "destructive" as const,
     color: "text-red-600"
+  },
+  [BOOKING_STATUS.EXPIRED]: {
+    label: "만료됨",
+    variant: "outline" as const,
+    color: "text-gray-500"
   }
 } as const
 

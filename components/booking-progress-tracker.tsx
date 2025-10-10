@@ -14,7 +14,7 @@ interface Step {
 
 interface BookingProgressTrackerProps {
   bookingType: 'direct' | 'recommended'
-  currentStatus: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show'
+  currentStatus: 'pending_payment' | 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'expired'
   hasTrainer: boolean
   createdAt: string
   trainerMatchedAt?: string | null
@@ -33,6 +33,11 @@ export function BookingProgressTracker({
   serviceStartedAt,
   serviceCompletedAt
 }: BookingProgressTrackerProps) {
+
+  // expired 상태는 트래커 숨김 (이미 위에 만료 메시지 표시됨)
+  if (currentStatus === 'expired' || currentStatus === 'pending_payment') {
+    return null
+  }
 
   // 추천 예약 단계
   const recommendedSteps: Step[] = [

@@ -18,7 +18,7 @@ import { useRouter } from 'next/navigation'
 interface CustomerBookingDetailProps {
   booking: {
     id: string
-    status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show'
+    status: 'pending_payment' | 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'expired'
     booking_date: string
     start_time: string
     end_time: string
@@ -96,12 +96,14 @@ export function CustomerBookingDetail({ booking, existingReview }: CustomerBooki
 
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+      pending_payment: { label: '결제 대기', variant: 'outline' },
       pending: { label: '대기 중', variant: 'secondary' },
       confirmed: { label: '확정', variant: 'default' },
       in_progress: { label: '진행 중', variant: 'default' },
       completed: { label: '완료', variant: 'outline' },
       cancelled: { label: '취소됨', variant: 'destructive' },
-      no_show: { label: '노쇼', variant: 'destructive' }
+      no_show: { label: '노쇼', variant: 'destructive' },
+      expired: { label: '만료됨', variant: 'outline' }
     }
 
     const { label, variant } = statusMap[status] || { label: status, variant: 'outline' as const }
@@ -151,6 +153,8 @@ export function CustomerBookingDetail({ booking, existingReview }: CustomerBooki
   const isCancellable = booking.status !== 'cancelled' &&
                        booking.status !== 'completed' &&
                        booking.status !== 'no_show' &&
+                       booking.status !== 'expired' &&
+                       booking.status !== 'pending_payment' &&
                        canCancel
 
   return (
@@ -165,6 +169,44 @@ export function CustomerBookingDetail({ booking, existingReview }: CustomerBooki
       </div>
 
       <div className="space-y-4 md:space-y-6">
+        {/* 만료 메시지 */}
+        {booking.status === 'expired' && (
+          <Alert className="border-gray-300 bg-gray-50">
+            <AlertCircle className="h-4 w-4 text-gray-600" />
+            <AlertDescription className="text-gray-800">
+              <div className="space-y-1">
+                <p className="font-bold">⏰ 결제 시간이 만료되었습니다</p>
+                <p className="text-sm">
+                  {booking.booking_type === 'direct'
+                    ? '결제 시간(10분) 내에 결제하지 않아 예약이 자동으로 취소되었습니다.'
+                    : '결제 시간(24시간) 내에 결제하지 않아 예약이 자동으로 취소되었습니다.'}
+                </p>
+                <p className="text-sm text-gray-600">다시 예약하시려면 새로 예약을 생성해주세요.</p>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* 결제 대기 메시지 */}
+        {booking.status === 'pending_payment' && (
+          <Alert className="border-blue-300 bg-blue-50">
+            <AlertCircle className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-800">
+              <div className="space-y-2">
+                <p className="font-bold">💳 결제를 완료해주세요</p>
+                <p className="text-sm">
+                  {booking.booking_type === 'direct'
+                    ? '10분 이내에 결제를 완료하지 않으면 예약이 자동으로 취소됩니다.'
+                    : '24시간 이내에 결제를 완료하지 않으면 예약이 자동으로 취소됩니다.'}
+                </p>
+                <Link href={`/checkout/${booking.id}`}>
+                  <Button className="w-full mt-2">결제하러 가기 →</Button>
+                </Link>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* 취소 성공 메시지 */}
         {cancelSuccess && (
           <Alert className="border-green-200 bg-green-50">
@@ -455,19 +497,27 @@ export function CustomerBookingDetail({ booking, existingReview }: CustomerBooki
                   <div className={`rounded-lg p-4 mt-3 space-y-3 ${
                     booking.status === 'completed'
                       ? 'bg-blue-50 border border-blue-200'
+                      : booking.status === 'expired'
+                      ? 'bg-gray-50 border border-gray-200'
                       : 'bg-yellow-50 border border-yellow-200'
                   }`}>
                     <p className={`text-sm md:text-base flex items-center gap-2 font-medium ${
                       booking.status === 'completed'
                         ? 'text-blue-800'
+                        : booking.status === 'expired'
+                        ? 'text-gray-800'
                         : 'text-yellow-800'
                     }`}>
                       <AlertCircle className="h-4 w-4" />
                       {booking.status === 'completed'
                         ? '서비스 완료 후 정산 예정입니다'
+                        : booking.status === 'expired'
+                        ? '결제 시간 만료로 결제 불가'
                         : '결제 대기 중입니다'}
                     </p>
-                    {booking.status !== 'completed' && booking.status !== 'cancelled' && (
+                    {booking.status !== 'completed' &&
+                     booking.status !== 'cancelled' &&
+                     booking.status !== 'expired' && (
                       <>
                         <p className="text-xs md:text-sm text-yellow-700">
                           {booking.booking_type === 'direct'

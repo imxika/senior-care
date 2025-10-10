@@ -118,7 +118,7 @@ export default async function TrainerDetailPage({ params }: PageProps) {
                     <div className="flex items-center">
                       <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
                       <span className="ml-1 font-semibold text-base md:text-lg">{trainer.rating?.toFixed(1) || '0.0'}</span>
-                      <span className="ml-1 text-muted-foreground text-base">({trainer.total_reviews || 0}개 리뷰)</span>
+                      <span className="ml-1 text-muted-foreground text-base">({reviews?.length || 0}개 리뷰)</span>
                     </div>
                     {trainer.is_verified && (
                       <Badge variant="outline" className="border-green-500 text-green-600">
@@ -262,7 +262,7 @@ export default async function TrainerDetailPage({ params }: PageProps) {
           <Card id="reviews">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">리뷰 ({trainer.total_reviews || 0})</CardTitle>
+                <CardTitle className="text-lg">리뷰 ({reviews?.length || 0})</CardTitle>
                 <div className="flex items-center gap-1">
                   <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
                   <span className="font-bold text-lg">{trainer.rating?.toFixed(1) || '0.0'}</span>
@@ -393,6 +393,50 @@ export default async function TrainerDetailPage({ params }: PageProps) {
             </Card>
           )}
 
+          {/* Center Information */}
+          {trainer.center_visit_available && trainer.center_name && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Building className="h-5 w-5" />
+                  센터 정보
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">센터 이름</p>
+                    <p className="font-semibold text-base">{trainer.center_name}</p>
+                  </div>
+                  {trainer.center_address && (
+                    <>
+                      <Separator />
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">주소</p>
+                        <p className="text-base">{trainer.center_address}</p>
+                      </div>
+                    </>
+                  )}
+                  {trainer.center_phone && (
+                    <>
+                      <Separator />
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">연락처</p>
+                        <a
+                          href={`tel:${trainer.center_phone}`}
+                          className="text-base text-primary hover:underline flex items-center gap-2"
+                        >
+                          <Phone className="h-4 w-4" />
+                          {trainer.center_phone}
+                        </a>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Pricing */}
           {trainer.hourly_rate && (
             <Card>
@@ -464,7 +508,7 @@ export default async function TrainerDetailPage({ params }: PageProps) {
               <Separator />
               <div className="flex justify-between text-base">
                 <span className="text-muted-foreground">리뷰 수</span>
-                <span className="font-medium">{trainer.total_reviews || 0}개</span>
+                <span className="font-medium">{reviews?.length || 0}개</span>
               </div>
             </CardContent>
           </Card>

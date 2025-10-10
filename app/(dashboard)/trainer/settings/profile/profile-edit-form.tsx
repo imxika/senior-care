@@ -60,6 +60,7 @@ export function ProfileEditForm({ profile, trainer, isEditing, setIsEditing }: P
   const [centerVisitAvailable, setCenterVisitAvailable] = useState(trainer?.center_visit_available ?? true)
   const [centerName, setCenterName] = useState(trainer?.center_name || '')
   const [centerAddress, setCenterAddress] = useState(trainer?.center_address || '')
+  const [centerPhone, setCenterPhone] = useState(trainer?.center_phone || '')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -78,6 +79,13 @@ export function ProfileEditForm({ profile, trainer, isEditing, setIsEditing }: P
     // 최소 1개 이상의 서비스 선택 검증
     if (!homeVisitAvailable && !centerVisitAvailable) {
       setError('최소 1개 이상의 서비스를 선택해주세요')
+      setLoading(false)
+      return
+    }
+
+    // 센터 방문 선택 시 센터 이름 필수 검증
+    if (centerVisitAvailable && !centerName.trim()) {
+      setError('센터 방문 서비스를 선택하셨습니다. 센터 이름을 입력해주세요.')
       setLoading(false)
       return
     }
@@ -102,6 +110,7 @@ export function ProfileEditForm({ profile, trainer, isEditing, setIsEditing }: P
     formData.append('center_visit_available', centerVisitAvailable.toString())
     formData.append('center_name', centerName)
     formData.append('center_address', centerAddress)
+    formData.append('center_phone', centerPhone)
 
     const result = await updateTrainerProfile(formData)
 
@@ -143,6 +152,7 @@ export function ProfileEditForm({ profile, trainer, isEditing, setIsEditing }: P
     setCenterVisitAvailable(trainer?.center_visit_available ?? true)
     setCenterName(trainer?.center_name || '')
     setCenterAddress(trainer?.center_address || '')
+    setCenterPhone(trainer?.center_phone || '')
     setIsEditing(false)
     setError(null)
     setMaxGroupSizeError(null)
@@ -464,35 +474,62 @@ export function ProfileEditForm({ profile, trainer, isEditing, setIsEditing }: P
                 )}
               </div>
 
-              <div className="space-y-2 pt-2 border-t">
-                <Label htmlFor="center_name" className="text-sm">센터 이름 (선택)</Label>
-                {isEditing ? (
-                  <Input
-                    id="center_name"
-                    value={centerName}
-                    onChange={(e) => setCenterName(e.target.value)}
-                    placeholder="센터 이름을 입력하세요"
-                    className="h-12 md:h-11 text-base"
-                  />
-                ) : (
-                  <p className="font-medium text-sm md:text-base">{centerName || '센터 정보 없음'}</p>
-                )}
-              </div>
+              {/* 센터 정보 - 센터 방문 체크 시에만 표시 */}
+              {centerVisitAvailable && (
+                <>
+                  <div className="space-y-2 pt-2 border-t">
+                    <Label htmlFor="center_name" className="text-sm">
+                      센터 이름 <span className="text-red-500">*</span>
+                    </Label>
+                    {isEditing ? (
+                      <Input
+                        id="center_name"
+                        value={centerName}
+                        onChange={(e) => setCenterName(e.target.value)}
+                        placeholder="센터 이름을 입력하세요"
+                        className="h-12 md:h-11 text-base"
+                        required
+                      />
+                    ) : (
+                      <p className="font-medium text-sm md:text-base">{centerName || '센터 정보 없음'}</p>
+                    )}
+                    {isEditing && (
+                      <p className="text-xs text-muted-foreground">센터 방문 서비스를 제공하려면 센터 이름이 필요합니다</p>
+                    )}
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="center_address" className="text-sm">센터 주소 (선택)</Label>
-                {isEditing ? (
-                  <Input
-                    id="center_address"
-                    value={centerAddress}
-                    onChange={(e) => setCenterAddress(e.target.value)}
-                    placeholder="센터 주소를 입력하세요"
-                    className="h-12 md:h-11 text-base"
-                  />
-                ) : (
-                  <p className="font-medium text-sm md:text-base">{centerAddress || '센터 주소 없음'}</p>
-                )}
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="center_address" className="text-sm">센터 주소 (선택)</Label>
+                    {isEditing ? (
+                      <Input
+                        id="center_address"
+                        value={centerAddress}
+                        onChange={(e) => setCenterAddress(e.target.value)}
+                        placeholder="센터 주소를 입력하세요"
+                        className="h-12 md:h-11 text-base"
+                      />
+                    ) : (
+                      <p className="font-medium text-sm md:text-base">{centerAddress || '센터 주소 없음'}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="center_phone" className="text-sm">센터 연락처 (선택)</Label>
+                    {isEditing ? (
+                      <Input
+                        id="center_phone"
+                        type="tel"
+                        value={centerPhone}
+                        onChange={(e) => setCenterPhone(e.target.value)}
+                        placeholder="010-0000-0000"
+                        className="h-12 md:h-11 text-base"
+                      />
+                    ) : (
+                      <p className="font-medium text-sm md:text-base">{centerPhone || '센터 연락처 없음'}</p>
+                    )}
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
