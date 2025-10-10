@@ -136,6 +136,9 @@ export function BookingProgressSimple({
   // Progress steps for the bar
   const getProgressSteps = () => {
     if (bookingType === 'recommended') {
+      const matchingStatus: 'cancelled' | 'completed' | 'current' =
+        currentStatus === 'cancelled' ? 'cancelled' : hasTrainer ? 'completed' : 'current';
+
       return [
         {
           label: '예약\n접수',
@@ -147,7 +150,7 @@ export function BookingProgressSimple({
           label: '트레이너\n매칭',
           description: hasTrainer ? '매칭이 완료되었습니다' : '최적의 트레이너를 찾는 중입니다',
           icon: <UserCheck className="h-5 w-5" />,
-          status: (currentStatus === 'cancelled' ? 'cancelled' : hasTrainer ? 'completed' : 'current') as const
+          status: matchingStatus as const
         },
         {
           label: '트레이너\n승인',
@@ -157,11 +160,12 @@ export function BookingProgressSimple({
             ? '트레이너 승인을 기다리는 중입니다'
             : '매칭 후 진행됩니다',
           icon: <Clock className="h-5 w-5" />,
-          status: (
-            currentStatus === 'cancelled' ? 'cancelled' :
-            currentStatus === 'confirmed' || currentStatus === 'in_progress' || currentStatus === 'completed' ? 'completed' :
-            hasTrainer ? 'current' : 'upcoming'
-          ) as const
+          status: (() => {
+            if (currentStatus === 'cancelled') return 'cancelled' as const;
+            if (currentStatus === 'confirmed' || currentStatus === 'in_progress' || currentStatus === 'completed') return 'completed' as const;
+            if (hasTrainer) return 'current' as const;
+            return 'upcoming' as const;
+          })()
         },
         {
           label: '예약\n확정',
@@ -171,20 +175,22 @@ export function BookingProgressSimple({
             ? '예약이 확정되었습니다'
             : '승인 후 확정됩니다',
           icon: <Calendar className="h-5 w-5" />,
-          status: (
-            currentStatus === 'cancelled' ? 'cancelled' :
-            currentStatus === 'completed' ? 'completed' :
-            currentStatus === 'confirmed' || currentStatus === 'in_progress' ? 'current' : 'upcoming'
-          ) as const
+          status: (() => {
+            if (currentStatus === 'cancelled') return 'cancelled' as const;
+            if (currentStatus === 'completed') return 'completed' as const;
+            if (currentStatus === 'confirmed' || currentStatus === 'in_progress') return 'current' as const;
+            return 'upcoming' as const;
+          })()
         },
         {
           label: '서비스\n완료',
           description: currentStatus === 'completed' ? '서비스가 완료되었습니다' : '예정된 날짜에 진행됩니다',
           icon: <CheckCircle2 className="h-5 w-5" />,
-          status: (
-            currentStatus === 'cancelled' ? 'cancelled' :
-            currentStatus === 'completed' ? 'completed' : 'upcoming'
-          ) as const
+          status: (() => {
+            if (currentStatus === 'cancelled') return 'cancelled' as const;
+            if (currentStatus === 'completed') return 'completed' as const;
+            return 'upcoming' as const;
+          })()
         }
       ]
     } else {
@@ -201,11 +207,11 @@ export function BookingProgressSimple({
             ? '트레이너가 승인했습니다'
             : '트레이너 승인을 기다리는 중입니다',
           icon: <Clock className="h-5 w-5" />,
-          status: (
-            currentStatus === 'cancelled' ? 'cancelled' :
-            currentStatus === 'confirmed' || currentStatus === 'in_progress' || currentStatus === 'completed' ? 'completed' :
-            'current'
-          ) as const
+          status: (() => {
+            if (currentStatus === 'cancelled') return 'cancelled' as const;
+            if (currentStatus === 'confirmed' || currentStatus === 'in_progress' || currentStatus === 'completed') return 'completed' as const;
+            return 'current' as const;
+          })()
         },
         {
           label: '예약\n확정',
@@ -215,21 +221,22 @@ export function BookingProgressSimple({
             ? '예약이 확정되었습니다'
             : '승인 후 확정됩니다',
           icon: <Calendar className="h-5 w-5" />,
-          status: (
-            currentStatus === 'cancelled' ? 'cancelled' :
-            currentStatus === 'completed' ? 'completed' :
-            currentStatus === 'confirmed' || currentStatus === 'in_progress' ? 'current' :
-            'upcoming'
-          ) as const
+          status: (() => {
+            if (currentStatus === 'cancelled') return 'cancelled' as const;
+            if (currentStatus === 'completed') return 'completed' as const;
+            if (currentStatus === 'confirmed' || currentStatus === 'in_progress') return 'current' as const;
+            return 'upcoming' as const;
+          })()
         },
         {
           label: '서비스\n완료',
           description: currentStatus === 'completed' ? '서비스가 완료되었습니다' : '예정된 날짜에 진행됩니다',
           icon: <CheckCircle2 className="h-5 w-5" />,
-          status: (
-            currentStatus === 'cancelled' ? 'cancelled' :
-            currentStatus === 'completed' ? 'completed' : 'upcoming'
-          ) as const
+          status: (() => {
+            if (currentStatus === 'cancelled') return 'cancelled' as const;
+            if (currentStatus === 'completed') return 'completed' as const;
+            return 'upcoming' as const;
+          })()
         }
       ]
     }
@@ -268,7 +275,7 @@ export function BookingProgressSimple({
                     {s.status === 'cancelled' ? (
                       <XCircle className="size-4 md:size-4 shrink-0" />
                     ) : (
-                      React.cloneElement(s.icon as React.ReactElement, { className: "size-4 md:size-4 shrink-0" })
+                      React.cloneElement(s.icon as React.ReactElement<{ className?: string }>, { className: "size-4 md:size-4 shrink-0" })
                     )}
                   </div>
 

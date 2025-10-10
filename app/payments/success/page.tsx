@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 
 /**
@@ -17,7 +17,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
  * - orderId: 주문 ID
  * - amount: 결제 금액
  */
-export default function PaymentSuccessPage() {
+function PaymentSuccessContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
@@ -182,5 +182,17 @@ export default function PaymentSuccessPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function PaymentSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-gray-500">결제를 확인하는 중입니다...</div>
+      </div>
+    }>
+      <PaymentSuccessContent />
+    </Suspense>
   );
 }
