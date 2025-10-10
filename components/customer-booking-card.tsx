@@ -71,7 +71,7 @@ export function CustomerBookingCard({ booking }: CustomerBookingCardProps) {
                 className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent transition-colors group"
               >
                 <Avatar className="h-12 w-12">
-                  <AvatarImage src={booking.trainer?.profiles?.avatar_url} />
+                  <AvatarImage src={booking.trainer?.profiles?.avatar_url || undefined} />
                   <AvatarFallback>
                     {booking.trainer?.profiles?.full_name?.charAt(0) || 'T'}
                   </AvatarFallback>
@@ -90,7 +90,7 @@ export function CustomerBookingCard({ booking }: CustomerBookingCardProps) {
             ) : (
               <div className="flex items-center gap-3 p-2">
                 <Avatar className="h-12 w-12">
-                  <AvatarImage src={booking.trainer?.profiles?.avatar_url} />
+                  <AvatarImage src={booking.trainer?.profiles?.avatar_url || undefined} />
                   <AvatarFallback>T</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
@@ -124,7 +124,7 @@ export function CustomerBookingCard({ booking }: CustomerBookingCardProps) {
             <div className="flex items-center gap-2">
               <MapPin className="w-5 h-5 text-muted-foreground" />
               <Badge variant="outline">
-                {SERVICE_TYPE_LABELS[booking.service_type]}
+                {SERVICE_TYPE_LABELS[booking.service_type as keyof typeof SERVICE_TYPE_LABELS] || booking.service_type}
               </Badge>
             </div>
 

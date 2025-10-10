@@ -138,7 +138,7 @@ export function TrainerBookingCard({
             {/* 서비스 유형 (constants 사용) */}
             <div className="flex items-center gap-2">
               <Badge variant={booking.service_type === 'home_visit' ? 'default' : 'secondary'}>
-                {SERVICE_TYPE_LABELS[booking.service_type]}
+                {SERVICE_TYPE_LABELS[booking.service_type as keyof typeof SERVICE_TYPE_LABELS] || booking.service_type}
               </Badge>
               <Badge variant="outline">
                 {booking.duration_minutes}분

@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation'
 
 interface FavoriteButtonProps {
   trainerId: string
-  variant?: 'default' | 'icon' | 'ghost'
+  variant?: 'default' | 'ghost' | 'outline' | 'secondary' | 'destructive' | 'link'
   size?: 'default' | 'sm' | 'lg' | 'icon'
   showLabel?: boolean
   className?: string
