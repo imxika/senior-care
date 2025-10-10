@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { getVerifiedTrainers } from '@/lib/supabase/queries'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -54,7 +54,7 @@ function maskName(fullName: string | null | undefined): string {
   return fullName[0] + '*'.repeat(fullName.length - 1)
 }
 
-export default function TrainersPage() {
+function TrainersPageContent() {
   const searchParams = useSearchParams()
   const sessionType = searchParams.get('session') || 'all' // 'all', '1', '2', '3'
   const serviceType = searchParams.get('service') || 'all' // 'home', 'center', 'all'
@@ -534,5 +534,17 @@ export default function TrainersPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function TrainersPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-500">트레이너 목록을 불러오는 중...</div>
+      </div>
+    }>
+      <TrainersPageContent />
+    </Suspense>
   )
 }
