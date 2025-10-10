@@ -4,7 +4,7 @@ import { createNotification, notificationTemplates } from '@/lib/notifications'
 import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-12-18.acacia',
+  apiVersion: '2025-09-30.clover',
 })
 
 /**
@@ -38,10 +38,11 @@ export async function POST(request: NextRequest) {
       sig,
       process.env.STRIPE_WEBHOOK_SECRET!
     )
-  } catch (err: any) {
-    console.error('[Stripe Webhook] Signature verification failed:', err.message)
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+    console.error('[Stripe Webhook] Signature verification failed:', errorMessage)
     return NextResponse.json(
-      { error: `Webhook Error: ${err.message}` },
+      { error: `Webhook Error: ${errorMessage}` },
       { status: 400 }
     )
   }

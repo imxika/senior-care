@@ -22,7 +22,7 @@ export default function PaymentSuccessPage() {
   const router = useRouter();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('결제를 확인하는 중입니다...');
-  const [paymentData, setPaymentData] = useState<any>(null);
+  const [paymentData, setPaymentData] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     const confirmPayment = async () => {
@@ -33,6 +33,13 @@ export default function PaymentSuccessPage() {
         const orderId = searchParams.get('orderId');
         const amount = searchParams.get('amount');
 
+        console.log('🔍 [PAYMENT SUCCESS] Starting confirmation:', {
+          paymentKey,
+          sessionId,
+          orderId,
+          amount
+        });
+
         // Toss 또는 Stripe 중 하나는 있어야 함
         if ((!paymentKey && !sessionId) || !orderId || !amount) {
           throw new Error('결제 정보가 올바르지 않습니다.');
@@ -42,6 +49,7 @@ export default function PaymentSuccessPage() {
 
         // Stripe 결제인 경우
         if (sessionId) {
+          console.log('💳 [PAYMENT SUCCESS] Calling Stripe confirm API');
           response = await fetch('/api/payments/stripe/confirm', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -71,11 +79,18 @@ export default function PaymentSuccessPage() {
 
         const data = await response.json();
 
+        console.log('📥 [PAYMENT SUCCESS] API Response:', {
+          ok: response.ok,
+          status: response.status,
+          data
+        });
+
         if (!response.ok) {
           throw new Error(data.error || '결제 승인에 실패했습니다.');
         }
 
         // 성공
+        console.log('✅ [PAYMENT SUCCESS] Payment confirmed successfully');
         setStatus('success');
         setMessage('결제가 완료되었습니다!');
         setPaymentData(data.data);
@@ -85,10 +100,10 @@ export default function PaymentSuccessPage() {
           router.push('/customer/bookings');
         }, 3000);
 
-      } catch (error: any) {
-        console.error('Payment confirmation error:', error);
+      } catch (error: unknown) {
+        console.error('❌ [PAYMENT SUCCESS] Payment confirmation error:', error);
         setStatus('error');
-        setMessage(error.message || '결제 승인 중 오류가 발생했습니다.');
+        setMessage(error instanceof Error ? error.message : '결제 승인 중 오류가 발생했습니다.');
       }
     };
 

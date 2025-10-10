@@ -1,10 +1,18 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import PaymentProviderButton from './PaymentProviderButton'
 import PaymentTimer from './PaymentTimer'
+import CancelButton from './CancelButton'
 
 interface CheckoutPageProps {
   params: Promise<{ bookingId: string }>
+}
+
+interface BookingAddress {
+  address?: string;
+  address_detail?: string;
+  address_label?: string;
 }
 
 export default async function CheckoutPage({ params }: CheckoutPageProps) {
@@ -92,12 +100,12 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
           <p className="text-gray-700 mb-4">
             예약 정보를 불러올 수 없습니다. 예약 ID를 확인해주세요.
           </p>
-          <a
+          <Link
             href="/customer/bookings"
             className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
           >
             예약 목록으로 돌아가기
-          </a>
+          </Link>
         </div>
       </div>
     )
@@ -118,12 +126,12 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
           <p className="text-gray-700 mb-4">
             이미 결제가 완료된 예약입니다.
           </p>
-          <a
+          <Link
             href="/customer/bookings"
             className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
           >
             예약 목록 보기
-          </a>
+          </Link>
         </div>
       </div>
     )
@@ -271,15 +279,15 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
             {booking.service_type === 'home_visit' && booking.booking_address && (
               <div className="border-t pt-4">
                 <p className="text-sm text-gray-500 mb-2">방문 주소</p>
-                {(booking.booking_address as any)?.address_label && (
+                {(booking.booking_address as BookingAddress)?.address_label && (
                   <span className="inline-block text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded mb-2">
-                    {(booking.booking_address as any).address_label}
+                    {(booking.booking_address as BookingAddress).address_label}
                   </span>
                 )}
                 <p className="text-gray-900">
-                  {(booking.booking_address as any)?.address}
-                  {(booking.booking_address as any)?.address_detail &&
-                    ` ${(booking.booking_address as any).address_detail}`}
+                  {(booking.booking_address as BookingAddress)?.address}
+                  {(booking.booking_address as BookingAddress)?.address_detail &&
+                    ` ${(booking.booking_address as BookingAddress).address_detail}`}
                 </p>
               </div>
             )}
@@ -352,14 +360,9 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
               </p>
             </div>
 
-            {/* Cancel Link */}
+            {/* Cancel Button */}
             <div className="mt-6 text-center">
-              <a
-                href="/customer/bookings"
-                className="text-gray-600 hover:text-gray-900 underline"
-              >
-                취소하고 예약 목록으로 돌아가기
-              </a>
+              <CancelButton bookingId={booking.id} />
             </div>
           </div>
         </div>

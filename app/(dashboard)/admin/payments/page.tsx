@@ -22,7 +22,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import Link from 'next/link'
-import { CreditCard, DollarSign, TrendingUp, TrendingDown } from 'lucide-react'
+import { CreditCard, DollarSign, TrendingUp } from 'lucide-react'
 import { PaymentsTableRow } from '@/components/admin/payments-table-row'
 
 interface PageProps {
@@ -30,6 +30,58 @@ interface PageProps {
     status?: string
     provider?: string
   }>
+}
+
+// Supabase query result type (foreign keys return arrays)
+interface SupabasePaymentResult {
+  id: string
+  amount: number
+  currency: string
+  payment_method: string
+  payment_status: string
+  payment_provider: string
+  paid_at: string | null
+  created_at: string
+  booking: Array<{
+    id: string
+    booking_date: string
+    start_time: string
+    service_type: string
+    customer: Array<{
+      id: string
+      profile: Array<{
+        full_name: string | null
+        email: string | null
+      }>
+    }>
+    trainer: Array<{
+      id: string
+      profile: Array<{
+        full_name: string | null
+      }>
+    }>
+  }>
+}
+
+// Normalized payment type for PaymentsTableRow component
+interface NormalizedPayment {
+  id: string
+  amount: string
+  payment_status: string
+  payment_provider: string
+  payment_method?: string
+  paid_at?: string
+  created_at: string
+  booking?: {
+    id: string
+    booking_date?: string
+    start_time?: string
+    customer?: {
+      profile?: {
+        full_name?: string
+      }
+    }
+  }
 }
 
 export default async function AdminPaymentsPage({ searchParams }: PageProps) {
@@ -103,7 +155,33 @@ export default async function AdminPaymentsPage({ searchParams }: PageProps) {
     console.error('Error fetching payments:', error)
   }
 
-  const paymentsList = payments || []
+  // Normalize Supabase array results to flat objects
+  const rawPayments = (payments || []) as unknown as SupabasePaymentResult[]
+  const paymentsList: NormalizedPayment[] = rawPayments.map((payment) => {
+    const bookingData = Array.isArray(payment.booking) ? payment.booking[0] : undefined
+    const customerData = bookingData?.customer ? (Array.isArray(bookingData.customer) ? bookingData.customer[0] : bookingData.customer) : undefined
+    const profileData = customerData?.profile ? (Array.isArray(customerData.profile) ? customerData.profile[0] : customerData.profile) : undefined
+
+    return {
+      id: payment.id,
+      amount: String(payment.amount),
+      payment_status: payment.payment_status,
+      payment_provider: payment.payment_provider,
+      payment_method: payment.payment_method,
+      paid_at: payment.paid_at || undefined,
+      created_at: payment.created_at,
+      booking: bookingData ? {
+        id: bookingData.id,
+        booking_date: bookingData.booking_date,
+        start_time: bookingData.start_time,
+        customer: profileData ? {
+          profile: {
+            full_name: profileData.full_name || undefined
+          }
+        } : undefined
+      } : undefined
+    }
+  })
 
   // 필터링
   let filteredPayments = paymentsList
@@ -352,7 +430,7 @@ export default async function AdminPaymentsPage({ searchParams }: PageProps) {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredPayments.map((payment: any) => (
+                  filteredPayments.map((payment) => (
                     <PaymentsTableRow key={payment.id} payment={payment} />
                   ))
                 )}

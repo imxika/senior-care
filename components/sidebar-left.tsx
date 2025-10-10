@@ -4,10 +4,12 @@ import * as React from "react"
 import {
   AudioWaveform,
   Blocks,
+  Calendar,
   Command,
   Home,
   Inbox,
   MessageCircleQuestion,
+  Search,
   Settings2,
   Sparkles,
   Trash2,

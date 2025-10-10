@@ -35,22 +35,28 @@ export async function POST(request: NextRequest) {
       .from('payments')
       .select(`
         *,
-        booking:bookings!inner(*),
-        customer:customers!inner(profile_id)
+        booking:bookings!inner(*)
       `)
       .eq('toss_order_id', orderId)
       .eq('payment_provider', 'stripe')
       .single();
 
     if (paymentError || !payment) {
+      console.error('Payment query error:', paymentError);
       return NextResponse.json(
         { error: 'Payment not found' },
         { status: 404 }
       );
     }
 
-    // 4. 권한 확인
-    if (payment.customer.profile_id !== user.id) {
+    // 4. Booking의 customer 조회 및 권한 확인
+    const { data: bookingCustomer } = await supabase
+      .from('customers')
+      .select('profile_id')
+      .eq('id', payment.booking.customer_id)
+      .single();
+
+    if (!bookingCustomer || bookingCustomer.profile_id !== user.id) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }
@@ -110,6 +116,13 @@ export async function POST(request: NextRequest) {
     }
 
     // 10. DB 업데이트 - 결제 성공
+    console.log('💳 [STRIPE CONFIRM] Updating payment:', {
+      paymentId: payment.id,
+      sessionId: session.id,
+      paymentStatus: session.payment_status,
+      amount: session.amount_total
+    });
+
     const { error: updateError } = await supabase
       .from('payments')
       .update({
@@ -122,7 +135,7 @@ export async function POST(request: NextRequest) {
           ? `****-****-****-${latestCharge.payment_method_details.card.last4}`
           : null,
         payment_metadata: {
-          ...payment.payment_metadata,
+          ...(payment.payment_metadata || {}),
           stripeSessionId: session.id,
           stripePaymentIntentId: session.payment_intent,
           stripeCustomerId: session.customer,
@@ -138,15 +151,19 @@ export async function POST(request: NextRequest) {
       .eq('id', payment.id);
 
     if (updateError) {
-      console.error('Payment update error:', updateError);
+      console.error('❌ [STRIPE CONFIRM] Payment update error:', updateError);
       return NextResponse.json(
-        { error: 'Payment completed but database update failed' },
+        { error: 'Payment completed but database update failed', details: updateError.message },
         { status: 500 }
       );
     }
 
+    console.log('✅ [STRIPE CONFIRM] Payment updated successfully');
+
     // 11. payment_events에 confirmed 이벤트 기록
-    await supabase.rpc('log_payment_event', {
+    console.log('📝 [STRIPE CONFIRM] Logging payment event');
+
+    const { error: eventError } = await supabase.rpc('log_payment_event', {
       p_payment_id: payment.id,
       p_event_type: 'confirmed',
       p_metadata: {
@@ -158,13 +175,25 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    if (eventError) {
+      console.error('⚠️ [STRIPE CONFIRM] Event logging failed:', eventError);
+      // Continue anyway - event logging is not critical
+    }
+
     // 12. Booking 상태 업데이트 - 결제 완료 → 트레이너 승인 대기
-    await supabase
+    console.log('📅 [STRIPE CONFIRM] Updating booking status');
+
+    const { error: bookingUpdateError } = await supabase
       .from('bookings')
       .update({
         status: 'pending', // 🆕 결제 완료 후 트레이너 승인 대기 상태로 변경
       })
       .eq('id', payment.booking_id);
+
+    if (bookingUpdateError) {
+      console.error('⚠️ [STRIPE CONFIRM] Booking update failed:', bookingUpdateError);
+      // Continue anyway
+    }
 
     // 13. 예약 타입에 따라 후속 처리
     const { data: booking } = await supabase
@@ -213,16 +242,33 @@ export async function POST(request: NextRequest) {
     } else if (booking.booking_type === 'recommended') {
       // 🆕 추천 예약: 자동 매칭 시작
       console.log('🚀 [PAYMENT] Recommended booking - Starting auto-matching');
+      console.log('📋 [PAYMENT] Booking info:', {
+        id: booking.id,
+        type: booking.booking_type,
+        date: booking.booking_date,
+        time: booking.start_time,
+        trainerId: booking.trainer_id
+      });
 
-      // 자동 매칭 함수 호출 (동적 import로 순환 참조 방지)
-      const { notifySuitableTrainers } = await import('@/lib/auto-matching');
-      const autoMatchResult = await notifySuitableTrainers(booking.id);
+      try {
+        // 자동 매칭 함수 호출 (동적 import로 순환 참조 방지)
+        const { notifySuitableTrainers } = await import('@/lib/auto-matching');
+        console.log('📦 [PAYMENT] Auto-matching module loaded');
 
-      if (autoMatchResult.error) {
-        console.error('❌ [PAYMENT] Auto-matching failed:', autoMatchResult.error);
-        // 자동 매칭 실패해도 결제는 성공 처리 - Admin이 수동 매칭 가능
-      } else {
-        console.log('✅ [PAYMENT] Auto-matching successful:', autoMatchResult);
+        const autoMatchResult = await notifySuitableTrainers(booking.id);
+        console.log('📊 [PAYMENT] Auto-matching result:', autoMatchResult);
+
+        if (autoMatchResult.error) {
+          console.error('❌ [PAYMENT] Auto-matching failed:', autoMatchResult.error);
+          // 자동 매칭 실패해도 결제는 성공 처리 - Admin이 수동 매칭 가능
+        } else {
+          console.log('✅ [PAYMENT] Auto-matching successful:', {
+            notifiedCount: autoMatchResult.notifiedCount,
+            deadline: autoMatchResult.deadline
+          });
+        }
+      } catch (autoMatchError) {
+        console.error('💥 [PAYMENT] Auto-matching exception:', autoMatchError);
       }
     }
 
@@ -240,10 +286,13 @@ export async function POST(request: NextRequest) {
       },
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Stripe payment confirm error:', error);
     return NextResponse.json(
-      { error: 'Internal server error', message: error.message },
+      {
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'Unknown error occurred'
+      },
       { status: 500 }
     );
   }

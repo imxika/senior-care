@@ -123,13 +123,16 @@ export default async function MatchTrainerPage({ params }: PageProps) {
 
   console.log('Trainers query result:', {
     count: trainers?.length || 0,
-    trainers: trainers?.map(t => ({
-      id: t.id,
-      name: t.profile?.full_name,
-      hourly_rate: t.hourly_rate,
-      is_verified: t.is_verified,
-      is_active: t.is_active
-    }))
+    trainers: trainers?.map(t => {
+      const trainerProfile = Array.isArray(t.profile) ? t.profile[0] : t.profile
+      return {
+        id: t.id,
+        name: trainerProfile?.full_name,
+        hourly_rate: t.hourly_rate,
+        is_verified: t.is_verified,
+        is_active: t.is_active
+      }
+    })
   })
 
   console.log('Full trainers data:', trainers)
@@ -151,8 +154,18 @@ export default async function MatchTrainerPage({ params }: PageProps) {
 
   console.log('Trainer booking counts:', bookingCountByTrainer)
 
-  const customerName = booking.customer?.profile?.full_name || booking.customer?.profile?.email?.split('@')[0] || '고객'
+  // Handle customer profile (can be array or object from Supabase)
+  const customerProfile = Array.isArray(booking.customer?.profile)
+    ? booking.customer.profile[0]
+    : booking.customer?.profile
+  const customerName = customerProfile?.full_name || customerProfile?.email?.split('@')[0] || '고객'
   const date = new Date(booking.booking_date)
+
+  // Normalize trainers array (handle profile array/object from Supabase)
+  const normalizedTrainers = trainers?.map(t => ({
+    ...t,
+    profile: Array.isArray(t.profile) ? t.profile[0] : t.profile
+  })) || []
 
   // 주소 정보 (booking_address 우선, 없으면 notes에서 파싱)
   let address = ''
@@ -254,11 +267,11 @@ export default async function MatchTrainerPage({ params }: PageProps) {
                 <p className="text-xs text-gray-500">고객 정보</p>
                 <p className="text-sm font-medium">{customerName}</p>
                 <p className="text-sm text-gray-600">
-                  {booking.customer?.profile?.email}
+                  {customerProfile?.email}
                 </p>
-                {booking.customer?.profile?.phone && (
+                {customerProfile?.phone && (
                   <p className="text-sm text-gray-600">
-                    {booking.customer?.profile?.phone}
+                    {customerProfile.phone}
                   </p>
                 )}
               </div>
@@ -269,7 +282,7 @@ export default async function MatchTrainerPage({ params }: PageProps) {
         {/* 트레이너 목록 (우측) */}
         <div className="lg:col-span-2">
           <TrainerMatchList
-            trainers={trainers || []}
+            trainers={normalizedTrainers}
             bookingId={bookingId}
             serviceType={booking.service_type}
             specialty={specialty}

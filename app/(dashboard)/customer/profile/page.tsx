@@ -218,7 +218,7 @@ export default async function CustomerProfilePage() {
                   <div className="space-y-2">
                     <p className="text-base md:text-lg text-muted-foreground">건강 상태</p>
                     <div className="flex flex-wrap gap-2">
-                      {customer.medical_conditions.map((condition, idx) => (
+                      {customer.medical_conditions.map((condition: string, idx: number) => (
                         <Badge key={idx} variant="secondary" className="text-base px-3 py-1">
                           {condition}
                         </Badge>

@@ -19,8 +19,22 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 
+interface Payment {
+  id: string;
+  amount: string;
+  payment_status: string;
+  payment_provider?: string;
+  paid_at?: string;
+  created_at: string;
+  booking?: {
+    service_type?: string;
+  } | Array<{
+    service_type?: string;
+  }>;
+}
+
 interface PaymentAnalyticsChartsProps {
-  payments: any[]
+  payments: Payment[]
 }
 
 const COLORS = {

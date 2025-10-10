@@ -35,7 +35,7 @@ export async function GET() {
       customer: customer || null,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Auth status check error:', error);
     return NextResponse.json({
       isAuthenticated: false,

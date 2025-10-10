@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/server';
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { paymentId: string } }
+  { params }: { params: Promise<{ paymentId: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -21,10 +21,13 @@ export async function POST(
       );
     }
 
-    // 2. 요청 데이터 파싱
+    // 2. params await (Next.js 15)
+    const { paymentId } = await params;
+
+    // 3. 요청 데이터 파싱
     const { cancelReason } = await request.json();
 
-    // 3. Payment 조회
+    // 4. Payment 조회
     const { data: payment, error: paymentError } = await supabase
       .from('payments')
       .select(`
@@ -32,7 +35,7 @@ export async function POST(
         booking:bookings!inner(*),
         customer:customers!inner(profile_id)
       `)
-      .eq('id', params.paymentId)
+      .eq('id', paymentId)
       .single();
 
     if (paymentError || !payment) {
@@ -138,7 +141,7 @@ export async function POST(
       }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Payment cancel error:', error);
     return NextResponse.json(
       { error: 'Internal server error', message: error.message },

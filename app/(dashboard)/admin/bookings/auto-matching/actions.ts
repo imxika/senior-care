@@ -78,7 +78,14 @@ export async function adminCancelBooking(bookingId: string, reason: string) {
   }
 
   // 4. 고객에게 알림
-  const customerProfileId = (booking.customer as any)?.profile?.id
+  const customerData = Array.isArray(booking.customer) ? booking.customer[0] : booking.customer
+  const customerProfile = customerData && typeof customerData === 'object' && 'profile' in customerData
+    ? (Array.isArray(customerData.profile) ? customerData.profile[0] : customerData.profile)
+    : null
+  const customerProfileId = customerProfile && typeof customerProfile === 'object' && 'id' in customerProfile
+    ? customerProfile.id
+    : null
+
   if (customerProfileId) {
     await createNotification({
       userId: customerProfileId,
@@ -182,14 +189,35 @@ export async function adminRematchBooking(bookingId: string, newTrainerId: strin
   }
 
   // 5. 알림
-  const customerName = (booking.customer as any)?.profile?.full_name || '고객'
-  const newTrainerName = newTrainer.profile?.full_name || '트레이너'
+  const customerData = Array.isArray(booking.customer) ? booking.customer[0] : booking.customer
+  const customerProfile = customerData && typeof customerData === 'object' && 'profile' in customerData
+    ? (Array.isArray(customerData.profile) ? customerData.profile[0] : customerData.profile)
+    : null
+  const customerName = customerProfile && typeof customerProfile === 'object' && 'full_name' in customerProfile
+    ? (customerProfile.full_name as string) || '고객'
+    : '고객'
+
+  const newTrainerProfile = Array.isArray(newTrainer.profile)
+    ? newTrainer.profile[0]
+    : newTrainer.profile
+  const newTrainerName = newTrainerProfile?.full_name || '트레이너'
+
   const scheduledAt = new Date(`${booking.booking_date}T${booking.start_time}`)
 
   // 기존 트레이너에게 알림 (있는 경우)
-  if (booking.trainer_id && (booking.old_trainer as any)?.profile?.id) {
+  const oldTrainerData = booking.old_trainer && typeof booking.old_trainer === 'object' && 'profile' in booking.old_trainer
+    ? (Array.isArray(booking.old_trainer) ? booking.old_trainer[0] : booking.old_trainer)
+    : null
+  const oldTrainerProfile = oldTrainerData && typeof oldTrainerData === 'object' && 'profile' in oldTrainerData
+    ? (Array.isArray(oldTrainerData.profile) ? oldTrainerData.profile[0] : oldTrainerData.profile)
+    : null
+  const oldTrainerProfileId = oldTrainerProfile && typeof oldTrainerProfile === 'object' && 'id' in oldTrainerProfile
+    ? oldTrainerProfile.id
+    : null
+
+  if (booking.trainer_id && oldTrainerProfileId) {
     await createNotification({
-      userId: (booking.old_trainer as any).profile.id,
+      userId: oldTrainerProfileId,
       title: '예약이 재배정되었습니다',
       message: `${customerName}님의 예약이 관리자에 의해 다른 트레이너에게 재배정되었습니다.`,
       type: 'booking_cancelled',
@@ -208,7 +236,10 @@ export async function adminRematchBooking(bookingId: string, newTrainerId: strin
   })
 
   // 고객에게 알림
-  const customerProfileId = (booking.customer as any)?.profile?.id
+  const customerProfileId = customerProfile && typeof customerProfile === 'object' && 'id' in customerProfile
+    ? customerProfile.id
+    : null
+
   if (customerProfileId) {
     const customerNotif = notificationTemplates.trainerMatchedToCustomer(newTrainerName, scheduledAt)
     await createNotification({

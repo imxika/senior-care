@@ -99,7 +99,9 @@ export default async function AdminStatsPage() {
     ?.filter(b => b.status === 'completed')
     .reduce((sum, b) => {
       const basePrice = PRICING[b.service_type as keyof typeof PRICING] || 0
-      const finalPrice = basePrice * (b.price_multiplier || 1) * (b.duration_hours || 1)
+      const priceMultiplier = b.price_multiplier ?? 1
+      const durationHours = b.duration_hours ?? 1
+      const finalPrice = Number(basePrice) * priceMultiplier * durationHours
       return sum + finalPrice
     }, 0) || 0
 
@@ -115,7 +117,9 @@ export default async function AdminStatsPage() {
     .filter(b => b.status === 'completed')
     .reduce((sum, b) => {
       const basePrice = PRICING[b.service_type as keyof typeof PRICING] || 0
-      const finalPrice = basePrice * (b.price_multiplier || 1) * (b.duration_hours || 1)
+      const priceMultiplier = b.price_multiplier ?? 1
+      const durationHours = b.duration_hours ?? 1
+      const finalPrice = Number(basePrice) * priceMultiplier * durationHours
       return sum + finalPrice
     }, 0)
 
@@ -131,7 +135,9 @@ export default async function AdminStatsPage() {
     .filter(b => b.status === 'completed')
     .reduce((sum, b) => {
       const basePrice = PRICING[b.service_type as keyof typeof PRICING] || 0
-      const finalPrice = basePrice * (b.price_multiplier || 1) * (b.duration_hours || 1)
+      const priceMultiplier = b.price_multiplier ?? 1
+      const durationHours = b.duration_hours ?? 1
+      const finalPrice = Number(basePrice) * priceMultiplier * durationHours
       return sum + finalPrice
     }, 0)
 
@@ -159,7 +165,9 @@ export default async function AdminStatsPage() {
       .filter(b => b.status === 'completed')
       .reduce((sum, b) => {
         const basePrice = PRICING[b.service_type as keyof typeof PRICING] || 0
-        const finalPrice = basePrice * (b.price_multiplier || 1) * (b.duration_hours || 1)
+        const priceMultiplier = b.price_multiplier ?? 1
+        const durationHours = b.duration_hours ?? 1
+        const finalPrice = Number(basePrice) * priceMultiplier * durationHours
         return sum + finalPrice
       }, 0)
 

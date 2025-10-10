@@ -159,7 +159,7 @@ export default function ReviewManagementClient({ reviews: initialReviews }: Prop
   }
 
   // 필터링 & 정렬
-  let filteredReviews = reviews.filter(review => {
+  const filteredReviews = reviews.filter(review => {
     // 검색
     if (searchTerm) {
       const customerName = review.customer?.profile?.full_name?.toLowerCase() || ''

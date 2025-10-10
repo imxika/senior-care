@@ -16,6 +16,7 @@ interface SecuritySettingsFormProps {
 export function SecuritySettingsForm({ currentEmail }: SecuritySettingsFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
 
   // 비밀번호 표시 상태
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)

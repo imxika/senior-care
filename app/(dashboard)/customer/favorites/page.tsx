@@ -138,8 +138,17 @@ export default async function CustomerFavoritesPage() {
         ) : (
           <div className="grid gap-5 md:gap-6 md:grid-cols-2">
             {favorites.map((favorite) => {
-              const trainer = favorite.trainer
+              // Handle trainer (can be array or object from Supabase)
+              const trainerData = favorite.trainer
+              if (!trainerData) return null
+
+              const trainer = Array.isArray(trainerData) ? trainerData[0] : trainerData
               if (!trainer) return null
+
+              // Handle profiles (can be array or object from Supabase)
+              const trainerProfile = Array.isArray(trainer.profiles)
+                ? trainer.profiles[0]
+                : trainer.profiles
 
               return (
                 <Card key={favorite.id} className="overflow-hidden hover:shadow-lg transition-all border-2">
@@ -148,16 +157,16 @@ export default async function CustomerFavoritesPage() {
                     <div className="flex items-start gap-4 mb-5">
                       <Avatar className="h-16 w-16 md:h-20 md:w-20 shrink-0">
                         <AvatarImage
-                          src={trainer.profiles?.avatar_url || ''}
-                          alt={trainer.profiles?.full_name || '트레이너'}
+                          src={trainerProfile?.avatar_url || ''}
+                          alt={trainerProfile?.full_name || '트레이너'}
                         />
                         <AvatarFallback className="text-xl">
-                          {trainer.profiles?.full_name?.charAt(0) || 'T'}
+                          {trainerProfile?.full_name?.charAt(0) || 'T'}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-bold text-xl md:text-2xl mb-2">
-                          {trainer.profiles?.full_name || '이름 없음'}
+                          {trainerProfile?.full_name || '이름 없음'}
                         </h3>
                         <div className="flex items-center gap-2 text-base md:text-lg text-yellow-600">
                           <Star className="h-6 w-6 fill-current" />
@@ -185,7 +194,7 @@ export default async function CustomerFavoritesPage() {
                     {/* 전문 분야 */}
                     {trainer.specialties && trainer.specialties.length > 0 && (
                       <div className="flex flex-wrap gap-2 mb-4">
-                        {trainer.specialties.slice(0, 3).map((specialty, idx) => (
+                        {trainer.specialties.slice(0, 3).map((specialty: string, idx: number) => (
                           <Badge key={idx} variant="secondary" className="text-sm md:text-base px-3 py-1">
                             {specialty}
                           </Badge>
@@ -225,7 +234,7 @@ export default async function CustomerFavoritesPage() {
                           프로필 보기
                         </Button>
                       </Link>
-                      <Link href={`/customer/booking/new?trainer=${trainer.id}`} className="flex-1">
+                      <Link href={`/trainers/${trainer.id}/booking`} className="flex-1">
                         <Button className="w-full h-12 text-base md:text-lg">
                           예약하기
                         </Button>

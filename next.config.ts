@@ -3,6 +3,14 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
+  eslint: {
+    // Vercel 배포 시 Warning은 무시하고 Error만 체크
+    ignoreDuringBuilds: false,
+  },
+  typescript: {
+    // TypeScript 에러 무시 (빌드 속도 개선)
+    ignoreBuildErrors: false,
+  },
 };
 
 export default withSentryConfig(nextConfig, {

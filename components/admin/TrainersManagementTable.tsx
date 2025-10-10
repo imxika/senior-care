@@ -200,8 +200,8 @@ export default function TrainersManagementTable({ trainers, initialStatus }: Pro
   }
 
   // 상태 필터링
-  let pendingTrainers = trainers.filter(t => !t.is_verified)
-  let verifiedTrainers = trainers.filter(t => t.is_verified)
+  const pendingTrainers = trainers.filter(t => !t.is_verified)
+  const verifiedTrainers = trainers.filter(t => t.is_verified)
 
   // URL 파라미터에 따라 표시 조정
   const shouldShowPending = statusFilter === 'all' || statusFilter === 'pending'

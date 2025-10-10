@@ -2,6 +2,37 @@
 
 import { useState, useEffect } from 'react';
 
+interface User {
+  id: string;
+  email?: string;
+}
+
+interface Customer {
+  id: string;
+  full_name?: string;
+  guardian_name?: string;
+  mobility_level?: string;
+}
+
+interface Booking {
+  id: string;
+  booking_date: string;
+  start_time: string;
+  end_time: string;
+  status: string;
+  total_price?: number;
+  trainer?: {
+    full_name?: string;
+  };
+}
+
+interface AuthStatus {
+  isAuthenticated: boolean;
+  user: User | null;
+  customer: Customer | null;
+  loading: boolean;
+}
+
 /**
  * 결제 API 테스트 페이지
  * /test-payment
@@ -11,16 +42,11 @@ export default function TestPaymentPage() {
   const [amount, setAmount] = useState('100000');
   const [paymentProvider, setPaymentProvider] = useState<'toss' | 'stripe'>('toss');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [bookings, setBookings] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
-  const [authStatus, setAuthStatus] = useState<{
-    isAuthenticated: boolean;
-    user: any;
-    customer: any;
-    loading: boolean;
-  }>({
+  const [authStatus, setAuthStatus] = useState<AuthStatus>({
     isAuthenticated: false,
     user: null,
     customer: null,
@@ -72,7 +98,7 @@ export default function TestPaymentPage() {
   };
 
   // Booking 선택
-  const selectBooking = (booking: any) => {
+  const selectBooking = (booking: Booking) => {
     setBookingId(booking.id);
     // total_price가 0이거나 없으면 기본값 100,000원
     const price = booking.total_price && booking.total_price > 0
@@ -100,8 +126,8 @@ export default function TestPaymentPage() {
       alert('테스트 예약이 생성되었습니다!');
       // 목록 새로고침
       fetchBookings();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : '테스트 예약 생성에 실패했습니다.');
     } finally {
       setLoading(false);
     }
@@ -117,10 +143,10 @@ export default function TestPaymentPage() {
     const { loadTossPayments } = await import('@tosspayments/tosspayments-sdk');
     const tossPayments = await loadTossPayments(clientKey);
 
-    // @ts-ignore
+    // @ts-expect-error - Toss Payments SDK 타입 정의 불완전
     const payment = tossPayments.payment({ customerKey: 'ANONYMOUS' });
 
-    // @ts-ignore
+    // @ts-expect-error - Toss Payments SDK 타입 정의 불완전
     await payment.requestPayment({
       method: 'CARD',
       amount: { currency: 'KRW', value: amountValue },
@@ -203,11 +229,12 @@ export default function TestPaymentPage() {
         await handleTossPayment(orderId, parseInt(amount));
       }
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Toss Payment Error:', err);
 
       // 사용자가 결제를 취소한 경우 payment 상태를 cancelled로 업데이트
-      if (err.code === 'USER_CANCEL' || err.message?.includes('취소')) {
+      const error = err as { code?: string; message?: string };
+      if (error.code === 'USER_CANCEL' || error.message?.includes('취소')) {
         try {
           await fetch('/api/payments/cancel', {
             method: 'POST',
@@ -219,7 +246,7 @@ export default function TestPaymentPage() {
         }
       }
 
-      setError(err.message || '결제 요청 중 오류가 발생했습니다.');
+      setError(err instanceof Error ? err.message : '결제 요청 중 오류가 발생했습니다.');
       setLoading(false);
     }
   };
@@ -256,8 +283,8 @@ export default function TestPaymentPage() {
 
       alert('결제 승인 성공! (실제 환경에서는 Toss API가 처리합니다)');
       setResult(data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : '결제 승인에 실패했습니다.');
     } finally {
       setLoading(false);
     }
@@ -273,8 +300,8 @@ export default function TestPaymentPage() {
       const response = await fetch('/api/payments/test');
       const data = await response.json();
       setResult(data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'API 연결 테스트에 실패했습니다.');
     } finally {
       setLoading(false);
     }
@@ -363,11 +390,11 @@ export default function TestPaymentPage() {
         ) : bookings.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <p className="mb-4">결제 가능한 예약이 없습니다.</p>
-            <p className="text-sm mb-4">위 "테스트 예약 생성" 버튼을 클릭하여 테스트용 예약을 만드세요.</p>
+            <p className="text-sm mb-4">위 &quot;테스트 예약 생성&quot; 버튼을 클릭하여 테스트용 예약을 만드세요.</p>
           </div>
         ) : (
           <div className="space-y-2 max-h-64 overflow-y-auto">
-            {bookings.map((booking: any) => (
+            {bookings.map((booking: Booking) => (
               <div
                 key={booking.id}
                 onClick={() => selectBooking(booking)}
@@ -514,11 +541,11 @@ export default function TestPaymentPage() {
       <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
         <h3 className="text-blue-800 font-semibold mb-3">📖 사용 방법</h3>
         <ol className="list-decimal list-inside space-y-2 text-sm text-blue-700">
-          <li>먼저 "Toss API 연결 확인"을 클릭하여 API 연결을 테스트하세요.</li>
+          <li>먼저 &quot;Toss API 연결 확인&quot;을 클릭하여 API 연결을 테스트하세요.</li>
           <li>실제 존재하는 Booking ID를 입력하세요 (DB에서 확인).</li>
-          <li>"결제 요청 생성"을 클릭하여 payment 레코드를 생성하세요.</li>
+          <li>&quot;결제 요청 생성&quot;을 클릭하여 payment 레코드를 생성하세요.</li>
           <li>실제 결제는 Toss 결제창에서 진행됩니다 (현재는 개발 단계).</li>
-          <li>개발용 "결제 승인"은 API 테스트용이며, 실제로는 Toss에서 처리됩니다.</li>
+          <li>개발용 &quot;결제 승인&quot;은 API 테스트용이며, 실제로는 Toss에서 처리됩니다.</li>
         </ol>
       </div>
 
@@ -530,7 +557,7 @@ export default function TestPaymentPage() {
           <p><strong>다음 단계:</strong> 프론트엔드 결제 UI 구현</p>
           <p className="mt-4"><strong>실제 결제 흐름:</strong></p>
           <ol className="list-decimal list-inside ml-4 space-y-1">
-            <li>고객이 예약 페이지에서 "결제하기" 클릭</li>
+            <li>고객이 예약 페이지에서 &quot;결제하기&quot; 클릭</li>
             <li>POST /api/payments/request → orderId 발급</li>
             <li>Toss 결제창 오픈 (카드 정보 입력)</li>
             <li>Toss 서버에서 결제 처리</li>

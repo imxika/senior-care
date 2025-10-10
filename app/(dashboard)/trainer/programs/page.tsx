@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Plus, Edit, Trash2, Users, DollarSign } from 'lucide-react'
-import Link from 'next/link'
+import { Edit, Trash2, Users, DollarSign, Plus } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -16,6 +15,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
+import CreateProgramButton from './CreateProgramButton'
 
 export default async function TrainerProgramsPage() {
   const supabase = await createClient()
@@ -140,10 +140,7 @@ export default async function TrainerProgramsPage() {
             <h1 className="text-3xl font-bold tracking-tight">프로그램 관리</h1>
             <p className="text-muted-foreground mt-1">제공하는 운동 프로그램을 관리하세요</p>
           </div>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            새 프로그램 만들기
-          </Button>
+          <CreateProgramButton />
         </div>
 
         {/* 통계 카드 */}

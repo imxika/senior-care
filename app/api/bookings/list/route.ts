@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import type { Booking } from '@/lib/types';
 
 /**
  * Booking 목록 조회 (테스트용)
@@ -47,7 +48,7 @@ export async function GET() {
 
     // 3. 각 예약의 결제 정보 및 트레이너 정보 조회
     const bookingsWithPayments = await Promise.all(
-      (bookings || []).map(async (booking: any) => {
+      (bookings || []).map(async (booking: Booking) => {
         // 결제 정보 조회
         const { data: payments } = await supabase
           .from('payments')
@@ -83,25 +84,25 @@ export async function GET() {
     );
 
     // 4. 예약 분류
-    const payableBookings = bookingsWithPayments.filter((booking: any) => {
+    const payableBookings = bookingsWithPayments.filter((booking: Booking & { payments?: { payment_status: string }[] }) => {
       // 이미 결제된 예약 제외
       const hasPaidPayment = booking.payments?.some(
-        (p: any) => p.payment_status === 'paid'
+        (p: { payment_status: string }) => p.payment_status === 'paid'
       );
 
       // 결제 대기 중이거나 결제되지 않은 예약만
       return !hasPaidPayment && ['pending', 'confirmed'].includes(booking.status);
     });
 
-    const paidBookings = bookingsWithPayments.filter((booking: any) => {
+    const paidBookings = bookingsWithPayments.filter((booking: Booking & { payments?: { payment_status: string }[] }) => {
       // 결제 완료된 예약
       const hasPaidPayment = booking.payments?.some(
-        (p: any) => p.payment_status === 'paid'
+        (p: { payment_status: string }) => p.payment_status === 'paid'
       );
       return hasPaidPayment;
     });
 
-    const completedBookings = bookingsWithPayments.filter((booking: any) => {
+    const completedBookings = bookingsWithPayments.filter((booking: Booking) => {
       // 완료된 예약 (정산 테스트용)
       return booking.status === 'completed';
     });
@@ -120,10 +121,11 @@ export async function GET() {
       }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Bookings list error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Internal server error', message: error.message },
+      { error: 'Internal server error', message: errorMessage },
       { status: 500 }
     );
   }

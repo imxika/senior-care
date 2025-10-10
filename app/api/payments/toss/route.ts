@@ -234,7 +234,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Payment confirm error:', error);
     return NextResponse.json(
       { error: 'Internal server error', message: error.message },

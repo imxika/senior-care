@@ -41,8 +41,9 @@ export function TrainerReviewResponse({ reviewId, existingResponse }: TrainerRev
       toast.success(existingResponse ? '답글이 수정되었습니다' : '답글이 등록되었습니다')
       setIsEditing(false)
       router.refresh()
-    } catch (error: any) {
-      toast.error(error.message)
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '오류가 발생했습니다';
+      toast.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -68,8 +69,9 @@ export function TrainerReviewResponse({ reviewId, existingResponse }: TrainerRev
       setResponse('')
       setIsEditing(false)
       router.refresh()
-    } catch (error: any) {
-      toast.error(error.message)
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '오류가 발생했습니다';
+      toast.error(errorMessage)
     } finally {
       setLoading(false)
     }

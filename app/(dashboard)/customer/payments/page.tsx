@@ -99,9 +99,21 @@ export default async function CustomerPaymentsPage() {
     }).format(date)
   }
 
-  const getTrainerName = (booking: any) => {
-    const trainer = Array.isArray(booking?.trainer) ? booking.trainer[0] : null
-    const profile = Array.isArray(trainer?.profiles) ? trainer.profiles[0] : null
+  interface BookingTrainer {
+    trainer?: Array<{
+      profiles?: Array<{
+        full_name?: string
+      }>
+    }> | {
+      profiles?: {
+        full_name?: string
+      }
+    }
+  }
+
+  const getTrainerName = (booking: BookingTrainer) => {
+    const trainer = Array.isArray(booking?.trainer) ? booking.trainer[0] : booking?.trainer
+    const profile = Array.isArray(trainer?.profiles) ? trainer.profiles[0] : trainer?.profiles
     return profile?.full_name || '트레이너'
   }
 

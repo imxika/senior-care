@@ -4,7 +4,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-12-18.acacia',
+  apiVersion: '2025-09-30.clover',
 })
 
 /**
@@ -68,7 +68,14 @@ export async function POST(
       )
     }
 
-    let refundResult: any = null
+    interface RefundResult {
+      refundId: string
+      amount: number
+      status: string
+      provider: 'stripe' | 'toss'
+    }
+
+    let refundResult: RefundResult | null = null
 
     // 5. 결제 수단별 환불 처리
     if (payment.payment_provider === 'stripe') {
@@ -100,14 +107,15 @@ export async function POST(
         refundResult = {
           refundId: refund.id,
           amount: refund.amount / 100, // 원 단위로 변환
-          status: refund.status,
+          status: refund.status ?? 'pending',
           provider: 'stripe'
         }
 
-      } catch (stripeError: any) {
+      } catch (stripeError: unknown) {
         console.error('Stripe refund failed:', stripeError)
+        const errorMessage = stripeError instanceof Error ? stripeError.message : 'Unknown error'
         return NextResponse.json(
-          { error: `Stripe refund failed: ${stripeError.message}` },
+          { error: `Stripe refund failed: ${errorMessage}` },
           { status: 500 }
         )
       }
@@ -155,10 +163,11 @@ export async function POST(
           provider: 'toss'
         }
 
-      } catch (tossError: any) {
+      } catch (tossError: unknown) {
         console.error('Toss refund failed:', tossError)
+        const errorMessage = tossError instanceof Error ? tossError.message : 'Unknown error'
         return NextResponse.json(
-          { error: `Toss refund failed: ${tossError.message}` },
+          { error: `Toss refund failed: ${errorMessage}` },
           { status: 500 }
         )
       }

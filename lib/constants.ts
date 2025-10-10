@@ -176,7 +176,13 @@ export const PRICING = {
   PLATFORM_FEE_PERCENT: 15,
   MIN_HOURLY_RATE: 50000,
   MAX_HOURLY_RATE: 200000,
-  RECOMMENDED_MAX_HOURLY_RATE: 100000  // 추천 예약용 최대 시급 (기본 필터)
+  RECOMMENDED_MAX_HOURLY_RATE: 100000,  // 추천 예약용 최대 시급 (기본 필터)
+  // 세션 타입별 기본 가격 (1회당, 랜딩 페이지 기준)
+  SESSION_PRICES: {
+    '1:1': 100000,   // 1:1 프리미엄 (1인)
+    '2:1': 75000,    // 1:2 듀얼 (1인당)
+    '3:1': 55000,    // 1:3 그룹 (1인당)
+  }
 } as const
 
 // ====================================

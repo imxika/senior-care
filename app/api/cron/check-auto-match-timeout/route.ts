@@ -107,7 +107,17 @@ export async function GET(request: NextRequest) {
         }
 
         // 2.3. 모든 Admin에게 알림
-        const customerName = (booking.customer as any).profile?.full_name || '고객'
+        interface CustomerData {
+          id: string
+          profile?: {
+            id: string
+            full_name: string
+          } | Array<{ id: string; full_name: string }>
+        }
+
+        const customer = booking.customer as unknown as CustomerData
+        const customerProfile = Array.isArray(customer?.profile) ? customer.profile[0] : customer?.profile
+        const customerName = customerProfile?.full_name || '고객'
         const scheduledAt = new Date(`${booking.booking_date}T${booking.start_time}`)
 
         const notification = notificationTemplates.autoMatchTimeout(customerName, scheduledAt)

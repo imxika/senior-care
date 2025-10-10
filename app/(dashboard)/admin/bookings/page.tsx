@@ -156,7 +156,7 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
       )
     `)
     .order('created_at', { ascending: false })
-    .limit(200) as { data: BookingWithRelations[] | null; error: any }
+    .limit(200) as { data: BookingWithRelations[] | null; error: Error | null }
 
   if (error) {
     console.error('Error fetching bookings:', error)

@@ -27,7 +27,7 @@ import {
   Bell
 } from 'lucide-react'
 import Link from 'next/link'
-import { formatPrice, formatDate, formatTime, combineDateTime } from '@/lib/utils'
+import { formatPrice, formatDate, combineDateTime } from '@/lib/utils'
 import { BOOKING_STATUS_CONFIG, SERVICE_TYPE_LABELS } from '@/lib/constants'
 import { RefundPaymentDialog } from '@/components/admin/refund-payment-dialog'
 
@@ -35,6 +35,26 @@ interface PageProps {
   params: Promise<{
     id: string
   }>
+}
+
+interface Payment {
+  id: string
+  payment_status: 'paid' | 'pending' | 'refunded' | 'failed'
+  total_amount: number
+  amount: number
+  payment_method: string
+  payment_provider: 'stripe' | 'toss'
+  payment_metadata?: Record<string, unknown> | null
+  paid_at?: string | null
+  created_at: string
+}
+
+interface TrainerNotification {
+  id: string
+  title: string
+  message: string
+  created_at: string
+  is_read: boolean
 }
 
 export default async function AdminBookingDetailPage({ params }: PageProps) {
@@ -123,11 +143,21 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
   }
 
   // Trainer에게 전송된 알림 조회
-  const { data: trainerNotifications } = booking?.trainer
+  const trainerData = booking?.trainer && typeof booking.trainer === 'object'
+    ? (Array.isArray(booking.trainer) ? booking.trainer[0] : booking.trainer)
+    : null
+  const trainerProfile = trainerData && typeof trainerData === 'object' && 'profile' in trainerData
+    ? (Array.isArray(trainerData.profile) ? trainerData.profile[0] : trainerData.profile)
+    : null
+  const trainerProfileId = trainerProfile && typeof trainerProfile === 'object' && 'id' in trainerProfile
+    ? trainerProfile.id
+    : null
+
+  const { data: trainerNotifications } = trainerProfileId
     ? await serviceSupabase
         .from('notifications')
         .select('*')
-        .eq('user_id', ((booking.trainer as any).profile as any).id)
+        .eq('user_id', trainerProfileId)
         .or(`link.cs.{/bookings/${id}},link.cs.{/trainer/bookings/${id}}`)
         .order('created_at', { ascending: false })
     : { data: null }
@@ -340,13 +370,13 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
               {booking.payments && booking.payments.length > 0 ? (
                 <div className="space-y-3 mt-3">
                   <p className="text-sm font-medium text-muted-foreground">결제 내역</p>
-                  {booking.payments.map((payment: any) => {
+                  {booking.payments.map((payment: Payment) => {
                     const statusBadge =
                       payment.payment_status === 'paid' ? { label: '✅ 결제 완료', variant: 'default' as const } :
                       payment.payment_status === 'pending' ? { label: '⏳ 결제 대기', variant: 'secondary' as const } :
                       payment.payment_status === 'refunded' ? { label: '🔄 환불 완료', variant: 'outline' as const } :
-                      payment.payment_status === 'cancelled' ? { label: '🚫 취소', variant: 'secondary' as const } :
-                      { label: '❌ 결제 실패', variant: 'destructive' as const };
+                      payment.payment_status === 'failed' ? { label: '❌ 결제 실패', variant: 'destructive' as const } :
+                      { label: '⚠️ 알 수 없음', variant: 'secondary' as const };
 
                     const providerLabel = payment.payment_provider === 'stripe' ? 'Stripe' : 'Toss Payments';
 
@@ -360,7 +390,7 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
                         <div className="grid grid-cols-2 gap-2 text-xs">
                           <div>
                             <span className="text-muted-foreground">금액:</span>
-                            <span className="ml-1 font-medium">{parseFloat(payment.amount).toLocaleString()}원</span>
+                            <span className="ml-1 font-medium">{typeof payment.amount === 'number' ? payment.amount.toLocaleString() : parseFloat(String(payment.amount)).toLocaleString()}원</span>
                           </div>
                           <div>
                             <span className="text-muted-foreground">결제수단:</span>
@@ -375,16 +405,22 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
                           </div>
                         )}
 
-                        {payment.payment_status === 'refunded' && payment.payment_metadata?.refund && (
+                        {payment.payment_status === 'refunded' && payment.payment_metadata && typeof payment.payment_metadata === 'object' && 'refund' in payment.payment_metadata && (
                           <div className="text-xs bg-yellow-50 border border-yellow-200 rounded p-2 mt-2">
                             <p className="font-medium text-yellow-800">환불 정보</p>
-                            <p className="text-yellow-700 mt-1">
-                              사유: {payment.payment_metadata.refund.reason || '정보 없음'}
-                            </p>
-                            {payment.payment_metadata.refund.refundedAt && (
-                              <p className="text-yellow-700">
-                                환불일시: {new Date(payment.payment_metadata.refund.refundedAt).toLocaleString('ko-KR')}
-                              </p>
+                            {typeof payment.payment_metadata.refund === 'object' && payment.payment_metadata.refund && (
+                              <>
+                                {'reason' in payment.payment_metadata.refund && (
+                                  <p className="text-yellow-700 mt-1">
+                                    사유: {String(payment.payment_metadata.refund.reason || '정보 없음')}
+                                  </p>
+                                )}
+                                {'refundedAt' in payment.payment_metadata.refund && payment.payment_metadata.refund.refundedAt && (
+                                  <p className="text-yellow-700">
+                                    환불일시: {new Date(String(payment.payment_metadata.refund.refundedAt)).toLocaleString('ko-KR')}
+                                  </p>
+                                )}
+                              </>
                             )}
                           </div>
                         )}
@@ -396,7 +432,7 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
                           {payment.payment_status === 'paid' && (
                             <RefundPaymentDialog
                               paymentId={payment.id}
-                              amount={payment.amount}
+                              amount={String(payment.amount)}
                               provider={payment.payment_provider}
                               bookingDate={booking.booking_date}
                               startTime={booking.start_time}
@@ -433,7 +469,7 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
                     총 {trainerNotifications.length}건의 알림이 전송되었습니다.
                   </p>
                   <div className="space-y-2">
-                    {trainerNotifications.map((notification: any) => (
+                    {trainerNotifications.map((notification: TrainerNotification) => (
                       <div key={notification.id} className="bg-gray-50 rounded-lg p-3 border">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
@@ -443,7 +479,7 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
                               <span className="text-xs text-muted-foreground">
                                 {new Date(notification.created_at).toLocaleString('ko-KR')}
                               </span>
-                              {notification.read_at ? (
+                              {notification.is_read ? (
                                 <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">✓ 읽음</span>
                               ) : (
                                 <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">미읽음</span>

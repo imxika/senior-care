@@ -3,20 +3,63 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+interface User {
+  id: string;
+  email?: string;
+}
+
+interface Customer {
+  id: string;
+  full_name?: string;
+  guardian_name?: string;
+  mobility_level?: string;
+}
+
+interface Booking {
+  id: string;
+  booking_date: string;
+  service_type: string;
+  status: string;
+  created_at: string;
+  total_price?: number;
+  customer?: {
+    profile?: {
+      full_name?: string;
+    };
+  };
+  trainer?: {
+    profile?: {
+      full_name?: string;
+    };
+  };
+  payments?: Payment[];
+}
+
+interface Payment {
+  id: string;
+  amount: string;
+  payment_status: string;
+  payment_provider: string;
+  payment_method?: string;
+  paid_at?: string;
+}
+
+interface AuthStatus {
+  isAuthenticated: boolean;
+  user: User | null;
+  customer: Customer | null;
+}
+
 /**
  * 예약 목록 페이지
  * /bookings
  */
 export default function BookingsPage() {
   const router = useRouter();
-  const [bookings, setBookings] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [authStatus, setAuthStatus] = useState<{
-    isAuthenticated: boolean;
-    user: any;
-    customer: any;
-  }>({
+  const [authStatus, setAuthStatus] = useState<AuthStatus>({
     isAuthenticated: false,
     user: null,
     customer: null,
@@ -38,7 +81,7 @@ export default function BookingsPage() {
         setError('로그인이 필요합니다. /test-payment 페이지에서 로그인해주세요.');
         setLoading(false);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Auth check error:', err);
       setError('인증 상태를 확인할 수 없습니다.');
       setLoading(false);
@@ -73,9 +116,9 @@ export default function BookingsPage() {
       }
 
       setBookings(data.data || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Fetch bookings error:', err);
-      setError(err.message);
+      setError(err instanceof Error ? err.message : '예약 목록을 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);
     }
@@ -239,7 +282,7 @@ export default function BookingsPage() {
                 {booking.payments && booking.payments.length > 0 && (
                   <div className="border-t pt-4 mt-4">
                     <h4 className="text-sm font-semibold text-gray-700 mb-2">결제 정보</h4>
-                    {booking.payments.map((payment: any) => (
+                    {booking.payments.map((payment: Payment) => (
                       <div key={payment.id} className="bg-gray-50 rounded-lg p-3 mb-2">
                         <div className="flex items-center justify-between">
                           <div>

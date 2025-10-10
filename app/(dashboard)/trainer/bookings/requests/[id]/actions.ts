@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import { createNotification, notificationTemplates } from '@/lib/notifications'
 import { combineDateTime } from '@/lib/utils'
 
@@ -41,7 +42,8 @@ export async function acceptBookingRequest(bookingId: string) {
     return { error: '트레이너 정보를 찾을 수 없습니다.' }
   }
 
-  console.log('👤 [ACCEPT-REQUEST] Trainer:', trainer.profile?.full_name, trainer.id)
+  const trainerProfileData = Array.isArray(trainer.profile) ? trainer.profile[0] : trainer.profile
+  console.log('👤 [ACCEPT-REQUEST] Trainer:', trainerProfileData?.full_name, trainer.id)
 
   // 2. 예약 정보 확인
   const { data: booking } = await serviceSupabase
@@ -145,9 +147,11 @@ export async function acceptBookingRequest(bookingId: string) {
     })
 
   // 8. 고객에게 확정 알림
-  const customerProfileId = (booking.customer as any).profile?.id
-  const customerName = (booking.customer as any).profile?.full_name || '고객'
-  const trainerName = trainer.profile?.full_name || '트레이너'
+  const customerData = Array.isArray(booking.customer) ? booking.customer[0] : booking.customer
+  const customerProfileData = Array.isArray(customerData?.profile) ? customerData.profile[0] : customerData?.profile
+  const customerProfileId = customerProfileData?.id
+  const customerName = customerProfileData?.full_name || '고객'
+  const trainerName = trainerProfileData?.full_name || '트레이너'
   const scheduledAt = combineDateTime(booking.booking_date, booking.start_time)
 
   if (customerProfileId) {
@@ -169,7 +173,7 @@ export async function acceptBookingRequest(bookingId: string) {
 
   console.log('🎉 [ACCEPT-REQUEST] Complete!')
 
-  return { success: true }
+  redirect('/trainer/dashboard')
 }
 
 /**
@@ -225,5 +229,5 @@ export async function declineBookingRequest(
 
   revalidatePath('/trainer/bookings')
 
-  return { success: true }
+  redirect('/trainer/dashboard')
 }

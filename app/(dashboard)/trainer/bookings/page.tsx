@@ -126,11 +126,13 @@ export default async function TrainerBookingsPage({ searchParams }: PageProps) {
 
   // 데이터 구조 확인용 로그
   if (rawBookings && rawBookings.length > 0) {
+    const firstCustomerData = Array.isArray(rawBookings[0].customer) ? rawBookings[0].customer[0] : rawBookings[0].customer
+    const firstProfileData = Array.isArray(firstCustomerData?.profile) ? firstCustomerData.profile[0] : firstCustomerData?.profile
     console.log('First booking with customer data:', {
       id: rawBookings[0].id,
       customer: rawBookings[0].customer,
       hasCustomer: !!rawBookings[0].customer,
-      customerProfile: rawBookings[0].customer?.profile
+      customerProfile: firstProfileData
     })
   }
 
@@ -175,12 +177,16 @@ export default async function TrainerBookingsPage({ searchParams }: PageProps) {
 
   if (params.search) {
     const search = params.search.toLowerCase()
-    filteredBookings = filteredBookings.filter(b =>
-      b.customer?.profile?.full_name?.toLowerCase().includes(search) ||
-      b.customer?.profile?.email?.toLowerCase().includes(search) ||
-      b.customer?.profile?.phone?.toLowerCase().includes(search) ||
-      b.id.toLowerCase().includes(search)
-    )
+    filteredBookings = filteredBookings.filter(b => {
+      const customerData = Array.isArray(b.customer) ? b.customer[0] : b.customer
+      const profileData = Array.isArray(customerData?.profile) ? customerData.profile[0] : customerData?.profile
+      return (
+        profileData?.full_name?.toLowerCase().includes(search) ||
+        profileData?.email?.toLowerCase().includes(search) ||
+        profileData?.phone?.toLowerCase().includes(search) ||
+        b.id.toLowerCase().includes(search)
+      )
+    })
   }
 
   // 정렬 (기본값: 최근 활동 순)
@@ -205,8 +211,14 @@ export default async function TrainerBookingsPage({ searchParams }: PageProps) {
         comparison = a.status.localeCompare(b.status)
         break
       case 'customer_name':
-        const nameA = a.customer?.profile?.full_name || ''
-        const nameB = b.customer?.profile?.full_name || ''
+        const customerA = Array.isArray(a.customer) ? a.customer[0] : a.customer
+        const profileA = Array.isArray(customerA?.profile) ? customerA.profile[0] : customerA?.profile
+        const nameA = profileA?.full_name || ''
+
+        const customerB = Array.isArray(b.customer) ? b.customer[0] : b.customer
+        const profileB = Array.isArray(customerB?.profile) ? customerB.profile[0] : customerB?.profile
+        const nameB = profileB?.full_name || ''
+
         comparison = nameA.localeCompare(nameB, 'ko')
         break
       default:
@@ -408,6 +420,9 @@ export default async function TrainerBookingsPage({ searchParams }: PageProps) {
               <div className="flex flex-col gap-4 md:hidden">
                 {paginatedBookings.map((booking) => {
                   const statusBadge = getStatusBadge(booking.status)
+                  const customerData = Array.isArray(booking.customer) ? booking.customer[0] : booking.customer
+                  const profileData = Array.isArray(customerData?.profile) ? customerData.profile[0] : customerData?.profile
+
                   return (
                     <div key={booking.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
                       <div className="flex items-stretch gap-3">
@@ -416,7 +431,7 @@ export default async function TrainerBookingsPage({ searchParams }: PageProps) {
                           <div>
                             <div className="flex items-center gap-2 mb-1 flex-wrap">
                               <p className="font-semibold">
-                                {booking.customer?.profile?.full_name || '고객 정보 없음'}
+                                {profileData?.full_name || '고객 정보 없음'}
                               </p>
                               <Badge variant={statusBadge.variant} className="shrink-0">
                                 {statusBadge.label}
@@ -426,7 +441,7 @@ export default async function TrainerBookingsPage({ searchParams }: PageProps) {
                               </Badge>
                             </div>
                             <p className="text-sm text-muted-foreground truncate">
-                              {booking.customer?.profiles?.phone || booking.customer?.profiles?.email}
+                              {profileData?.phone || profileData?.email}
                             </p>
                           </div>
 
@@ -474,6 +489,9 @@ export default async function TrainerBookingsPage({ searchParams }: PageProps) {
                   <tbody>
                     {paginatedBookings.map((booking) => {
                       const statusBadge = getStatusBadge(booking.status)
+                      const customerData = Array.isArray(booking.customer) ? booking.customer[0] : booking.customer
+                      const profileData = Array.isArray(customerData?.profile) ? customerData.profile[0] : customerData?.profile
+
                       return (
                         <tr key={booking.id} className="border-b hover:bg-muted/50">
                           <td className="p-3 font-mono text-sm">{booking.id.slice(0, 8)}</td>
@@ -482,10 +500,10 @@ export default async function TrainerBookingsPage({ searchParams }: PageProps) {
                           </td>
                           <td className="p-3">
                             <div className="text-sm font-medium">
-                              {booking.customer?.profile?.full_name || '고객 정보 없음'}
+                              {profileData?.full_name || '고객 정보 없음'}
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              {booking.customer?.profile?.phone || booking.customer?.profile?.email}
+                              {profileData?.phone || profileData?.email}
                             </div>
                           </td>
                           <td className="p-3">

@@ -272,7 +272,7 @@ export default async function TrainerDetailPage({ params }: PageProps) {
             <CardContent>
               {reviews && reviews.length > 0 ? (
                 <div className="space-y-4">
-                  {reviews.map((review: any) => (
+                  {reviews.map((review: Record<string, unknown>) => (
                     <div key={review.id} className="border-b last:border-0 pb-4 last:pb-0">
                       <div className="flex items-start gap-3 mb-2">
                         <Avatar className="h-10 w-10">

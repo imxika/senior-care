@@ -69,7 +69,7 @@ export async function PUT(
     }
 
     return NextResponse.json({ review: updatedReview })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('PUT /api/reviews/[id]/response error:', error)
     return NextResponse.json({ error: '서버 오류가 발생했습니다' }, { status: 500 })
   }

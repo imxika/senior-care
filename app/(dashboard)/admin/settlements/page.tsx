@@ -24,6 +24,86 @@ import { formatPrice } from '@/lib/utils'
 import { PRICING } from '@/lib/constants'
 import Link from 'next/link'
 
+// Supabase query result type (foreign keys return arrays)
+interface SupabasePaymentResult {
+  id: string
+  amount: number
+  payment_status: string
+  paid_at: string | null
+  payment_provider: string
+  booking: Array<{
+    id: string
+    booking_date: string
+    start_time: string
+    end_time: string
+    duration_minutes: number
+    service_type: string
+    booking_type: string
+    service_completed_at: string | null
+    trainer: Array<{
+      id: string
+      hourly_rate: number | null
+      profile: Array<{
+        full_name: string | null
+        avatar_url: string | null
+        email: string | null
+      }>
+    }>
+    customer: Array<{
+      profile: Array<{
+        full_name: string | null
+      }>
+    }>
+  }>
+}
+
+// Normalized payment type
+interface PaymentWithBooking {
+  id: string
+  amount: string
+  paid_at: string | null
+  payment_provider: string
+  booking: {
+    id: string
+    booking_date: string
+    start_time: string
+    duration_minutes: number
+    service_type: string
+    booking_type: string
+    trainer?: {
+      id: string
+      hourly_rate?: number
+      profile?: {
+        full_name?: string
+        avatar_url?: string | null
+        email?: string
+      }
+    }
+    customer?: {
+      profile?: {
+        full_name?: string
+      }
+    }
+  }
+}
+
+interface TrainerSettlement {
+  trainer: {
+    id: string
+    hourly_rate?: number
+    profile?: {
+      full_name?: string
+      avatar_url?: string | null
+      email?: string
+    }
+  }
+  payments: PaymentWithBooking[]
+  totalRevenue: number
+  platformCommission: number
+  settlementAmount: number
+  bookingCount: number
+}
+
 export default async function AdminSettlementsPage() {
   const supabase = await createClient()
 
@@ -51,7 +131,7 @@ export default async function AdminSettlementsPage() {
   )
 
   // 결제 완료된 예약만 조회 (정산 대상) - Service Role로 RLS 우회
-  const { data: payments } = await serviceSupabase
+  const { data: rawPayments } = await serviceSupabase
     .from('payments')
     .select(`
       id,
@@ -81,24 +161,56 @@ export default async function AdminSettlementsPage() {
     .eq('payment_status', 'paid')
     .order('paid_at', { ascending: false })
 
+  // Normalize Supabase array results to flat objects
+  const supabasePayments = (rawPayments || []) as unknown as SupabasePaymentResult[]
+  const payments: PaymentWithBooking[] = supabasePayments.map((payment) => {
+    const bookingData = Array.isArray(payment.booking) ? payment.booking[0] : undefined
+    const trainerData = bookingData?.trainer ? (Array.isArray(bookingData.trainer) ? bookingData.trainer[0] : bookingData.trainer) : undefined
+    const trainerProfile = trainerData?.profile ? (Array.isArray(trainerData.profile) ? trainerData.profile[0] : trainerData.profile) : undefined
+    const customerData = bookingData?.customer ? (Array.isArray(bookingData.customer) ? bookingData.customer[0] : bookingData.customer) : undefined
+    const customerProfile = customerData?.profile ? (Array.isArray(customerData.profile) ? customerData.profile[0] : customerData.profile) : undefined
+
+    return {
+      id: payment.id,
+      amount: String(payment.amount),
+      paid_at: payment.paid_at,
+      payment_provider: payment.payment_provider,
+      booking: {
+        id: bookingData?.id || '',
+        booking_date: bookingData?.booking_date || '',
+        start_time: bookingData?.start_time || '',
+        duration_minutes: bookingData?.duration_minutes || 0,
+        service_type: bookingData?.service_type || '',
+        booking_type: bookingData?.booking_type || '',
+        trainer: trainerData ? {
+          id: trainerData.id,
+          hourly_rate: trainerData.hourly_rate || undefined,
+          profile: trainerProfile ? {
+            full_name: trainerProfile.full_name || undefined,
+            avatar_url: trainerProfile.avatar_url,
+            email: trainerProfile.email || undefined
+          } : undefined
+        } : undefined,
+        customer: customerProfile ? {
+          profile: {
+            full_name: customerProfile.full_name || undefined
+          }
+        } : undefined
+      }
+    }
+  })
+
   // 트레이너별로 그룹화 (결제 기반)
   const platformCommissionRate = 0.15 // 15% 수수료
 
-  const trainerSettlements = new Map<string, {
-    trainer: any
-    payments: any[]
-    totalRevenue: number // 실제 결제 금액
-    platformCommission: number // 플랫폼 수수료 (15%)
-    settlementAmount: number // 트레이너 정산 금액 (85%)
-    bookingCount: number
-  }>()
+  const trainerSettlements = new Map<string, TrainerSettlement>()
 
-  payments?.forEach((payment: any) => {
-    const booking = Array.isArray(payment.booking) ? payment.booking[0] : payment.booking
+  payments.forEach((payment: PaymentWithBooking) => {
+    const booking = payment.booking
     if (!booking?.trainer) return
 
-    const trainer = Array.isArray(booking.trainer) ? booking.trainer[0] : booking.trainer
-    const trainerId = trainer?.id
+    const trainer = booking.trainer
+    const trainerId = trainer.id
     if (!trainerId) return
 
     const amount = parseFloat(payment.amount)
@@ -117,7 +229,7 @@ export default async function AdminSettlementsPage() {
     }
 
     const data = trainerSettlements.get(trainerId)!
-    data.payments.push({ ...payment, booking })
+    data.payments.push(payment)
     data.totalRevenue += amount
     data.platformCommission += commission
     data.settlementAmount += settlement
@@ -138,17 +250,17 @@ export default async function AdminSettlementsPage() {
   // 이번 달 통계
   const currentMonth = new Date().getMonth()
   const currentYear = new Date().getFullYear()
-  const thisMonthPayments = payments?.filter((p: any) => {
+  const thisMonthPayments = payments.filter((p: PaymentWithBooking) => {
+    if (!p.paid_at) return false
     const paidDate = new Date(p.paid_at)
     return paidDate.getMonth() === currentMonth && paidDate.getFullYear() === currentYear
-  }) || []
+  })
 
-  const thisMonthRevenue = thisMonthPayments.reduce((sum: number, p: any) => {
+  const thisMonthRevenue = thisMonthPayments.reduce((sum: number, p: PaymentWithBooking) => {
     return sum + parseFloat(p.amount)
   }, 0)
 
   const thisMonthCommission = thisMonthRevenue * platformCommissionRate
-  const thisMonthSettlement = thisMonthRevenue - thisMonthCommission
 
   return (
     <>
@@ -316,7 +428,7 @@ export default async function AdminSettlementsPage() {
 
                     {/* Payments List */}
                     <div className="space-y-3">
-                      {settlement.payments.slice(0, 5).map((payment: any) => {
+                      {settlement.payments.slice(0, 5).map((payment) => {
                         const booking = payment.booking
                         const customer = Array.isArray(booking?.customer) ? booking.customer[0] : booking?.customer
                         const customerProfile = Array.isArray(customer?.profile) ? customer.profile[0] : customer?.profile
@@ -363,7 +475,7 @@ export default async function AdminSettlementsPage() {
                                 매출 {formatPrice(amount)}
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                {new Date(payment.paid_at).toLocaleDateString('ko-KR')}
+                                {payment.paid_at ? new Date(payment.paid_at).toLocaleDateString('ko-KR') : '-'}
                               </div>
                             </div>
                           </div>

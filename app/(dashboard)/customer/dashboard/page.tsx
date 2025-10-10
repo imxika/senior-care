@@ -30,7 +30,7 @@ export default async function CustomerDashboard() {
 
   if (profile?.user_type !== 'customer') redirect('/')
 
-  let { data: customer, error: customerError } = await supabase
+  const { data: customer, error: customerError } = await supabase
     .from('customers')
     .select('*')
     .eq('profile_id', user.id)

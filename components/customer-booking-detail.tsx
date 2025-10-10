@@ -62,7 +62,7 @@ interface CustomerBookingDetailProps {
       payment_provider: string
       paid_at?: string
       created_at: string
-      payment_metadata?: any
+      payment_metadata?: Record<string, unknown>
     }>
   }
   existingReview?: {

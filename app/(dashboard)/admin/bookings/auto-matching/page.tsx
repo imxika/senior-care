@@ -16,6 +16,19 @@ import { ko } from 'date-fns/locale'
 import Link from 'next/link'
 import { CancelBookingButton } from './actions-ui'
 
+// 타입 정의
+interface BookingCustomer {
+  profile?: {
+    full_name?: string
+  }
+}
+
+interface BookingTrainer {
+  profile?: {
+    full_name?: string
+  }
+}
+
 export default async function AutoMatchingMonitorPage() {
   const supabase = await createClient()
 
@@ -180,7 +193,7 @@ export default async function AutoMatchingMonitorPage() {
           </h2>
 
           {timedOutBookings.map((booking) => {
-            const customerName = (booking.customer as any)?.profile?.full_name || '고객'
+            const customerName = (booking.customer as BookingCustomer)?.profile?.full_name || '고객'
             const deadline = new Date(booking.auto_match_deadline)
             const notifiedAt = new Date(booking.notified_at)
             const adminNotifiedAt = booking.admin_notified_at ? new Date(booking.admin_notified_at) : null
@@ -259,7 +272,7 @@ export default async function AutoMatchingMonitorPage() {
           </h2>
 
           {pendingBookings.map((booking) => {
-            const customerName = (booking.customer as any)?.profile?.full_name || '고객'
+            const customerName = (booking.customer as BookingCustomer)?.profile?.full_name || '고객'
 
             // NULL 체크 및 기본값 처리
             const hasValidDates = booking.notified_at && booking.auto_match_deadline
@@ -364,8 +377,8 @@ export default async function AutoMatchingMonitorPage() {
 
           <div className="grid gap-4 md:grid-cols-2">
             {recentMatched.map((booking) => {
-              const customerName = (booking.customer as any)?.profile?.full_name || '고객'
-              const trainerName = (booking.trainer as any)?.profile?.full_name || '트레이너'
+              const customerName = (booking.customer as BookingCustomer)?.profile?.full_name || '고객'
+              const trainerName = (booking.trainer as BookingTrainer)?.profile?.full_name || '트레이너'
               const confirmedAt = new Date(booking.trainer_confirmed_at)
 
               return (

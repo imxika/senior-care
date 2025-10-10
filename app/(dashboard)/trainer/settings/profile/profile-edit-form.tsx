@@ -24,9 +24,30 @@ const SPECIALTY_OPTIONS = [
   '실버 댄스',
 ]
 
+interface Profile {
+  full_name?: string
+  phone?: string
+  email?: string
+}
+
+interface Trainer {
+  years_experience?: number
+  hourly_rate?: number
+  bio?: string
+  specialties?: string[]
+  certifications?: string[]
+  service_areas?: string[]
+  max_group_size?: number
+  home_visit_available?: boolean
+  center_visit_available?: boolean
+  center_name?: string
+  center_address?: string
+  center_phone?: string
+}
+
 interface ProfileEditFormProps {
-  profile: any
-  trainer: any
+  profile: Profile
+  trainer: Trainer
   isEditing: boolean
   setIsEditing: (value: boolean) => void
 }

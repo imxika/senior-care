@@ -370,7 +370,7 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
                   <div className="pt-3 md:pt-4 border-t">
                     <p className="text-sm text-muted-foreground mb-2">의료 정보</p>
                     <div className="flex flex-wrap gap-2">
-                      {booking.customer.medical_conditions.map((condition, index) => (
+                      {booking.customer.medical_conditions.map((condition: string, index: number) => (
                         <Badge key={index} variant="outline" className="text-xs md:text-sm">
                           {condition}
                         </Badge>

@@ -64,8 +64,9 @@ export function ReviewForm({ bookingId, trainerId, existingReview }: ReviewFormP
 
       toast.success(existingReview ? '리뷰가 수정되었습니다' : '리뷰가 등록되었습니다')
       router.refresh()
-    } catch (error: any) {
-      toast.error(error.message)
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '오류가 발생했습니다';
+      toast.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -94,8 +95,9 @@ export function ReviewForm({ bookingId, trainerId, existingReview }: ReviewFormP
       setRating(0)
       setComment('')
       router.refresh()
-    } catch (error: any) {
-      toast.error(error.message)
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '오류가 발생했습니다';
+      toast.error(errorMessage)
     } finally {
       setLoading(false)
     }

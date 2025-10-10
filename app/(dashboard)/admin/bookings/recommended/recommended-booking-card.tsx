@@ -30,8 +30,9 @@ interface RecommendedBookingCardProps {
 }
 
 export function RecommendedBookingCard({ booking }: RecommendedBookingCardProps) {
-  // 고객 이름 추출
-  const profile = booking.customer?.profile
+  // 고객 이름 추출 (handle array or object from Supabase)
+  const profileData = booking.customer?.profile
+  const profile = Array.isArray(profileData) ? profileData[0] : profileData
   const customerName = profile?.full_name || profile?.email?.split('@')[0] || '고객'
 
   const date = new Date(booking.booking_date)

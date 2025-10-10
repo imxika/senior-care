@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
       data
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Toss API test error:', error);
     return NextResponse.json(
       {

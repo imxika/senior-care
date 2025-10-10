@@ -19,9 +19,26 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { updateCustomerProfile } from './actions'
 
+interface Profile {
+  full_name?: string
+  phone?: string
+}
+
+interface Customer {
+  birth_date?: string
+  gender?: string
+  address?: string
+  address_detail?: string
+  guardian_name?: string
+  guardian_relationship?: string
+  guardian_phone?: string
+  mobility_level?: string
+  notes?: string
+}
+
 interface ProfileEditFormProps {
-  profile: any
-  customer: any
+  profile: Profile
+  customer: Customer
   isEditing: boolean
   setIsEditing: (value: boolean) => void
 }

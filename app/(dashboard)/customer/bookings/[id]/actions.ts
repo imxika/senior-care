@@ -8,7 +8,7 @@ import { calculateCancellationFee } from '@/lib/utils'
 import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-12-18.acacia',
+  apiVersion: '2025-09-30.clover',
 })
 
 export async function cancelBooking(
@@ -134,14 +134,35 @@ ${notes ? `상세 사유: ${notes}\n` : ''}취소 시기: ${cancellationInfo.tim
         }
       )
 
-      let refundResult: any = null
+      let refundResult: {
+        refundId: string
+        amount: number
+        status: string
+        provider: string
+      } | null = null
 
       // Stripe 환불
       if (paidPayment.payment_provider === 'stripe') {
-        const paymentIntentId = paidPayment.payment_metadata?.stripePaymentIntentId
+        // payment_metadata는 JSONB이므로 안전하게 타입 단언
+        const metadata = paidPayment.payment_metadata as Record<string, unknown> | null
+        const paymentIntentId = metadata?.stripePaymentIntentId as string | undefined
 
-        if (paymentIntentId) {
+        console.log('💳 [STRIPE REFUND] Payment metadata:', {
+          hasMetadata: !!paidPayment.payment_metadata,
+          paymentIntentId,
+          metadata: paidPayment.payment_metadata,
+          metadataKeys: metadata ? Object.keys(metadata) : [],
+          metadataType: typeof metadata
+        })
+
+        if (paymentIntentId && typeof paymentIntentId === 'string') {
           const refundAmountInCents = Math.round(cancellationInfo.refundAmount * 100)
+
+          console.log('💸 [STRIPE REFUND] Creating refund:', {
+            paymentIntentId,
+            refundAmount: cancellationInfo.refundAmount,
+            refundAmountInCents
+          })
 
           const refund = await stripe.refunds.create({
             payment_intent: paymentIntentId,
@@ -158,18 +179,28 @@ ${notes ? `상세 사유: ${notes}\n` : ''}취소 시기: ${cancellationInfo.tim
           refundResult = {
             refundId: refund.id,
             amount: refund.amount / 100,
-            status: refund.status,
+            status: refund.status || 'succeeded',
             provider: 'stripe'
           }
 
-          console.log('Stripe 환불 완료:', refundResult)
+          console.log('✅ [STRIPE REFUND] Refund completed:', refundResult)
+        } else {
+          console.error('❌ [STRIPE REFUND] No paymentIntentId found in metadata')
         }
       }
       // Toss 환불
       else if (paidPayment.payment_provider === 'toss') {
-        const paymentKey = paidPayment.payment_metadata?.paymentKey
+        const metadata = paidPayment.payment_metadata as Record<string, unknown> | null
+        const paymentKey = metadata?.paymentKey as string | undefined
 
-        if (paymentKey) {
+        console.log('💳 [TOSS REFUND] Payment metadata:', {
+          hasMetadata: !!paidPayment.payment_metadata,
+          paymentKey,
+          metadata: paidPayment.payment_metadata,
+          metadataKeys: metadata ? Object.keys(metadata) : []
+        })
+
+        if (paymentKey && typeof paymentKey === 'string') {
           const tossResponse = await fetch(
             `https://api.tosspayments.com/v1/payments/${paymentKey}/cancel`,
             {
@@ -215,7 +246,7 @@ ${notes ? `상세 사유: ${notes}\n` : ''}취소 시기: ${cancellationInfo.tim
                 reason: `고객 예약 취소 - ${reason}`,
                 refundedBy: customer.id,
                 refundedAt: new Date().toISOString(),
-                cancellationFee: cancellationInfo.cancellationFee,
+                cancellationFee: cancellationInfo.feeAmount,
                 refundAmount: cancellationInfo.refundAmount
               }
             }

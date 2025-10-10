@@ -81,7 +81,7 @@ export function BookingsTable({ bookings, currentPage, totalPages, params }: Pro
   }
 
   // 정렬
-  let sortedBookings = [...bookings]
+  const sortedBookings = [...bookings]
   sortedBookings.sort((a, b) => {
     let comparison = 0
 

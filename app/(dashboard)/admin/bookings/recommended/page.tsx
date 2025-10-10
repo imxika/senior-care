@@ -2,12 +2,56 @@ import { createClient } from "@/lib/supabase/server"
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { redirect } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { RecommendedBookingCard } from "./recommended-booking-card"
 
 // Force dynamic rendering - no caching
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
+
+// Supabase query 결과 타입 정의 (foreign key joins return arrays)
+interface SupabaseBookingResult {
+  id: string
+  customer_id: string
+  trainer_id: string | null
+  booking_type: string
+  service_type: string
+  booking_date: string
+  start_time: string
+  end_time: string
+  status: string
+  matching_status: string | null
+  total_price: number
+  customer_request: string | null
+  parking_info: string | null
+  created_at: string
+  updated_at: string
+  customer: Array<{
+    id: string
+    profile: Array<{
+      full_name: string | null
+      email: string | null
+      phone: string | null
+    }>
+  }>
+}
+
+// RecommendedBookingCard에 전달할 normalized 타입
+interface NormalizedBooking {
+  id: string
+  booking_date: string
+  start_time: string
+  end_time: string
+  service_type: string
+  customer_notes?: string
+  created_at: string
+  customer?: {
+    profile?: {
+      full_name?: string
+      email?: string
+      phone?: string
+    }
+  }
+}
 
 export default async function AdminRecommendedBookingsPage() {
   const supabase = await createClient()
@@ -78,7 +122,29 @@ export default async function AdminRecommendedBookingsPage() {
     console.error('Error fetching recommended bookings:', error)
   }
 
-  const bookings = pendingBookings || []
+  // Supabase foreign key joins return arrays - normalize to flat objects
+  const rawBookings = (pendingBookings || []) as unknown as SupabaseBookingResult[]
+  const bookings: NormalizedBooking[] = rawBookings.map((booking) => {
+    const customerData = Array.isArray(booking.customer) ? booking.customer[0] : undefined
+    const profileData = customerData?.profile ? (Array.isArray(customerData.profile) ? customerData.profile[0] : customerData.profile) : undefined
+
+    return {
+      id: booking.id,
+      booking_date: booking.booking_date,
+      start_time: booking.start_time,
+      end_time: booking.end_time,
+      service_type: booking.service_type,
+      customer_notes: booking.customer_request || undefined,
+      created_at: booking.created_at,
+      customer: profileData ? {
+        profile: {
+          full_name: profileData.full_name || undefined,
+          email: profileData.email || undefined,
+          phone: profileData.phone || undefined
+        }
+      } : undefined
+    }
+  })
 
   return (
     <div className="container mx-auto p-6">

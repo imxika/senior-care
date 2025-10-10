@@ -23,8 +23,13 @@ export type Trainer = Tables['trainers']['Row']
 export type Program = Tables['programs']['Row']
 export type Booking = Tables['bookings']['Row']
 export type Review = Tables['reviews']['Row']
-export type Payment = Tables['payments']['Row']
+export type BasePayment = Tables['payments']['Row']
 export type Notification = Tables['notifications']['Row']
+
+// Payment 타입 확장 (payment_provider 필드 추가)
+export type Payment = BasePayment & {
+  payment_provider?: 'stripe' | 'toss'
+}
 
 // ====================================
 // 확장된 타입 (Join된 데이터)
@@ -79,6 +84,29 @@ export interface SanityTrainerProfile {
  */
 export interface TrainerWithSanity extends TrainerWithProfile {
   sanity?: SanityTrainerProfile
+}
+
+// ====================================
+// API 응답 타입
+// ====================================
+
+/**
+ * API 에러 응답
+ */
+export interface ApiErrorResponse {
+  error: string
+  details?: string | Record<string, unknown>
+  code?: string
+}
+
+/**
+ * Supabase 쿼리 에러 타입
+ */
+export interface SupabaseError {
+  message: string
+  details?: string
+  hint?: string
+  code?: string
 }
 
 // ====================================

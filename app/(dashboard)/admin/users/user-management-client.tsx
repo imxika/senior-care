@@ -41,8 +41,8 @@ interface User {
   user_type: string
   created_at: string
   last_sign_in_at?: string | null
-  customers: any[]
-  trainers: any[]
+  customers: Array<Record<string, unknown>>
+  trainers: Array<Record<string, unknown>>
   has_profile?: boolean
 }
 

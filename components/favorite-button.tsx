@@ -148,10 +148,11 @@ export function FavoriteButton({
 
       // 페이지 새로고침 (찜한 트레이너 페이지에서 사용 시)
       router.refresh()
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error toggling favorite:', error)
+      const errorMessage = error instanceof Error ? error.message : '다시 시도해주세요.';
       toast.error('찜하기 처리 실패', {
-        description: error.message || '다시 시도해주세요.',
+        description: errorMessage,
       })
     } finally {
       setIsLoading(false)

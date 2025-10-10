@@ -20,6 +20,24 @@ import { CustomerBookingFilters } from './customer-booking-filters'
 import { BookingDateDisplay } from '@/components/booking-date-display'
 import { SortableTableHeader } from '@/components/sortable-table-header'
 
+// 타입 정의
+interface TrainerProfile {
+  full_name: string
+  avatar_url?: string | null
+}
+
+interface Trainer {
+  id: string
+  profiles: TrainerProfile | TrainerProfile[]
+}
+
+interface Payment {
+  id: string
+  payment_status: string
+  created_at: string
+  amount?: number
+}
+
 interface PageProps {
   searchParams: Promise<{
     success?: string
@@ -237,7 +255,7 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
   }
 
   // Trainer profile helper
-  const getTrainerProfile = (trainer: any) => {
+  const getTrainerProfile = (trainer: Trainer | Trainer[] | null) => {
     if (!trainer) return null
     // Handle both array and object formats
     if (Array.isArray(trainer)) {
@@ -249,17 +267,17 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
   }
 
   // Payment helper (가장 최근 결제 반환)
-  const getPayment = (payments: any) => {
+  const getPayment = (payments: Payment[] | null) => {
     if (!Array.isArray(payments) || payments.length === 0) return null
 
     // 가장 최근 결제 반환 (생성일 기준)
-    return payments.sort((a: any, b: any) =>
+    return payments.sort((a: Payment, b: Payment) =>
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     )[0]
   }
 
   // Payment status badge
-  const getPaymentBadge = (payment: any) => {
+  const getPaymentBadge = (payment: Payment | null) => {
     if (!payment) {
       return { label: '⏳ 결제 대기', variant: 'secondary' as const, color: 'text-yellow-600' }
     }

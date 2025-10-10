@@ -123,7 +123,13 @@ export async function notifySuitableTrainers(bookingId: string) {
     }
   })
 
-  // 6. 트레이너 점수 계산 및 정렬
+  // 6. Normalize trainers (handle profile array/object from Supabase)
+  const normalizedTrainers: TrainerForMatching[] = trainers.map(t => ({
+    ...t,
+    profile: Array.isArray(t.profile) ? t.profile[0] : t.profile
+  }))
+
+  // 7. 트레이너 점수 계산 및 정렬
   const bookingForMatching: BookingForMatching = {
     serviceType: booking.service_type,
     specialty,
@@ -134,12 +140,12 @@ export async function notifySuitableTrainers(bookingId: string) {
   }
 
   const scoredTrainers = scoreAndRankTrainers(
-    trainers as TrainerForMatching[],
+    normalizedTrainers,
     bookingForMatching,
     trainerBookingCounts
   )
 
-  // 7. 상위 10명 선택 (예산 내 우선)
+  // 8. 상위 10명 선택 (예산 내 우선)
   const selectedTrainers = selectTopTrainers(scoredTrainers, 10)
 
   console.log(`🎯 [AUTO-MATCH] Selected ${selectedTrainers.length} trainers for notification`)
@@ -154,7 +160,7 @@ export async function notifySuitableTrainers(bookingId: string) {
     return { error: '적합한 트레이너를 찾을 수 없습니다.' }
   }
 
-  // 8. pending_trainer_ids 업데이트 + 30분 마감시간 설정
+  // 9. pending_trainer_ids 업데이트 + 30분 마감시간 설정
   const pendingTrainerIds = selectedTrainers.map(t => t.id)
   const autoMatchDeadline = new Date(Date.now() + 30 * 60 * 1000) // 30분 후
 
@@ -173,12 +179,29 @@ export async function notifySuitableTrainers(bookingId: string) {
     return { error: 'booking 업데이트 실패' }
   }
 
-  // 9. 모든 선택된 트레이너에게 알림 발송 (병렬)
-  const customerName = (booking.customer as any).profile?.full_name || '고객'
+  // 10. 모든 선택된 트레이너에게 알림 발송 (병렬)
+  // Handle customer profile (can be array or object from Supabase)
+  const customerData = booking.customer && typeof booking.customer === 'object'
+    ? (Array.isArray(booking.customer) ? booking.customer[0] : booking.customer)
+    : null
+  const customerProfile = customerData && typeof customerData === 'object' && 'profile' in customerData
+    ? (Array.isArray(customerData.profile) ? customerData.profile[0] : customerData.profile)
+    : null
+  const customerName = customerProfile && typeof customerProfile === 'object' && 'full_name' in customerProfile
+    ? (customerProfile.full_name as string) || '고객'
+    : '고객'
   const scheduledAt = new Date(`${booking.booking_date}T${booking.start_time}`)
+
+  console.log('👤 [AUTO-MATCH] Customer info:', {
+    customerName,
+    scheduledAt: scheduledAt.toISOString(),
+    serviceType: booking.service_type
+  })
 
   const notificationResults = await Promise.allSettled(
     selectedTrainers.map(async (trainer) => {
+      console.log(`📧 [AUTO-MATCH] Sending notification to trainer: ${trainer.profile?.full_name} (${trainer.profile_id})`)
+
       // 알림 생성
       const notification = notificationTemplates.newBookingRequest(
         customerName,
@@ -186,6 +209,13 @@ export async function notifySuitableTrainers(bookingId: string) {
         booking.service_type === 'home_visit' ? '방문' : '센터',
         `${booking.duration_minutes}분`
       )
+
+      console.log(`📝 [AUTO-MATCH] Notification template:`, {
+        title: notification.title,
+        message: notification.message,
+        type: notification.type,
+        userId: trainer.profile_id
+      })
 
       const result = await createNotification({
         userId: trainer.profile_id,
@@ -195,14 +225,20 @@ export async function notifySuitableTrainers(bookingId: string) {
         link: `/trainer/bookings/requests/${bookingId}` // 새로운 요청 페이지
       })
 
+      console.log(`📬 [AUTO-MATCH] Notification result for ${trainer.profile?.full_name}:`, result)
+
       // 응답 로그 기록 (notified)
-      await supabase
+      const { error: responseError } = await supabase
         .from('trainer_match_responses')
         .insert({
           booking_id: bookingId,
           trainer_id: trainer.id,
           response_type: 'notified'
         })
+
+      if (responseError) {
+        console.error(`❌ [AUTO-MATCH] Failed to log response for ${trainer.profile?.full_name}:`, responseError)
+      }
 
       console.log(`✅ [AUTO-MATCH] Notified trainer: ${trainer.profile?.full_name} (score: ${trainer.matchScore})`)
 

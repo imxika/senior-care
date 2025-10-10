@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 결제 상태 업데이트
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       payment_status: body.status === 'DONE' ? 'paid' :
                       body.status === 'CANCELED' ? 'cancelled' :
                       body.status === 'FAILED' ? 'failed' : body.status,

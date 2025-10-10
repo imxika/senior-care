@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     }
 
     const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2024-12-18.acacia',
+      apiVersion: '2025-09-30.clover',
     });
 
     // 6. Stripe Checkout Session 생성
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Stripe session creation error:', error);
     return NextResponse.json(
       { error: 'Internal server error', message: error.message },

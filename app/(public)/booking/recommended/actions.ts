@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { calculateTimeRange } from "@/lib/utils"
-import { BOOKING_TYPE, BOOKING_TYPE_CONFIG } from "@/lib/constants"
+import { BOOKING_TYPE, BOOKING_TYPE_CONFIG, PRICING } from "@/lib/constants"
 import type { ActionResponse } from "@/lib/types"
 import { notifySuitableTrainers } from "@/lib/auto-matching"
 
@@ -119,8 +119,8 @@ export async function createRecommendedBooking(formData: FormData): Promise<Acti
     group_size: 1, // 추천 예약은 기본 1:1 (deprecated, session_type 사용)
     status: 'pending_payment', // 🆕 결제 대기 상태로 시작 (결제 완료 후 pending으로 변경)
     matching_status: 'pending', // 매칭은 결제 완료 후 시작
-    price_per_person: 0, // 매칭 후 설정
-    total_price: 0, // 매칭 후 설정
+    price_per_person: PRICING.SESSION_PRICES[session_type as keyof typeof PRICING.SESSION_PRICES] || PRICING.SESSION_PRICES['1:1'],
+    total_price: PRICING.SESSION_PRICES[session_type as keyof typeof PRICING.SESSION_PRICES] || PRICING.SESSION_PRICES['1:1'],
     customer_notes: customerNotes,
     address_id: finalAddressId,
   }

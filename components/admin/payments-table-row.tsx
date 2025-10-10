@@ -5,8 +5,34 @@ import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 import { RefundPaymentDialog } from './refund-payment-dialog'
 
+interface Profile {
+  full_name?: string;
+}
+
+interface Customer {
+  profile?: Profile | Profile[];
+}
+
+interface Booking {
+  id: string;
+  booking_date?: string;
+  start_time?: string;
+  customer?: Customer;
+}
+
+interface Payment {
+  id: string;
+  amount: string;
+  payment_status: string;
+  payment_provider: string;
+  payment_method?: string;
+  paid_at?: string;
+  created_at: string;
+  booking?: Booking | Booking[];
+}
+
 interface PaymentsTableRowProps {
-  payment: any
+  payment: Payment
 }
 
 export function PaymentsTableRow({ payment }: PaymentsTableRowProps) {

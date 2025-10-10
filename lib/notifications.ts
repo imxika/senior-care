@@ -148,5 +148,12 @@ export const notificationTemplates = {
     title: '⚠️ 자동 매칭 실패',
     message: `${customerName}님의 ${formatScheduledTime(scheduledAt)} 예약이 30분 내에 매칭되지 않았습니다. 수동 매칭이 필요합니다.`,
     type: 'auto_match_timeout' as NotificationType
+  }),
+
+  // 결제 완료 (트레이너에게)
+  paymentCompleted: (amount: number, scheduledAt: Date) => ({
+    title: '결제가 완료되었습니다',
+    message: `${amount.toLocaleString()}원 결제가 완료되었습니다. 예약 일시: ${formatScheduledTime(scheduledAt)}`,
+    type: 'system' as NotificationType
   })
 }

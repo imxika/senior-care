@@ -102,7 +102,7 @@ export async function POST() {
       },
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Create test booking error:', error);
     return NextResponse.json(
       { error: 'Internal server error', message: error.message },

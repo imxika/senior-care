@@ -104,7 +104,7 @@ export default async function CustomerReviewsPage() {
 
         {reviews && reviews.length > 0 ? (
           <div className="grid gap-5">
-            {reviews.map((review: any) => (
+            {reviews.map((review) => (
               <Card key={review.id} className="border-2">
                 <CardHeader className="p-6">
                   <div className="flex items-start justify-between gap-4">

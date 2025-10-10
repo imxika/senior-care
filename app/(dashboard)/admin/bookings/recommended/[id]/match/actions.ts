@@ -140,8 +140,9 @@ export async function matchTrainerToBooking(
 
   // 알림 생성
   const scheduledAt = new Date(`${booking.booking_date}T${booking.start_time}`)
-  const trainerName = (trainer.profiles as any)?.full_name || '트레이너'
-  const customerName = (customerProfile as any)?.full_name || '고객'
+  const trainerProfile = trainer.profiles as { full_name?: string } | undefined
+  const trainerName = trainerProfile?.full_name || '트레이너'
+  const customerName = customerProfile?.full_name || '고객'
 
   console.log('Creating notifications for:', { customerName, trainerName })
 

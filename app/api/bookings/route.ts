@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
       data: bookings || [],
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Bookings API error:', error);
     return NextResponse.json(
       { error: 'Internal server error', message: error.message },

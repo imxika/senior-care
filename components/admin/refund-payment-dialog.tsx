@@ -92,9 +92,10 @@ export function RefundPaymentDialog({ paymentId, amount, provider, bookingDate, 
       setRefundType('full')
       setCustomAmount('')
       router.refresh()
-    } catch (error: any) {
+    } catch (error) {
       console.error('Refund error:', error)
-      toast.error(error.message || '환불 처리 중 오류가 발생했습니다')
+      const errorMessage = error instanceof Error ? error.message : '환불 처리 중 오류가 발생했습니다';
+      toast.error(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -138,7 +139,7 @@ export function RefundPaymentDialog({ paymentId, amount, provider, bookingDate, 
           {/* 환불 유형 선택 */}
           <div className="space-y-3">
             <Label>환불 유형</Label>
-            <RadioGroup value={refundType} onValueChange={(value: any) => setRefundType(value)}>
+            <RadioGroup value={refundType} onValueChange={(value) => setRefundType(value as 'full' | 'partial')}>
               <div className="flex items-start space-x-2">
                 <RadioGroupItem value="full" id="full" />
                 <div className="grid gap-1.5 leading-none">
