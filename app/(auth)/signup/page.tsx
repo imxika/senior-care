@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { UserPlus } from 'lucide-react'
+import { UserPlus, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -17,12 +17,12 @@ export default function SignupPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
+    setIsLoading(true)
     setMessage(null)
 
     // 비밀번호 확인
@@ -31,7 +31,7 @@ export default function SignupPage() {
         type: 'error',
         text: '비밀번호가 일치하지 않습니다.'
       })
-      setLoading(false)
+      setIsLoading(false)
       return
     }
 
@@ -41,7 +41,7 @@ export default function SignupPage() {
         type: 'error',
         text: '비밀번호는 최소 6자 이상이어야 합니다.'
       })
-      setLoading(false)
+      setIsLoading(false)
       return
     }
 
@@ -119,7 +119,7 @@ export default function SignupPage() {
         text: error instanceof Error ? error.message : '회원가입 중 오류가 발생했습니다.'
       })
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
@@ -199,12 +199,21 @@ export default function SignupPage() {
 
             <Button
               type="submit"
-              disabled={loading}
+              disabled={isLoading}
               className="w-full h-14 md:h-16 text-lg md:text-xl font-bold"
               size="lg"
             >
-              <UserPlus className="w-6 h-6 mr-3" />
-              가입하기
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-6 h-6 mr-3 animate-spin" />
+                  가입 처리 중...
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-6 h-6 mr-3" />
+                  가입하기
+                </>
+              )}
             </Button>
           </form>
 

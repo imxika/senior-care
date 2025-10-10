@@ -6,20 +6,20 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { MessageCircle, Chrome, LogIn } from 'lucide-react'
+import { MessageCircle, Chrome, LogIn, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 
 export default function LoginPage() {
   const supabase = createClient()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   // 이메일 + 비밀번호 로그인
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
+    setIsLoading(true)
     setMessage(null)
 
     try {
@@ -41,13 +41,16 @@ export default function LoginPage() {
         type: 'error',
         text: error instanceof Error ? error.message : '로그인 중 오류가 발생했습니다.'
       })
-      setLoading(false)
+    } finally {
+      setIsLoading(false)
     }
   }
 
   // Kakao 로그인
   const handleKakaoLogin = async () => {
-    setLoading(true)
+    setIsLoading(true)
+    setMessage(null)
+
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'kakao',
@@ -61,13 +64,16 @@ export default function LoginPage() {
         type: 'error',
         text: error instanceof Error ? error.message : '카카오 로그인 중 오류가 발생했습니다.'
       })
-      setLoading(false)
+    } finally {
+      setIsLoading(false)
     }
   }
 
   // Google 로그인
   const handleGoogleLogin = async () => {
-    setLoading(true)
+    setIsLoading(true)
+    setMessage(null)
+
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -81,7 +87,8 @@ export default function LoginPage() {
         type: 'error',
         text: error instanceof Error ? error.message : '구글 로그인 중 오류가 발생했습니다.'
       })
-      setLoading(false)
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -102,23 +109,41 @@ export default function LoginPage() {
           <div className="space-y-3">
             <Button
               onClick={handleKakaoLogin}
-              disabled={loading}
+              disabled={isLoading}
               className="w-full h-14 md:h-16 text-lg md:text-xl font-bold bg-[#FEE500] hover:bg-[#FDD835] text-black"
               size="lg"
             >
-              <MessageCircle className="w-6 h-6 mr-3" />
-              카카오로 로그인
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-6 h-6 mr-3 animate-spin" />
+                  로그인 중...
+                </>
+              ) : (
+                <>
+                  <MessageCircle className="w-6 h-6 mr-3" />
+                  카카오로 로그인
+                </>
+              )}
             </Button>
 
             <Button
               onClick={handleGoogleLogin}
-              disabled={loading}
+              disabled={isLoading}
               variant="outline"
               className="w-full h-14 md:h-16 text-lg md:text-xl font-bold border-2"
               size="lg"
             >
-              <Chrome className="w-6 h-6 mr-3" />
-              Google로 로그인
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-6 h-6 mr-3 animate-spin" />
+                  로그인 중...
+                </>
+              ) : (
+                <>
+                  <Chrome className="w-6 h-6 mr-3" />
+                  Google로 로그인
+                </>
+              )}
             </Button>
           </div>
 
@@ -168,12 +193,21 @@ export default function LoginPage() {
 
             <Button
               type="submit"
-              disabled={loading}
+              disabled={isLoading}
               className="w-full h-14 md:h-16 text-lg md:text-xl font-bold"
               size="lg"
             >
-              <LogIn className="w-6 h-6 mr-3" />
-              로그인
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-6 h-6 mr-3 animate-spin" />
+                  로그인 중...
+                </>
+              ) : (
+                <>
+                  <LogIn className="w-6 h-6 mr-3" />
+                  로그인
+                </>
+              )}
             </Button>
           </form>
 
