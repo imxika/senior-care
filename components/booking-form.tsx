@@ -78,15 +78,29 @@ export function BookingForm({
   const [participants, setParticipants] = useState<Participant[]>([])
 
   // Calculate total price using pricing policy
-  const totalPrice = duration && sessionType && serviceType
-    ? calculatePrice(
+  const totalPrice = (() => {
+    if (!duration || !sessionType || !serviceType) {
+      return 0
+    }
+
+    try {
+      // Convert UI service type ('home' | 'center') to API service type ('home_visit' | 'center_visit')
+      const apiServiceType: ServiceType = serviceType === 'home' ? 'home_visit' : 'center_visit'
+
+      const calculation = calculatePrice(
         sessionType as SessionType,
-        (serviceType === 'home' ? 'home_visit' : 'center_visit') as ServiceType,
+        apiServiceType,
         parseInt(duration) as DurationMinutes,
         pricingConfig,
         pricingPolicy
-      ).final_price
-    : 0
+      )
+
+      return calculation.final_price
+    } catch (error) {
+      console.error('가격 계산 중 오류가 발생했습니다:', error)
+      return 0
+    }
+  })()
 
   // Get max participants based on session type and trainer's max group size
   const sessionTypeMaxParticipants = sessionType === '1:1' ? 1 : sessionType === '2:1' ? 2 : 3
