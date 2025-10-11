@@ -37,10 +37,17 @@ export async function getVerifiedTrainers() {
         profiles (
           full_name,
           avatar_url
+        ),
+        center:centers!center_id (
+          id,
+          name,
+          address,
+          phone
         )
       `)
       .eq('is_verified', true)
       .eq('is_active', true)
+      .eq('is_available', true)
       .order('rating', { ascending: false })
 
     console.log('🔍 getVerifiedTrainers: Query completed')
@@ -137,6 +144,7 @@ export async function getTrainersByServiceType(
     `)
     .eq('is_verified', true)
     .eq('is_active', true)
+    .eq('is_available', true)
     .eq(field, true)
     .order('rating', { ascending: false })
 
@@ -161,6 +169,7 @@ export async function getTrainersByArea(area: string) {
     `)
     .eq('is_verified', true)
     .eq('is_active', true)
+    .eq('is_available', true)
     .contains('service_areas', [area])
     .order('rating', { ascending: false })
 

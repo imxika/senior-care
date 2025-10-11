@@ -24,9 +24,7 @@ export async function updateTrainerProfile(formData: FormData) {
   const maxGroupSize = parseInt(formData.get('max_group_size') as string) || 1
   const homeVisitAvailable = formData.get('home_visit_available') === 'true'
   const centerVisitAvailable = formData.get('center_visit_available') === 'true'
-  const centerName = formData.get('center_name') as string
-  const centerAddress = formData.get('center_address') as string
-  const centerPhone = formData.get('center_phone') as string
+  const centerId = (formData.get('center_id') as string) || null
 
   // 최대 그룹 인원 검증 (1-3명: 1:1, 1:2, 1:3 세션만 지원)
   if (maxGroupSize < 1 || maxGroupSize > 3) {
@@ -77,9 +75,7 @@ export async function updateTrainerProfile(formData: FormData) {
         max_group_size: maxGroupSize,
         home_visit_available: homeVisitAvailable,
         center_visit_available: centerVisitAvailable,
-        center_name: centerName || null,
-        center_address: centerAddress || null,
-        center_phone: centerPhone || null,
+        center_id: centerId,
       })
       .eq('profile_id', user.id)
 

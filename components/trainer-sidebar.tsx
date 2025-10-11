@@ -14,6 +14,8 @@ import {
   CreditCard,
   Shield,
   Star,
+  Clock,
+  Building2,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -83,8 +85,12 @@ const data = {
           url: "/trainer/settings/profile",
         },
         {
-          title: "스케줄",
-          url: "/trainer/settings/schedule",
+          title: "가능시간 관리",
+          url: "/trainer/settings/availability",
+        },
+        {
+          title: "센터 관리",
+          url: "/trainer/settings/center",
         },
         {
           title: "가격 설정",

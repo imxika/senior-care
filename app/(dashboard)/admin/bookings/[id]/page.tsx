@@ -49,12 +49,17 @@ interface Payment {
   created_at: string
 }
 
-interface TrainerNotification {
+interface NotificationWithUser {
   id: string
   title: string
   message: string
   created_at: string
   is_read: boolean
+  user_id: string
+  user?: {
+    full_name: string
+    user_type: 'customer' | 'trainer' | 'admin'
+  }
 }
 
 export default async function AdminBookingDetailPage({ params }: PageProps) {
@@ -106,10 +111,18 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
         id,
         hourly_rate,
         specialties,
+        center_id,
         profile:profiles!profile_id(
           full_name,
           email,
           phone
+        ),
+        center:centers(
+          id,
+          name,
+          address,
+          phone,
+          business_registration_number
         )
       ),
       payments!booking_id(
@@ -142,7 +155,18 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
     notFound()
   }
 
-  // Trainer에게 전송된 알림 조회
+  // 고객 profile_id 추출
+  const customerData = booking?.customer && typeof booking.customer === 'object'
+    ? (Array.isArray(booking.customer) ? booking.customer[0] : booking.customer)
+    : null
+  const customerProfile = customerData && typeof customerData === 'object' && 'profile' in customerData
+    ? (Array.isArray(customerData.profile) ? customerData.profile[0] : customerData.profile)
+    : null
+  const customerProfileId = customerProfile && typeof customerProfile === 'object' && 'id' in customerProfile
+    ? customerProfile.id
+    : null
+
+  // 트레이너 profile_id 추출
   const trainerData = booking?.trainer && typeof booking.trainer === 'object'
     ? (Array.isArray(booking.trainer) ? booking.trainer[0] : booking.trainer)
     : null
@@ -153,12 +177,14 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
     ? trainerProfile.id
     : null
 
-  const { data: trainerNotifications } = trainerProfileId
+  // 이 예약과 관련된 모든 알림 조회 (고객 + 트레이너)
+  const userIds = [customerProfileId, trainerProfileId].filter(Boolean)
+  const { data: allNotifications } = userIds.length > 0
     ? await serviceSupabase
         .from('notifications')
-        .select('*')
-        .eq('user_id', trainerProfileId)
-        .or(`link.cs.{/bookings/${id}},link.cs.{/trainer/bookings/${id}}`)
+        .select('*, user:profiles!user_id(full_name, user_type)')
+        .in('user_id', userIds)
+        .or(`link.cs.{/bookings/${id}},link.cs.{/trainer/bookings/${id}},link.cs.{/customer/bookings/${id}}`)
         .order('created_at', { ascending: false })
     : { data: null }
 
@@ -195,7 +221,7 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">예약 상세</h1>
-            <p className="text-muted-foreground mt-1">예약번호: #{booking.id.slice(0, 8)}</p>
+            <p className="text-muted-foreground mt-1 font-mono text-sm">예약번호: {booking.id}</p>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
@@ -271,6 +297,34 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
                     label="시급"
                     value={formatPrice(booking.trainer.hourly_rate)}
                   />
+                  {booking.trainer.center && (
+                    <>
+                      <Separator />
+                      <div className="pt-2">
+                        <p className="text-sm font-medium mb-2">🏢 센터 정보</p>
+                        <InfoRow
+                          label="센터명"
+                          value={booking.trainer.center.name}
+                        />
+                        <InfoRow
+                          icon={<MapPin className="h-4 w-4" />}
+                          label="주소"
+                          value={booking.trainer.center.address}
+                        />
+                        <InfoRow
+                          icon={<Phone className="h-4 w-4" />}
+                          label="센터 전화"
+                          value={booking.trainer.center.phone || '정보 없음'}
+                        />
+                        {booking.trainer.center.business_registration_number && (
+                          <InfoRow
+                            label="사업자번호"
+                            value={booking.trainer.center.business_registration_number}
+                          />
+                        )}
+                      </div>
+                    </>
+                  )}
                 </>
               ) : (
                 <p className="text-sm text-muted-foreground">
@@ -332,7 +386,7 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
             <CardContent className="space-y-3">
               <InfoRow
                 label="기본 금액"
-                value={formatPrice(booking.base_price)}
+                value={booking.base_price > 0 ? formatPrice(booking.base_price) : '미정'}
               />
               {booking.price_multiplier && booking.price_multiplier !== 1 && (
                 <InfoRow
@@ -343,7 +397,7 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
               <Separator />
               <InfoRow
                 label="최종 금액"
-                value={formatPrice(booking.final_price)}
+                value={booking.total_price > 0 ? `${booking.total_price.toLocaleString()}원` : '미정'}
                 className="text-lg font-bold"
               />
             </CardContent>
@@ -453,26 +507,49 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
           </Card>
         )}
 
-        {/* 트레이너 알림 전송 확인 (Admin) */}
-        {booking.trainer && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5" />
-                🔔 트레이너 알림 전송 내역
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {trainerNotifications && trainerNotifications.length > 0 ? (
-                <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    총 {trainerNotifications.length}건의 알림이 전송되었습니다.
-                  </p>
-                  <div className="space-y-2">
-                    {trainerNotifications.map((notification: TrainerNotification) => (
-                      <div key={notification.id} className="bg-gray-50 rounded-lg p-3 border">
-                        <div className="flex items-start justify-between">
+        {/* 알림 전송 내역 (고객 ↔ 트레이너) */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              🔔 알림 전송 내역
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {allNotifications && allNotifications.length > 0 ? (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  총 {allNotifications.length}건의 알림이 전송되었습니다.
+                </p>
+                <div className="space-y-2">
+                  {allNotifications.map((notification: NotificationWithUser) => {
+                    const userType = notification.user?.user_type
+                    const isCustomer = userType === 'customer'
+                    const isTrainer = userType === 'trainer'
+
+                    return (
+                      <div
+                        key={notification.id}
+                        className={`rounded-lg p-3 border ${
+                          isCustomer ? 'bg-blue-50 border-blue-200' :
+                          isTrainer ? 'bg-green-50 border-green-200' :
+                          'bg-gray-50 border-gray-200'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
                           <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
+                                isCustomer ? 'bg-blue-100 text-blue-700' :
+                                isTrainer ? 'bg-green-100 text-green-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {isCustomer ? '👤 고객' : isTrainer ? '🏃 트레이너' : '⚠️ 알 수 없음'}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {notification.user?.full_name || '정보 없음'}
+                              </span>
+                            </div>
                             <p className="text-sm font-medium">{notification.title}</p>
                             <p className="text-xs text-muted-foreground mt-1">{notification.message}</p>
                             <div className="flex gap-2 items-center mt-2">
@@ -488,18 +565,18 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
                           </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    )
+                  })}
                 </div>
-              ) : (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                  <p className="text-sm text-yellow-800 font-medium">⚠️ 알림 전송 내역 없음</p>
-                  <p className="text-xs text-yellow-700 mt-1">아직 트레이너에게 전송된 알림이 없습니다.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
+              </div>
+            ) : (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <p className="text-sm text-yellow-800 font-medium">⚠️ 알림 전송 내역 없음</p>
+                <p className="text-xs text-yellow-700 mt-1">아직 전송된 알림이 없습니다.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* 추가 정보 */}
         {(booking.customer_notes || booking.specialty_required) && (

@@ -1,13 +1,433 @@
 # 🏥 Senior Care MVP - 프로젝트 현황 분석
 
 **작성일**: 2025-10-02 (Day 1)
-**최종 업데이트**: 2025-10-11 (Day 13 완료)
-**버전**: 3.14.0
-**상태**: MVP 핵심 기능 완료 + 가격 정책 시스템 + 자동 환불 + 동적 가격 계산
+**최종 업데이트**: 2025-10-11 (Day 14 완료)
+**버전**: 3.15.0
+**상태**: MVP 핵심 기능 완료 + 센터 관리 시스템 + RLS 무한 재귀 해결
 
 ---
 
 ## 📅 개발 타임라인
+
+### Day 14 (2025-10-11) - 센터 관리 시스템 구축 🏢✅
+
+#### 🎯 핵심 성과
+- ✅ **센터 등록 시스템 완성** - 트레이너가 센터 등록, 수정, 삭제 가능
+- ✅ **관리자 센터 승인 시스템** - 센터 상세 조회 및 승인/거부 처리
+- ✅ **RLS 무한 재귀 문제 해결** - SECURITY DEFINER 함수로 완전 해결
+- ✅ **센터 검색 시스템** - 승인된 센터 검색 및 선택 (Command 컴포넌트)
+- ✅ **트레이너 프로필 센터 연동** - center_id 외래키 방식으로 센터 선택
+- ✅ **고객 화면 센터 정보 표시** - 트레이너 목록/상세/예약 페이지에 센터 정보
+- ✅ **센터 고유 ID 표시** - 카드에 짧은 코드, 상세에 전체 UUID
+- ✅ **빌드 성공 - TypeScript/ESLint 오류 0개**
+
+#### 📝 작업 상세
+
+**1. 센터 등록 시스템 (Trainer)**
+
+**파일**: `app/(dashboard)/trainer/settings/center/center-form.tsx`
+
+**핵심 기능:**
+- 트레이너가 자신의 센터 정보 등록 (센터명, 주소, 전화번호, 사업자등록번호, 설명)
+- 센터당 owner 1명만 가능 (owner_id 컬럼)
+- 승인 대기 중인 센터는 수정/삭제 가능
+- 승인된 센터는 읽기 전용
+
+**센터 ID 표시:**
+```typescript
+// 카드 타이틀에 짧은 코드
+<span className="text-xs font-mono text-muted-foreground">
+  #{center.id.substring(0, 6).toUpperCase()}
+</span>
+
+// 상세 정보에 전체 UUID
+<p className="text-xs text-muted-foreground">
+  센터 ID: <span className="font-mono">{center.id}</span>
+</p>
+```
+
+**폼 표시 로직 수정:**
+- **문제**: 폼과 "첫 센터 등록하기" 카드가 동시에 표시됨
+- **원인**: `(isEditing || ownedCenters.length === 0)` 조건
+- **해결**: `{isEditing && (` 로 변경하여 편집 모드일 때만 폼 표시
+
+**2. RLS 무한 재귀 문제 해결**
+
+**마이그레이션**: `20251011234500_fix_center_rls_recursion.sql`
+
+**문제:**
+- `centers` RLS 정책에서 `trainers` 테이블 조회 시 무한 재귀 발생
+- `trainers.center_id` → `centers` 참조로 인한 순환 종속성
+
+**해결책: SECURITY DEFINER 함수**
+```sql
+CREATE OR REPLACE FUNCTION get_current_trainer_id()
+RETURNS UUID
+LANGUAGE sql
+SECURITY DEFINER  -- RLS 우회, superuser 권한으로 실행
+STABLE
+SET search_path = public
+AS $$
+  SELECT id
+  FROM public.trainers
+  WHERE profile_id = auth.uid()
+  LIMIT 1;
+$$;
+
+-- 정책에서 함수 사용
+CREATE POLICY "Trainers view own centers"
+  ON centers FOR SELECT
+  USING (owner_id = get_current_trainer_id());
+```
+
+**안전성 검증:**
+- 사용자가 매우 신중하게 접근: "RLS는 100%안전한거지?"
+- 단계별 실행 확인 후 적용
+- 12개 중복 정책 제거 완료
+
+**3. 관리자 센터 관리 시스템**
+
+**파일**:
+- `app/(dashboard)/admin/centers/page.tsx` - 센터 목록
+- `app/(dashboard)/admin/centers/[id]/page.tsx` - 센터 상세
+- `app/(dashboard)/admin/centers/[id]/approval-actions.tsx` - 승인/거부 UI
+
+**목록 페이지 쿼리 수정:**
+```typescript
+// AS-IS (잘못된 join)
+trainers!center_id(...)
+
+// TO-BE (올바른 join)
+owner:trainers!owner_id(
+  id,
+  profile:profiles!profile_id(
+    full_name,
+    email
+  )
+)
+```
+
+**승인/거부 API:**
+- `app/api/admin/centers/approve/route.ts` - 센터 승인
+- `app/api/admin/centers/reject/route.ts` - 센터 거부
+
+**승인 처리:**
+```typescript
+await supabase
+  .from('centers')
+  .update({
+    is_verified: true,
+    verified_at: new Date().toISOString(),
+    verified_by: user.id,
+  })
+  .eq('id', centerId)
+```
+
+**4. 트레이너 프로필 센터 선택**
+
+**파일**:
+- `components/center-selector.tsx` - 센터 검색/선택 컴포넌트
+- `app/(dashboard)/trainer/settings/profile/profile-edit-form.tsx` - 프로필 폼 업데이트
+
+**기존 방식 (deprecated):**
+- `center_name`, `center_address`, `center_phone` 텍스트 필드
+- 중복 데이터 입력, 수동 관리
+
+**새로운 방식 (center_id 외래키):**
+```typescript
+interface Trainer {
+  center_id?: string  // centers(id) 참조
+}
+
+// CenterSelector 컴포넌트 사용
+<CenterSelector
+  selectedCenterId={selectedCenterId}
+  onCenterSelect={setSelectedCenterId}
+  disabled={!centerVisitAvailable}
+/>
+```
+
+**센터 검색 기능:**
+- Popover + Command (cmdk) 패턴 사용
+- 1글자 이상 입력 시 검색 결과 표시
+- 센터명, ID, 사업자번호로 검색
+- 승인된 센터만 표시
+
+**5. 센터 검색 API 구현**
+
+**파일**: `app/api/centers/search/route.ts`
+
+**UUID 검색 문제 해결:**
+- **문제**: `id.ilike.%${query}%` 실행 시 `operator does not exist: uuid ~~* unknown` 오류
+- **해결**: 서버에서 전체 센터 조회 후 클라이언트에서 필터링
+
+```typescript
+// 서버에서 모든 승인 센터 가져오기 (최대 100개)
+const { data: centers } = await supabase
+  .from('centers')
+  .select('id, name, address, business_registration_number')
+  .eq('is_verified', true)
+  .order('name')
+  .limit(100)
+
+// 클라이언트 측 필터링
+let filteredCenters = centers || []
+if (query.trim()) {
+  const searchLower = query.toLowerCase()
+  filteredCenters = filteredCenters.filter((center) => {
+    const nameMatch = center.name?.toLowerCase().includes(searchLower)
+    const idMatch = center.id?.toLowerCase().includes(searchLower)
+    const businessMatch = center.business_registration_number?.toLowerCase().includes(searchLower)
+    return nameMatch || idMatch || businessMatch
+  })
+}
+```
+
+**검색 UX 개선:**
+- 초기 드롭다운 오픈 시 결과 숨김 (사용자 피드백: "20개가 뜨면 안되고 검색할때만 뜨는게 낫지 않아?")
+- 검색어 입력 시에만 결과 표시
+- 검색어 삭제 시 목록 초기화
+
+**6. 고객 화면 센터 정보 표시**
+
+**업데이트된 파일:**
+- `lib/supabase/queries.ts` - getVerifiedTrainers 쿼리에 센터 조인 추가
+- `app/(public)/trainers/page.tsx` - 트레이너 목록에 센터 정보
+- `app/(public)/trainers/[id]/page.tsx` - 트레이너 상세에 센터 카드
+- `app/(public)/trainers/[id]/booking/page.tsx` - 예약 페이지에 센터 정보
+
+**쿼리 업데이트:**
+```typescript
+const { data } = await supabase
+  .from('trainers')
+  .select(`
+    *,
+    profiles (full_name, avatar_url),
+    center:centers!center_id (
+      id,
+      name,
+      address,
+      phone
+    )
+  `)
+```
+
+**인터페이스 변경:**
+```typescript
+// AS-IS
+interface Trainer {
+  center_name?: string
+  center_address?: string
+  center_phone?: string
+}
+
+// TO-BE
+interface Trainer {
+  center?: {
+    id: string
+    name: string
+    address: string | null
+    phone: string | null
+  } | null
+}
+```
+
+**트레이너 목록 페이지:**
+```tsx
+{trainer.center_visit_available && trainer.center && (
+  <div>
+    <Badge onClick={() => setSelectedCenter(trainer.center.name)}>
+      🏢 {trainer.center.name}
+    </Badge>
+    {trainer.center.address && (
+      <p className="text-sm text-muted-foreground mt-1">
+        📍 {trainer.center.address}
+      </p>
+    )}
+  </div>
+)}
+```
+
+**트레이너 상세 페이지:**
+```tsx
+{trainer.center_visit_available && trainer.center && (
+  <Card>
+    <CardHeader>
+      <CardTitle>센터 정보</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <div className="space-y-2">
+        <p><strong>센터 이름:</strong> {trainer.center.name}</p>
+        {trainer.center.address && (
+          <p><strong>주소:</strong> {trainer.center.address}</p>
+        )}
+        {trainer.center.phone && (
+          <p>
+            <strong>연락처:</strong>{' '}
+            <a href={`tel:${trainer.center.phone}`}>
+              {trainer.center.phone}
+            </a>
+          </p>
+        )}
+      </div>
+    </CardContent>
+  </Card>
+)}
+```
+
+**7. shadcn Command 컴포넌트 추가**
+
+**파일**: `components/ui/command.tsx`
+
+**설치:** cmdk 패키지 이미 설치됨, shadcn command 컴포넌트 코드 추가
+
+**구성:**
+- Command - 메인 컨테이너
+- CommandInput - 검색 입력
+- CommandList - 결과 목록
+- CommandEmpty - 검색 결과 없음 메시지
+- CommandGroup - 결과 그룹
+- CommandItem - 개별 결과 아이템
+
+#### 🗄️ 데이터베이스 변경사항
+
+**마이그레이션 파일:**
+1. `20251011230000_add_center_owner_and_policies.sql` - owner_id 컬럼 및 초기 RLS 정책
+2. `20251011234500_fix_center_rls_recursion.sql` - SECURITY DEFINER 함수 및 정책 재작성
+
+**주요 스키마 변경:**
+```sql
+-- centers 테이블에 owner_id 추가
+ALTER TABLE centers
+ADD COLUMN IF NOT EXISTS owner_id UUID
+REFERENCES trainers(id) ON DELETE SET NULL;
+
+-- trainers 테이블에 center_id 추가 (기존 컬럼 deprecated)
+ALTER TABLE trainers
+ADD COLUMN center_id UUID
+REFERENCES centers(id);
+```
+
+**RLS 정책:**
+- 트레이너: 자신의 센터만 조회/등록/수정/삭제 (미승인만)
+- 관리자: 모든 센터 조회/수정 가능
+- 고객: 승인된 센터만 조회 가능
+
+#### 🔧 주요 버그 수정
+
+1. **센터 폼 표시 로직 버그**
+   - **문제**: 폼과 카드가 동시에 표시
+   - **수정**: `isEditing` 조건으로 단순화
+
+2. **Admin 센터 목록 조회 실패**
+   - **문제**: `trainers!center_id` 잘못된 join
+   - **수정**: `owner:trainers!owner_id` 올바른 join
+
+3. **RLS 무한 재귀**
+   - **문제**: centers ↔ trainers 순환 참조
+   - **수정**: SECURITY DEFINER 함수로 RLS 우회
+
+4. **UUID 검색 타입 오류**
+   - **문제**: `uuid ~~* unknown` 연산자 오류
+   - **수정**: 서버 전체 조회 + 클라이언트 필터링
+
+5. **검색 UX 문제**
+   - **문제**: 드롭다운 오픈 시 모든 결과 표시
+   - **수정**: 검색어 입력 시에만 결과 표시
+
+6. **고객 화면 센터 정보 미표시**
+   - **문제**: 쿼리에 센터 join 누락
+   - **수정**: 모든 고객 화면에 센터 조인 추가
+
+#### 📚 문서화
+
+**생성된 문서:** `docs/18_CENTER_MANAGEMENT_SYSTEM.md`
+
+**문서 내용:**
+- 개요 및 주요 기능
+- 워크플로우 (등록 → 승인 → 프로필 연동 → 고객 표시)
+- 데이터베이스 스키마 (centers, trainers 변경사항)
+- RLS 정책 상세 설명
+- RLS 무한 재귀 해결 방법
+- API 엔드포인트 (검색, 승인, 거부)
+- 주요 컴포넌트 (CenterSelector, ApprovalActions)
+- 테스트 시나리오
+- TODO 및 주의사항
+
+#### 🎨 UI/UX 개선사항
+
+1. **센터 ID 표시:**
+   - 카드: 짧은 코드 `#A1B2C3` 형태
+   - 상세: 전체 UUID `a1b2c3d4-...` 형태
+
+2. **센터 검색 드롭다운:**
+   - Popover + Command 패턴
+   - 실시간 검색 (1글자 이상)
+   - 센터명, 주소, ID 표시
+   - "검색어를 입력하세요" 안내 메시지
+
+3. **관리자 승인 UI:**
+   - 센터 상세 페이지
+   - 승인/거부 버튼 with 확인 다이얼로그
+   - 거부 시 사유 입력 필수
+   - Sonner 토스트 알림
+
+4. **고객 화면 센터 표시:**
+   - 트레이너 카드: 센터 배지 + 주소
+   - 상세 페이지: 센터 정보 카드
+   - 예약 페이지: 센터 정보 표시
+
+#### 🔄 개발 프로세스
+
+**사용자 피드백 기반 개발:**
+- "RLS는 100%안전한거지?" → SECURITY DEFINER 함수 안전성 확인 후 단계별 실행
+- "20개가 뜨면 안되고 검색할때만 뜨는게 낫지 않아?" → 검색 UX 개선
+- "03은 필수로 해야해" → PROJECT_STATUS.md 업데이트 우선 처리
+
+**코드 컨벤션 준수:**
+- TypeScript strict mode
+- Next.js 15 App Router 패턴 (async params)
+- Server/Client Component 명확한 분리
+- Supabase RLS 정책 활용
+
+#### 📦 수정된 파일 (총 30개)
+
+**새로 생성된 파일:**
+- `app/(dashboard)/admin/centers/page.tsx`
+- `app/(dashboard)/admin/centers/[id]/page.tsx`
+- `app/(dashboard)/admin/centers/[id]/approval-actions.tsx`
+- `app/(dashboard)/trainer/settings/center/center-form.tsx`
+- `app/(dashboard)/trainer/settings/center/actions.ts`
+- `app/api/admin/centers/approve/route.ts`
+- `app/api/admin/centers/reject/route.ts`
+- `app/api/centers/search/route.ts`
+- `components/center-selector.tsx`
+- `components/ui/command.tsx`
+- `docs/18_CENTER_MANAGEMENT_SYSTEM.md`
+- `supabase/migrations/20251011230000_add_center_owner_and_policies.sql`
+- `supabase/migrations/20251011234500_fix_center_rls_recursion.sql`
+- (3개 추가 마이그레이션 파일)
+
+**수정된 파일:**
+- `app/(dashboard)/trainer/settings/profile/profile-edit-form.tsx`
+- `app/(dashboard)/trainer/settings/profile/actions.ts`
+- `app/(public)/trainers/page.tsx`
+- `app/(public)/trainers/[id]/page.tsx`
+- `app/(public)/trainers/[id]/booking/page.tsx`
+- `lib/supabase/queries.ts`
+- `components/trainer-sidebar.tsx`
+- `components/admin-sidebar.tsx`
+- (8개 추가 파일)
+
+#### ✅ TODO
+
+- [ ] 센터 owner_id unique 제약 추가 고려
+- [ ] 승인/거부 시 트레이너 알림 시스템 구현
+- [ ] 센터 이미지 업로드 기능 구현
+- [ ] 센터 공개 페이지 (`/centers`) 구현
+- [ ] 센터별 트레이너 목록 표시
+
+---
 
 ### Day 13 (2025-10-11) - 가격 정책 시스템 & 자동 환불 & 동적 가격 💰🔄
 

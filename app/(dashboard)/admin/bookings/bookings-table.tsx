@@ -59,7 +59,7 @@ interface Props {
 const ITEMS_PER_PAGE = 10
 
 export function BookingsTable({ bookings, currentPage, totalPages, params }: Props) {
-  const [sortBy, setSortBy] = useState(params.sort || 'updated_at')
+  const [sortBy, setSortBy] = useState(params.sort || 'booking_date')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(params.direction === 'asc' ? 'asc' : 'desc')
 
   const handleSort = (column: string) => {
@@ -87,7 +87,10 @@ export function BookingsTable({ bookings, currentPage, totalPages, params }: Pro
 
     switch (sortBy) {
       case 'booking_date':
-        comparison = new Date(a.booking_date).getTime() - new Date(b.booking_date).getTime()
+        // 예약일 + 시간 기준 정렬
+        const aDateTime = new Date(`${a.booking_date}T${a.start_time}`).getTime()
+        const bDateTime = new Date(`${b.booking_date}T${b.start_time}`).getTime()
+        comparison = aDateTime - bDateTime
         break
       case 'created_at':
         comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
@@ -110,13 +113,6 @@ export function BookingsTable({ bookings, currentPage, totalPages, params }: Pro
     }
 
     return sortDirection === 'asc' ? comparison : -comparison
-  })
-
-  // 승인대기 항목을 최상단으로
-  sortedBookings.sort((a, b) => {
-    if (a.status === 'pending' && b.status !== 'pending') return -1
-    if (a.status !== 'pending' && b.status === 'pending') return 1
-    return 0
   })
 
   // 페이지네이션
@@ -241,7 +237,7 @@ function BookingTableRow({ booking }: { booking: Booking }) {
 
   return (
     <tr className={`hover:bg-muted/50 ${isPending ? 'bg-yellow-50' : ''}`}>
-      <td className="px-4 py-3 text-sm font-mono">#{booking.id.slice(0, 8)}</td>
+      <td className="px-4 py-3 text-xs font-mono">{booking.id}</td>
       <td className="px-4 py-3">
         {booking.booking_type === 'recommended' ? (
           <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">

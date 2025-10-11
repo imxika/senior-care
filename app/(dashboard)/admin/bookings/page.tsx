@@ -153,8 +153,20 @@ export default async function AdminBookingsPage({ searchParams }: PageProps) {
     .limit(200) as { data: BookingWithRelations[] | null; error: Error | null }
 
   if (error) {
-    console.error('Error fetching bookings:', error)
+    console.error('❌ [ADMIN] Error fetching bookings:', error)
   }
+
+  // 디버깅 로그
+  console.log('📊 [ADMIN] Bookings fetched:', {
+    total: bookings?.length || 0,
+    error: error?.message,
+    sample: bookings?.[0] ? {
+      id: bookings[0].id,
+      status: bookings[0].status,
+      customer: bookings[0].customer?.profile?.full_name,
+      trainer: bookings[0].trainer?.profile?.full_name
+    } : null
+  })
 
   // 필터링
   let filteredBookings = bookings || []

@@ -10,17 +10,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
-import { AvailabilityForm } from './availability-form'
-
-const DAYS_OF_WEEK = [
-  { value: 0, label: '일요일' },
-  { value: 1, label: '월요일' },
-  { value: 2, label: '화요일' },
-  { value: 3, label: '수요일' },
-  { value: 4, label: '목요일' },
-  { value: 5, label: '금요일' },
-  { value: 6, label: '토요일' },
-]
+import { AvailabilityContent } from './availability-content'
 
 export default async function TrainerAvailabilityPage() {
   const supabase = await createClient()
@@ -31,10 +21,10 @@ export default async function TrainerAvailabilityPage() {
     redirect('/login')
   }
 
-  // 트레이너 권한 확인
+  // 프로필 정보 조회
   const { data: profile } = await supabase
     .from('profiles')
-    .select('user_type, full_name')
+    .select('*')
     .eq('id', user.id)
     .single()
 
@@ -42,18 +32,18 @@ export default async function TrainerAvailabilityPage() {
     redirect('/')
   }
 
-  // 트레이너 정보 가져오기
+  // 트레이너 상세 정보 조회
   const { data: trainer } = await supabase
     .from('trainers')
-    .select('id')
+    .select('*')
     .eq('profile_id', user.id)
     .single()
 
   if (!trainer) {
-    redirect('/trainer/dashboard')
+    redirect('/trainer/settings')
   }
 
-  // 기존 가능 시간 가져오기
+  // 기본 가능시간 조회 (trainer_availability 테이블)
   const { data: availabilities } = await supabase
     .from('trainer_availability')
     .select('*')
@@ -61,6 +51,20 @@ export default async function TrainerAvailabilityPage() {
     .eq('is_active', true)
     .order('day_of_week', { ascending: true })
     .order('start_time', { ascending: true })
+
+  // 예외 날짜 조회 (미래 날짜만, 90일까지)
+  const today = new Date().toISOString().split('T')[0]
+  const futureDate = new Date()
+  futureDate.setDate(futureDate.getDate() + 90) // 90일 후까지
+  const maxDate = futureDate.toISOString().split('T')[0]
+
+  const { data: exceptions } = await supabase
+    .from('trainer_availability_exceptions')
+    .select('*')
+    .eq('trainer_id', trainer.id)
+    .gte('date', today)
+    .lte('date', maxDate)
+    .order('date', { ascending: true })
 
   return (
     <>
@@ -74,28 +78,23 @@ export default async function TrainerAvailabilityPage() {
                 <BreadcrumbLink href="/trainer/dashboard">트레이너</BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator className="hidden md:block" />
+              <BreadcrumbItem className="hidden md:block">
+                <BreadcrumbLink href="/trainer/settings">설정</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="hidden md:block" />
               <BreadcrumbItem>
-                <BreadcrumbPage>가능 시간 설정</BreadcrumbPage>
+                <BreadcrumbPage>가능시간 관리</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
         </div>
       </header>
 
-      <div className="flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">가능 시간 설정</h1>
-          <p className="text-sm md:text-base text-muted-foreground mt-1">
-            요일별로 운동 지도가 가능한 시간을 설정해주세요
-          </p>
-        </div>
-
-        <AvailabilityForm
-          trainerId={trainer.id}
-          existingAvailabilities={availabilities || []}
-          daysOfWeek={DAYS_OF_WEEK}
-        />
-      </div>
+      <AvailabilityContent
+        trainer={trainer}
+        availabilities={availabilities || []}
+        exceptions={exceptions || []}
+      />
     </>
   )
 }

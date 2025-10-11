@@ -60,6 +60,12 @@ export default async function TrainerDetailPage({ params }: PageProps) {
         avatar_url,
         email,
         phone
+      ),
+      center:centers!center_id (
+        id,
+        name,
+        address,
+        phone
       )
     `)
     .eq('id', id)
@@ -463,7 +469,7 @@ export default async function TrainerDetailPage({ params }: PageProps) {
           )}
 
           {/* Center Information */}
-          {trainer.center_visit_available && trainer.center_name && (
+          {trainer.center_visit_available && trainer.center && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -475,28 +481,28 @@ export default async function TrainerDetailPage({ params }: PageProps) {
                 <div className="space-y-3">
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">센터 이름</p>
-                    <p className="font-semibold text-base">{trainer.center_name}</p>
+                    <p className="font-semibold text-base">{trainer.center.name}</p>
                   </div>
-                  {trainer.center_address && (
+                  {trainer.center.address && (
                     <>
                       <Separator />
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">주소</p>
-                        <p className="text-base">{trainer.center_address}</p>
+                        <p className="text-base">{trainer.center.address}</p>
                       </div>
                     </>
                   )}
-                  {trainer.center_phone && (
+                  {trainer.center.phone && (
                     <>
                       <Separator />
                       <div>
-                        <p className="text-sm text-muted-foreground mb-1">연락처</p>
+                        <p className="text-sm text-muted-foreground mb-1">센터 연락처</p>
                         <a
-                          href={`tel:${trainer.center_phone}`}
+                          href={`tel:${trainer.center.phone}`}
                           className="text-base text-primary hover:underline flex items-center gap-2"
                         >
                           <Phone className="h-4 w-4" />
-                          {trainer.center_phone}
+                          {trainer.center.phone}
                         </a>
                       </div>
                     </>

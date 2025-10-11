@@ -14,6 +14,7 @@ import {
   UserCog,
   CreditCard,
   DollarSign,
+  Building2,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -55,6 +56,21 @@ const data = {
         {
           title: "승인 대기",
           url: "/admin/trainers?status=pending",
+        },
+      ],
+    },
+    {
+      title: "센터 관리",
+      url: "/admin/centers",
+      icon: Building2,
+      items: [
+        {
+          title: "전체 센터",
+          url: "/admin/centers",
+        },
+        {
+          title: "승인 대기",
+          url: "/admin/centers?status=pending",
         },
       ],
     },

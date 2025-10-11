@@ -87,6 +87,12 @@ export default async function TrainerBookingPage({ params, searchParams }: PageP
         avatar_url,
         email,
         phone
+      ),
+      center:centers!center_id (
+        id,
+        name,
+        address,
+        phone
       )
     `)
     .eq('id', id)
@@ -156,9 +162,9 @@ export default async function TrainerBookingPage({ params, searchParams }: PageP
                 initialSessionType={sessionType}
                 initialServiceType={serviceType}
                 hourlyRate={trainer.hourly_rate || 100000}
-                centerName={trainer.center_name}
-                centerAddress={trainer.center_address}
-                centerPhone={trainer.center_phone}
+                centerName={trainer.center?.name}
+                centerAddress={trainer.center?.address}
+                centerPhone={trainer.center?.phone}
                 pricingConfig={pricing.config}
                 pricingPolicy={pricing.policy}
               />

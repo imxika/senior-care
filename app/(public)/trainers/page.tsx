@@ -25,13 +25,17 @@ interface Trainer {
   total_reviews: number
   home_visit_available: boolean
   center_visit_available: boolean
-  center_name?: string | null
-  center_address?: string | null
   max_group_size?: number | null
   profiles?: {
     full_name: string
     avatar_url: string | null
   }
+  center?: {
+    id: string
+    name: string
+    address: string | null
+    phone: string | null
+  } | null
   sanity?: {
     supabaseId: string
     profileImage?: {
@@ -142,7 +146,7 @@ function TrainersPageContent() {
     // 센터 필터
     const matchesCenter =
       !selectedCenter ||
-      trainer.center_name === selectedCenter
+      trainer.center?.name === selectedCenter
 
     // 세션 타입 필터 (max_group_size 기준)
     const matchesSession =
@@ -431,7 +435,7 @@ function TrainersPageContent() {
                   )}
 
                   {/* 센터 정보 - 클릭 가능 */}
-                  {trainer.center_visit_available && trainer.center_name && (
+                  {trainer.center_visit_available && trainer.center && (
                     <div>
                       <p className="text-sm font-semibold mb-2 flex items-center gap-1">
                         <Building className="w-4 h-4" />
@@ -443,15 +447,15 @@ function TrainersPageContent() {
                         onClick={(e) => {
                           e.preventDefault()
                           e.stopPropagation()
-                          setSelectedCenter(trainer.center_name!)
+                          setSelectedCenter(trainer.center.name)
                           window.scrollTo({ top: 0, behavior: 'smooth' })
                         }}
                       >
-                        🏢 {trainer.center_name}
+                        🏢 {trainer.center.name}
                       </Badge>
-                      {trainer.center_address && (
+                      {trainer.center.address && (
                         <p className="text-xs text-muted-foreground mt-2">
-                          📍 {trainer.center_address}
+                          📍 {trainer.center.address}
                         </p>
                       )}
                     </div>
