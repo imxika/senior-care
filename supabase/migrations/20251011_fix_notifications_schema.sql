@@ -30,4 +30,3 @@ ALTER TABLE notifications ADD CONSTRAINT notifications_type_check
 
 -- Step 4: Add documentation comments
 COMMENT ON COLUMN notifications.link IS '알림 클릭 시 이동할 URL 경로 (예: /customer/bookings/123)';
-COMMENT ON COLUMN notifications.related_id IS '레거시 컬럼 - 새 코드는 link 사용';

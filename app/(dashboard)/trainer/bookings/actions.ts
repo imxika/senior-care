@@ -114,6 +114,99 @@ export async function updateBookingStatus(
     return { error: `예약 상태 업데이트 중 오류: ${updateError.message}` }
   }
 
+  // 거절 시 자동 환불 처리
+  if (status === 'cancelled') {
+    // 결제 내역 조회
+    const { data: payments } = await serviceSupabase
+      .from('payments')
+      .select('id, payment_status, amount, payment_provider, payment_metadata')
+      .eq('booking_id', bookingId)
+      .eq('payment_status', 'paid')
+
+    // 결제 완료된 건이 있으면 환불 처리
+    if (payments && payments.length > 0) {
+      for (const payment of payments) {
+        try {
+          console.log('💰 Processing refund for payment:', payment.id)
+
+          // Stripe 환불
+          if (payment.payment_provider === 'stripe') {
+            const Stripe = (await import('stripe')).default
+            const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+              apiVersion: '2025-09-30.clover',
+            })
+
+            const paymentIntentId = payment.payment_metadata?.stripePaymentIntentId
+
+            if (paymentIntentId) {
+              const refund = await stripe.refunds.create({
+                payment_intent: paymentIntentId,
+                reason: 'requested_by_customer',
+                metadata: {
+                  refund_reason: `트레이너 예약 거절 (사유: ${rejectionReason})${rejectionNote ? ` - ${rejectionNote}` : ''}`,
+                  refunded_by_trainer: trainer.id,
+                  refunded_at: new Date().toISOString(),
+                }
+              })
+
+              console.log('✅ Stripe refund successful:', refund.id)
+            }
+          }
+          // Toss Payments 환불
+          else if (payment.payment_provider === 'toss') {
+            const paymentKey = payment.payment_metadata?.paymentKey
+
+            if (paymentKey) {
+              const tossResponse = await fetch(
+                `https://api.tosspayments.com/v1/payments/${paymentKey}/cancel`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Basic ${Buffer.from(process.env.TOSS_SECRET_KEY + ':').toString('base64')}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    cancelReason: `트레이너 예약 거절 (사유: ${rejectionReason})${rejectionNote ? ` - ${rejectionNote}` : ''}`
+                  })
+                }
+              )
+
+              if (tossResponse.ok) {
+                const tossData = await tossResponse.json()
+                console.log('✅ Toss refund successful:', tossData.transactionKey)
+              } else {
+                console.error('❌ Toss refund failed:', await tossResponse.json())
+              }
+            }
+          }
+
+          // DB 업데이트
+          await serviceSupabase
+            .from('payments')
+            .update({
+              payment_status: 'refunded',
+              refunded_at: new Date().toISOString(),
+              payment_metadata: {
+                ...payment.payment_metadata,
+                refund: {
+                  reason: `트레이너 예약 거절 (사유: ${rejectionReason})${rejectionNote ? ` - ${rejectionNote}` : ''}`,
+                  refundedByTrainer: trainer.id,
+                  refundedAt: new Date().toISOString(),
+                }
+              }
+            })
+            .eq('id', payment.id)
+
+          console.log('✅ Payment status updated to refunded')
+
+        } catch (refundError) {
+          console.error('❌ Refund error:', refundError)
+          // 환불 실패해도 예약 거절은 계속 진행 (관리자가 수동 처리)
+        }
+      }
+    }
+  }
+
   // Create notification for customer (utils 사용)
   const trainerName = booking.trainer?.profile?.full_name || '트레이너'
   const scheduledAt = combineDateTime(booking.booking_date, booking.start_time)

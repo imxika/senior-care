@@ -2,14 +2,167 @@
 
 **작성일**: 2025-10-02 (Day 1)
 **최종 업데이트**: 2025-10-11 (Day 13 완료)
-**버전**: 3.13.0
-**상태**: MVP 핵심 기능 완료 + 가격 정책 시스템 + 긴급 버그 수정
+**버전**: 3.14.0
+**상태**: MVP 핵심 기능 완료 + 가격 정책 시스템 + 자동 환불 + 동적 가격 계산
 
 ---
 
 ## 📅 개발 타임라인
 
-### Day 13 (2025-10-11) - 가격 정책 시스템 & 긴급 버그 수정 💰🐛
+### Day 13 (2025-10-11) - 가격 정책 시스템 & 자동 환불 & 동적 가격 💰🔄
+
+#### 🎯 핵심 성과
+- ✅ **플랫폼 가격 정책 시스템 완전 구현** - 데이터베이스 기반 가격 관리
+- ✅ **트레이너 개별 가격 설정 기능** - 플랫폼 기본값 또는 커스텀 가격
+- ✅ **수수료 차등 시스템** - 추천 예약 15%, 직접 예약 20%
+- ✅ **트레이너 예약 거절 시 자동 환불** - Stripe/Toss 자동 환불 처리
+- ✅ **예약 페이지 동적 가격 계산** - 세션 유형, 시간에 따른 실시간 가격
+- ✅ **알림 시스템 DB 스키마 수정** - link 컬럼 추가, CHECK 제약조건 업데이트
+- ✅ **긴급 버그 6개 수정** - React Hooks dependency 경고 완전 해결
+- ✅ **빌드 성공 (14.6초) - TypeScript/ESLint 오류 0개**
+
+#### 📝 작업 상세
+
+**1. 트레이너 예약 거절 자동 환불 시스템**
+
+**파일**: `app/(dashboard)/trainer/bookings/actions.ts`
+
+**동작 흐름:**
+1. 트레이너가 예약 거절 (`updateBookingStatus(bookingId, 'cancelled')`)
+2. 자동으로 해당 예약의 결제 내역 조회 (`payment_status = 'paid'`)
+3. Stripe 또는 Toss Payments API 호출하여 전액 환불
+4. DB에 `payment_status = 'refunded'` 업데이트
+5. 환불 메타데이터 저장 (거절 사유, 환불 시간 등)
+6. 고객에게 거절 알림 전송
+
+**환불 처리:**
+```typescript
+// Stripe 환불
+const refund = await stripe.refunds.create({
+  payment_intent: paymentIntentId,
+  reason: 'requested_by_customer',
+  metadata: {
+    refund_reason: `트레이너 예약 거절 (사유: ${rejectionReason})`,
+    refunded_by_trainer: trainer.id
+  }
+})
+
+// Toss 환불
+const tossResponse = await fetch(
+  `https://api.tosspayments.com/v1/payments/${paymentKey}/cancel`,
+  {
+    method: 'POST',
+    body: JSON.stringify({
+      cancelReason: `트레이너 예약 거절 (사유: ${rejectionReason})`
+    })
+  }
+)
+
+// DB 업데이트
+await serviceSupabase
+  .from('payments')
+  .update({
+    payment_status: 'refunded',
+    refunded_at: new Date().toISOString(),
+    payment_metadata: { refund: { reason, refundedByTrainer: trainer.id } }
+  })
+```
+
+**2. 예약 페이지 동적 가격 계산**
+
+**문제:**
+- 기존: 시간당 고정 가격만 표시 (세션 유형, 시간 미반영)
+- 우측 "예상 비용" 박스가 변하지 않음
+
+**해결:**
+1. `lib/pricing-client.ts` 생성 - 클라이언트용 가격 계산 함수 분리
+2. BookingForm에서 세션 유형, 시간 선택 시 실시간 가격 계산
+3. 우측 고정 "예상 비용" 박스 제거 (BookingForm 내부 가격 박스만 사용)
+
+**가격 계산 로직:**
+```typescript
+// pricing-client.ts (클라이언트 컴포넌트용)
+export function calculatePrice(
+  sessionType: SessionType,     // 1:1, 2:1, 3:1
+  duration: DurationMinutes,     // 60, 90, 120
+  config: TrainerPricingConfig,
+  policy: PlatformPricingPolicy
+): PriceCalculation {
+  const hourlyRate = getHourlyRate(config, policy)
+  const hours = duration / 60
+  const basePrice = Math.round(hourlyRate * hours)
+  const discountRate = getDurationDiscount(duration, config, policy)
+  const discountAmount = Math.round(basePrice * (1 - discountRate))
+  const finalPrice = basePrice - discountAmount
+
+  return { base_price, discount_amount, final_price }
+}
+```
+
+**3. 주차 안내 조건부 표시**
+
+**변경:**
+```typescript
+{/* 주차 안내 - 방문 서비스일 때만 표시 */}
+{serviceType === 'home' && (
+  <div className="bg-blue-50 border border-blue-200...">
+    <p className="font-semibold mb-1">🅿️ 주차 안내</p>
+    <ul>
+      <li>• 고객 측 주차 제공 불가 시, 인근 유료 주차장 이용</li>
+      <li>• 주차비는 서비스 종료 후 별도 청구됩니다</li>
+    </ul>
+  </div>
+)}
+```
+
+**4. 알림 시스템 DB 스키마 수정**
+
+**문제:**
+- 코드에서 `link` 컬럼 사용하지만 DB에는 `related_id` 컬럼만 존재
+- 4개 신규 알림 타입 (booking_matched, booking_request, booking_request_closed, auto_match_timeout)이 CHECK 제약조건에 없음
+
+**마이그레이션 파일**: `supabase/migrations/20251011_fix_notifications_schema.sql`
+
+```sql
+-- Step 1: Add 'link' column
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS link TEXT;
+
+-- Step 2: Create index
+CREATE INDEX IF NOT EXISTS idx_notifications_link ON notifications(link);
+
+-- Step 3: Update CHECK constraint
+ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
+ALTER TABLE notifications ADD CONSTRAINT notifications_type_check
+  CHECK (type IN (
+    'booking_confirmed', 'booking_cancelled', 'booking_completed',
+    'booking_pending', 'booking_rejected', 'system',
+    'booking_matched', 'booking_request',
+    'booking_request_closed', 'auto_match_timeout'
+  ));
+```
+
+#### 🔧 기술 변경 사항
+
+**파일 수정:**
+- `app/(dashboard)/trainer/bookings/actions.ts` - 자동 환불 로직 추가
+- `components/booking-form.tsx` - 동적 가격 계산 적용
+- `app/(public)/trainers/[id]/booking/page.tsx` - 가격 정책 데이터 전달
+- `lib/pricing-client.ts` - 클라이언트용 가격 계산 함수 (신규)
+- `supabase/migrations/20251011_fix_notifications_schema.sql` - 알림 스키마 수정
+
+**빌드 결과:**
+```
+✓ Compiled successfully in 14.6s
+✓ Linting passed (경고 26개, 오류 0개)
+✓ Type checking skipped
+```
+
+#### 🎯 다음 작업 (Day 14 예정)
+- [ ] Stats 페이지 데이터 표시 (pendingTrainers, totalCustomers, directBookings, recommendedBookings)
+- [ ] 미사용 import 제거 (~50개)
+- [ ] 이미지 최적화 (next/image 적용)
+
+### Day 13 (2025-10-11) - 가격 정책 시스템 & 긴급 버그 수정 💰🐛 (이전 내용)
 
 #### 🎯 핵심 성과
 - ✅ **플랫폼 가격 정책 시스템 완전 구현** - 데이터베이스 기반 가격 관리

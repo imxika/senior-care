@@ -7,6 +7,8 @@ import { Separator } from '@/components/ui/separator'
 import { Star, Home, Building, ArrowLeft, Users } from 'lucide-react'
 import Link from 'next/link'
 import { BookingForm } from '@/components/booking-form'
+import { BookingFormWrapper } from '@/components/booking-form-wrapper'
+import { getTrainerPricing } from '@/lib/pricing-utils'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -99,6 +101,22 @@ export default async function TrainerBookingPage({ params, searchParams }: PageP
   // 경력 계산 (fallback 지원)
   const experienceYears = trainer.years_experience || trainer.experience_years || 0
 
+  // 가격 정책 가져오기
+  const pricing = await getTrainerPricing(id)
+  if (!pricing) {
+    return (
+      <div className="container mx-auto px-4 py-12">
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-center text-muted-foreground">
+              가격 정보를 불러올 수 없습니다.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       {/* Back Button */}
@@ -133,6 +151,8 @@ export default async function TrainerBookingPage({ params, searchParams }: PageP
                 centerName={trainer.center_name}
                 centerAddress={trainer.center_address}
                 centerPhone={trainer.center_phone}
+                pricingConfig={pricing.config}
+                pricingPolicy={pricing.policy}
               />
             </CardContent>
           </Card>
@@ -236,25 +256,6 @@ export default async function TrainerBookingPage({ params, searchParams }: PageP
               )}
             </CardContent>
           </Card>
-
-          {/* Pricing */}
-          {trainer.hourly_rate && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">예상 비용</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">
-                  {trainer.hourly_rate.toLocaleString()}원
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">시간당 기준</p>
-                <Separator className="my-3" />
-                <p className="text-xs text-muted-foreground">
-                  * 최종 비용은 서비스 시간과 유형에 따라 달라질 수 있습니다
-                </p>
-              </CardContent>
-            </Card>
-          )}
 
           {/* Notice */}
           <Card>

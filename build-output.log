@@ -9,278 +9,43 @@
 
    Creating an optimized production build ...
 
-[2m[192.61ms][22m [@tailwindcss/postcss] app/globals.css
+[2m[210.95ms][22m [@tailwindcss/postcss] app/globals.css
 [2m[  0.04ms][22m  [2m ↳ [22mQuick bail check
-[2m[ 23.09ms][22m  [2m ↳ [22mSetup compiler
-[2m[  0.21ms][22m    [2m ↳ [22mPostCSS AST -> Tailwind CSS AST
-[2m[ 22.80ms][22m    [2m ↳ [22mCreate compiler
-[2m[  0.08ms][22m  [2m ↳ [22mRegister full rebuild paths
-[2m[  1.13ms][22m  [2m ↳ [22mSetup scanner
-[2m[ 30.67ms][22m  [2m ↳ [22mScan for candidates
-[2m[ 21.50ms][22m  [2m ↳ [22mRegister dependency messages
-[2m[ 53.33ms][22m  [2m ↳ [22mBuild utilities
-[2m[ 56.55ms][22m  [2m ↳ [22mOptimization
-[2m[  1.28ms][22m    [2m ↳ [22mAST -> CSS
-[2m[ 39.34ms][22m    [2m ↳ [22mLightning CSS
-[2m[ 15.78ms][22m    [2m ↳ [22mCSS -> PostCSS AST
-[2m[  5.95ms][22m  [2m ↳ [22mUpdate PostCSS AST
+[2m[ 20.53ms][22m  [2m ↳ [22mSetup compiler
+[2m[  0.29ms][22m    [2m ↳ [22mPostCSS AST -> Tailwind CSS AST
+[2m[ 20.22ms][22m    [2m ↳ [22mCreate compiler
+[2m[  0.07ms][22m  [2m ↳ [22mRegister full rebuild paths
+[2m[  2.85ms][22m  [2m ↳ [22mSetup scanner
+[2m[ 40.52ms][22m  [2m ↳ [22mScan for candidates
+[2m[ 29.58ms][22m  [2m ↳ [22mRegister dependency messages
+[2m[ 54.52ms][22m  [2m ↳ [22mBuild utilities
+[2m[ 54.20ms][22m  [2m ↳ [22mOptimization
+[2m[  1.20ms][22m    [2m ↳ [22mAST -> CSS
+[2m[ 33.97ms][22m    [2m ↳ [22mLightning CSS
+[2m[ 18.96ms][22m    [2m ↳ [22mCSS -> PostCSS AST
+[2m[  8.27ms][22m  [2m ↳ [22mUpdate PostCSS AST
 
- ✓ Finished writing to disk in 1690ms
- ✓ Compiled successfully in 12.7s
-   Running next.config.js provided runAfterProductionCompile ...
- ✓ Completed runAfterProductionCompile in 13394ms
-   Linting and checking validity of types ...
 
-./app/(auth)/login/page.tsx
-14:9  Warning: 'router' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+[2m[0.02ms][22m [@tailwindcss/postcss] node_modules/nprogress/nprogress.css
+[2m[0.02ms][22m  [2m ↳ [22mQuick bail check
 
-./app/(dashboard)/admin/analytics/page.tsx
-4:10  Warning: 'Card' is defined but never used.  @typescript-eslint/no-unused-vars
-4:16  Warning: 'CardContent' is defined but never used.  @typescript-eslint/no-unused-vars
-4:29  Warning: 'CardHeader' is defined but never used.  @typescript-eslint/no-unused-vars
-4:41  Warning: 'CardTitle' is defined but never used.  @typescript-eslint/no-unused-vars
-4:52  Warning: 'CardDescription' is defined but never used.  @typescript-eslint/no-unused-vars
+ ✓ Finished writing to disk in 3.4s
 
-./app/(dashboard)/admin/bookings/page.tsx
-4:29  Warning: 'CardHeader' is defined but never used.  @typescript-eslint/no-unused-vars
-4:41  Warning: 'CardTitle' is defined but never used.  @typescript-eslint/no-unused-vars
-5:10  Warning: 'Badge' is defined but never used.  @typescript-eslint/no-unused-vars
-6:10  Warning: 'Button' is defined but never used.  @typescript-eslint/no-unused-vars
-17:8  Warning: 'Link' is defined but never used.  @typescript-eslint/no-unused-vars
-18:10  Warning: 'BOOKING_STATUS_CONFIG' is defined but never used.  @typescript-eslint/no-unused-vars
-19:10  Warning: 'BookingFilters' is defined but never used.  @typescript-eslint/no-unused-vars
-21:10  Warning: 'Eye' is defined but never used.  @typescript-eslint/no-unused-vars
-253:9  Warning: 'paginatedBookings' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+> Build error occurred
+Error: Turbopack build failed with 1 errors:
+./lib/supabase/server.ts:3:1
+Ecmascript file had an error
+[0m [90m 1 |[39m [36mimport[39m { createServerClient } [36mfrom[39m [32m'@supabase/ssr'[39m
+ [90m 2 |[39m [36mimport[39m { createClient [36mas[39m createSupabaseClient } [36mfrom[39m [32m'@supabase/supabase-js'[39m
+[31m[1m>[22m[39m[90m 3 |[39m [36mimport[39m { cookies } [36mfrom[39m [32m'next/headers'[39m
+ [90m   |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 4 |[39m
+ [90m 5 |[39m [36mexport[39m [36masync[39m [36mfunction[39m createClient() {
+ [90m 6 |[39m   [36mconst[39m cookieStore [33m=[39m [36mawait[39m cookies()[0m
 
-./app/(dashboard)/admin/bookings/recommended/[id]/match/page.tsx
-5:10  Warning: 'Badge' is defined but never used.  @typescript-eslint/no-unused-vars
+You're importing a component that needs "next/headers". That only works in a Server Component which is not supported in the pages/ directory. Read more: https://nextjs.org/docs/app/building-your-application/rendering/server-components
 
-./app/(dashboard)/admin/bookings/recommended/[id]/match/trainer-match-list.tsx
-10:16  Warning: 'Star' is defined but never used.  @typescript-eslint/no-unused-vars
-10:33  Warning: 'DollarSign' is defined but never used.  @typescript-eslint/no-unused-vars
-53:3  Warning: 'bookingDate' is defined but never used.  @typescript-eslint/no-unused-vars
-54:3  Warning: 'startTime' is defined but never used.  @typescript-eslint/no-unused-vars
-55:3  Warning: 'endTime' is defined but never used.  @typescript-eslint/no-unused-vars
 
-./app/(dashboard)/admin/bookings/recommended/recommended-booking-card.tsx
-3:10  Warning: 'useState' is defined but never used.  @typescript-eslint/no-unused-vars
 
-./app/(dashboard)/admin/reviews/ReviewManagementClient.tsx
-24:106  Warning: 'ExternalLink' is defined but never used.  @typescript-eslint/no-unused-vars
-24:120  Warning: 'X' is defined but never used.  @typescript-eslint/no-unused-vars
-24:132  Warning: 'ImageIcon' is defined but never used.  @typescript-eslint/no-unused-vars
-24:143  Warning: 'Video' is defined but never used.  @typescript-eslint/no-unused-vars
-73:10  Warning: 'detailDialog' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-73:24  Warning: 'setDetailDialog' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-128:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
-154:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
-323:27  Warning: 'hasContent' is assigned a value but never used.  @typescript-eslint/no-unused-vars
 
-./app/(dashboard)/admin/settlements/page.tsx
-4:29  Warning: 'CardDescription' is defined but never used.  @typescript-eslint/no-unused-vars
-24:10  Warning: 'PRICING' is defined but never used.  @typescript-eslint/no-unused-vars
-263:9  Warning: 'thisMonthCommission' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-
-./app/(dashboard)/admin/stats/page.tsx
-4:29  Warning: 'CardDescription' is defined but never used.  @typescript-eslint/no-unused-vars
-10:3  Warning: 'TrendingUp' is defined but never used.  @typescript-eslint/no-unused-vars
-88:9  Warning: 'pendingTrainers' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-90:9  Warning: 'totalCustomers' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-183:9  Warning: 'directBookings' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-184:9  Warning: 'recommendedBookings' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-
-./app/(dashboard)/admin/users/user-management-client.tsx
-55:17  Warning: 'setUsers' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-
-./app/(dashboard)/customer/bookings/page.tsx
-75:34  Warning: 'customerError' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-
-./app/(dashboard)/customer/dashboard/page.tsx
-33:34  Warning: 'customerError' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-101:9  Warning: 'serviceTypeLabel' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-
-./app/(dashboard)/customer/reviews/page.tsx
-13:41  Warning: 'CardTitle' is defined but never used.  @typescript-eslint/no-unused-vars
-
-./app/(dashboard)/customer/settings/profile/profile-edit-form.tsx
-5:10  Warning: 'Button' is defined but never used.  @typescript-eslint/no-unused-vars
-17:10  Warning: 'Badge' is defined but never used.  @typescript-eslint/no-unused-vars
-48:10  Warning: 'loading' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-112:9  Warning: 'handleCancel' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-
-./app/(dashboard)/trainer/bookings/actions.ts
-7:10  Warning: 'BOOKING_STATUS' is defined but never used.  @typescript-eslint/no-unused-vars
-
-./app/(dashboard)/trainer/bookings/page.tsx
-4:40  Warning: 'XCircle' is defined but never used.  @typescript-eslint/no-unused-vars
-
-./app/(dashboard)/trainer/bookings/requests/[id]/BookingActionButtons.tsx
-8:50  Warning: 'trainerId' is defined but never used.  @typescript-eslint/no-unused-vars
-40:50  Warning: 'trainerId' is defined but never used.  @typescript-eslint/no-unused-vars
-
-./app/(dashboard)/trainer/bookings/requests/[id]/actions.ts
-153:9  Warning: 'customerName' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-
-./app/(dashboard)/trainer/earnings/page.tsx
-19:3  Warning: 'Select' is defined but never used.  @typescript-eslint/no-unused-vars
-20:3  Warning: 'SelectContent' is defined but never used.  @typescript-eslint/no-unused-vars
-21:3  Warning: 'SelectItem' is defined but never used.  @typescript-eslint/no-unused-vars
-22:3  Warning: 'SelectTrigger' is defined but never used.  @typescript-eslint/no-unused-vars
-23:3  Warning: 'SelectValue' is defined but never used.  @typescript-eslint/no-unused-vars
-
-./app/(dashboard)/trainer/settings/profile/profile-edit-form.tsx
-5:10  Warning: 'Button' is defined but never used.  @typescript-eslint/no-unused-vars
-12:10  Warning: 'Loader2' is defined but never used.  @typescript-eslint/no-unused-vars
-12:19  Warning: 'Save' is defined but never used.  @typescript-eslint/no-unused-vars
-12:25  Warning: 'X' is defined but never used.  @typescript-eslint/no-unused-vars
-57:10  Warning: 'loading' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-160:9  Warning: 'handleCancel' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-
-./app/(dashboard)/trainer/settings/security/security-form.tsx
-19:10  Warning: 'success' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-
-./app/(public)/booking/recommended/actions.ts
-9:10  Warning: 'notifySuitableTrainers' is defined but never used.  @typescript-eslint/no-unused-vars
-
-./app/(public)/page.tsx
-5:10  Warning: 'Input' is defined but never used.  @typescript-eslint/no-unused-vars
-7:43  Warning: 'Phone' is defined but never used.  @typescript-eslint/no-unused-vars
-
-./app/(public)/trainers/[id]/booking/actions.ts
-5:10  Warning: 'createNotification' is defined but never used.  @typescript-eslint/no-unused-vars
-5:30  Warning: 'notificationTemplates' is defined but never used.  @typescript-eslint/no-unused-vars
-6:10  Warning: 'BOOKING_STATUS' is defined but never used.  @typescript-eslint/no-unused-vars
-
-./app/(public)/trainers/page.tsx
-9:55  Warning: 'Users' is defined but never used.  @typescript-eslint/no-unused-vars
-11:8  Warning: 'Image' is defined but never used.  @typescript-eslint/no-unused-vars
-
-./app/api/bookings/route.ts
-8:27  Warning: 'request' is defined but never used.  @typescript-eslint/no-unused-vars
-
-./app/api/payments/[paymentId]/refund/route.ts
-5:30  Warning: 'notificationTemplates' is defined but never used.  @typescript-eslint/no-unused-vars
-
-./app/api/payments/test/route.ts
-7:27  Warning: 'request' is defined but never used.  @typescript-eslint/no-unused-vars
-
-./app/bookings/page.tsx
-70:6  Warning: React Hook useEffect has a missing dependency: 'checkAuth'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
-
-./app/debug/page.tsx
-58:6  Warning: React Hook useEffect has a missing dependency: 'checkAuth'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
-
-./app/layout.tsx
-3:8  Warning: 'Header' is defined but never used.  @typescript-eslint/no-unused-vars
-4:8  Warning: 'Footer' is defined but never used.  @typescript-eslint/no-unused-vars
-
-./app/payments/fail/page.tsx
-11:9  Warning: 'orderId' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-
-./components/address-selector.tsx
-7:10  Warning: 'Button' is defined but never used.  @typescript-eslint/no-unused-vars
-9:18  Warning: 'Plus' is defined but never used.  @typescript-eslint/no-unused-vars
-71:6  Warning: React Hook useEffect has a missing dependency: 'onAddressChange'. Either include it or remove the dependency array. If 'onAddressChange' changes too often, find the parent component that defines it and wrap that definition in useCallback.  react-hooks/exhaustive-deps
-
-./components/admin/TrainersManagementTable.tsx
-57:24  Warning: 'setStatusFilter' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-59:9  Warning: 'handleVerifyTrainer' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-76:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
-146:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
-
-./components/admin-sidebar.tsx
-10:3  Warning: 'FileText' is defined but never used.  @typescript-eslint/no-unused-vars
-
-./components/avatar-upload.tsx
-56:21  Warning: 'uploadData' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-
-./components/booking-form.tsx
-3:20  Warning: 'useEffect' is defined but never used.  @typescript-eslint/no-unused-vars
-54:9  Warning: 'router' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-
-./components/booking-participants-manager.tsx
-4:35  Warning: 'Phone' is defined but never used.  @typescript-eslint/no-unused-vars
-4:42  Warning: 'Calendar' is defined but never used.  @typescript-eslint/no-unused-vars
-4:52  Warning: 'User' is defined but never used.  @typescript-eslint/no-unused-vars
-46:3  Warning: 'bookingId' is defined but never used.  @typescript-eslint/no-unused-vars
-
-./components/booking-progress-simple.tsx
-134:9  Warning: 'colors' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-
-./components/booking-progress-tracker.tsx
-152:31  Warning: 'index' is defined but never used.  @typescript-eslint/no-unused-vars
-235:31  Warning: 'index' is defined but never used.  @typescript-eslint/no-unused-vars
-
-./components/customer-booking-detail.tsx
-78:10  Warning: 'mounted' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-
-./components/favorite-button.tsx
-34:6  Warning: React Hook useEffect has a missing dependency: 'checkFavoriteStatus'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
-
-./components/favorite-toggle-button.tsx
-42:6  Warning: React Hook useEffect has a missing dependency: 'checkFavoriteStatus'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
-
-./components/inactivity-logout.tsx
-53:6  Warning: React Hook useEffect has a missing dependency: 'resetTimer'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
-
-./components/layout/Header.tsx
-17:9  Warning: 'router' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-24:9  Warning: 'loadUserType' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-
-./components/nav-main.tsx
-44:10  Warning: 'isPending' is assigned a value but never used.  @typescript-eslint/no-unused-vars
-
-./components/navigation-progress.tsx
-5:10  Warning: 'Loader2' is defined but never used.  @typescript-eslint/no-unused-vars
-
-./components/notifications-dropdown.tsx
-16:8  Warning: 'Link' is defined but never used.  @typescript-eslint/no-unused-vars
-126:6  Warning: React Hook useEffect has missing dependencies: 'loadNotifications', 'playNotificationSound', and 'supabase'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
-
-./components/sidebar-left.tsx
-29:10  Warning: 'CalendarIcon' is defined but never used.  @typescript-eslint/no-unused-vars
-29:24  Warning: 'MagnifyingGlassIcon' is defined but never used.  @typescript-eslint/no-unused-vars
-
-./components/sidebar-right.tsx
-13:3  Warning: 'SidebarRail' is defined but never used.  @typescript-eslint/no-unused-vars
-
-./components/trainer-sidebar.tsx
-7:3  Warning: 'Users' is defined but never used.  @typescript-eslint/no-unused-vars
-12:3  Warning: 'Bell' is defined but never used.  @typescript-eslint/no-unused-vars
-13:3  Warning: 'CreditCard' is defined but never used.  @typescript-eslint/no-unused-vars
-14:3  Warning: 'Shield' is defined but never used.  @typescript-eslint/no-unused-vars
-
-./components/ui/SeniorCard.tsx
-36:11  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
-
-./components/ui/sheet.tsx
-5:18  Warning: 'AnimatePresence' is defined but never used.  @typescript-eslint/no-unused-vars
-
-./lib/auto-matching.ts
-8:10  Warning: 'createClient' is defined but never used.  @typescript-eslint/no-unused-vars
-
-./lib/supabase/queries.ts
-14:6  Warning: 'Trainer' is defined but never used.  @typescript-eslint/no-unused-vars
-15:6  Warning: 'Program' is defined but never used.  @typescript-eslint/no-unused-vars
-16:6  Warning: 'Booking' is defined but never used.  @typescript-eslint/no-unused-vars
-17:6  Warning: 'Review' is defined but never used.  @typescript-eslint/no-unused-vars
-
-./lib/types.ts
-7:3  Warning: 'UserRole' is defined but never used.  @typescript-eslint/no-unused-vars
-8:3  Warning: 'ServiceType' is defined but never used.  @typescript-eslint/no-unused-vars
-9:3  Warning: 'BookingStatus' is defined but never used.  @typescript-eslint/no-unused-vars
-
-info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
-Failed to compile.
-
-./app/(dashboard)/customer/bookings/actions.ts:95:7
-Type error: Object literal may only specify known properties, and 'relatedId' does not exist in type 'CreateNotificationParams'.
-
-[0m [90m 93 |[39m       userId[33m:[39m booking[33m.[39mtrainer[33m.[39mprofile_id[33m,[39m
- [90m 94 |[39m       [33m...[39mnotification[33m,[39m
-[31m[1m>[22m[39m[90m 95 |[39m       relatedId[33m:[39m bookingId
- [90m    |[39m       [31m[1m^[22m[39m
- [90m 96 |[39m     })
- [90m 97 |[39m   }
- [90m 98 |[39m[0m
-Next.js build worker exited with code: 1 and signal: null
+    at <unknown> (./lib/supabase/server.ts:3:1)

@@ -14,6 +14,8 @@ import { BookingParticipantsManager } from '@/components/booking-participants-ma
 import { AddressSelector } from '@/components/address-selector'
 import { createBooking } from '@/app/(public)/trainers/[id]/booking/actions'
 import { formatKSTDate } from '@/lib/date-utils'
+import type { TrainerPricingConfig, PlatformPricingPolicy, SessionType, DurationMinutes } from '@/lib/pricing-utils'
+import { calculatePrice } from '@/lib/pricing-client'
 
 interface Participant {
   id: string
@@ -42,6 +44,8 @@ interface BookingFormProps {
   centerName?: string | null
   centerAddress?: string | null
   centerPhone?: string | null
+  pricingConfig: TrainerPricingConfig
+  pricingPolicy: PlatformPricingPolicy
 }
 
 export function BookingForm({
@@ -55,7 +59,9 @@ export function BookingForm({
   hourlyRate = 100000,
   centerName,
   centerAddress,
-  centerPhone
+  centerPhone,
+  pricingConfig,
+  pricingPolicy
 }: BookingFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
@@ -71,8 +77,15 @@ export function BookingForm({
   const [duration, setDuration] = useState('')
   const [participants, setParticipants] = useState<Participant[]>([])
 
-  // Calculate total price based on duration and hourly rate
-  const totalPrice = duration ? Math.round((parseInt(duration) / 60) * hourlyRate) : 0
+  // Calculate total price using pricing policy
+  const totalPrice = duration && sessionType
+    ? calculatePrice(
+        sessionType as SessionType,
+        parseInt(duration) as DurationMinutes,
+        pricingConfig,
+        pricingPolicy
+      ).final_price
+    : 0
 
   // Get max participants based on session type and trainer's max group size
   const sessionTypeMaxParticipants = sessionType === '1:1' ? 1 : sessionType === '2:1' ? 2 : 3
@@ -375,14 +388,16 @@ export function BookingForm({
         />
       </div>
 
-      {/* 주차 안내 */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
-        <p className="font-semibold mb-1">🅿️ 주차 안내</p>
-        <ul className="space-y-1 text-xs">
-          <li>• 고객 측 주차 제공 불가 시, 인근 유료 주차장 이용</li>
-          <li>• 주차비는 서비스 종료 후 별도 청구됩니다</li>
-        </ul>
-      </div>
+      {/* 주차 안내 - 방문 서비스일 때만 표시 */}
+      {serviceType === 'home' && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+          <p className="font-semibold mb-1">🅿️ 주차 안내</p>
+          <ul className="space-y-1 text-xs">
+            <li>• 고객 측 주차 제공 불가 시, 인근 유료 주차장 이용</li>
+            <li>• 주차비는 서비스 종료 후 별도 청구됩니다</li>
+          </ul>
+        </div>
+      )}
 
       {/* Submit */}
       <div className="pt-4">
