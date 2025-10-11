@@ -116,8 +116,12 @@ export async function createBooking(formData: FormData) {
   // For now, assume all bookings are 'direct' (user chose trainer directly)
   const bookingType: BookingType = 'direct'
 
+  // Convert UI service type ('home' | 'center') to API service type ('home_visit' | 'center_visit')
+  const apiServiceType = (serviceType === 'home' ? 'home_visit' : 'center_visit') as ServiceType
+
   const priceCalculation = await calculateCompletePrice(
     sessionType as SessionType,
+    apiServiceType,
     duration as DurationMinutes,
     bookingType,
     trainerId

@@ -40,12 +40,18 @@ export function getSessionPrice(
   }
 
   // Use platform default with service type distinction
-  if (policy.session_prices_v2) {
+  if (policy.session_prices_v2 && policy.session_prices_v2[serviceType]) {
     return policy.session_prices_v2[serviceType][sessionType]
   }
 
   // Fallback to old format
-  return policy.session_prices[sessionType]
+  if (policy.session_prices && policy.session_prices[sessionType]) {
+    return policy.session_prices[sessionType]
+  }
+
+  // Last resort fallback
+  console.error('No session price found for:', { sessionType, serviceType, policy })
+  throw new Error(`가격 정보를 찾을 수 없습니다 (세션: ${sessionType}, 서비스: ${serviceType})`)
 }
 
 /**
@@ -66,7 +72,13 @@ export function getDurationDiscount(
   }
 
   // Use platform default
-  return policy.duration_discounts[duration]
+  if (policy.duration_discounts && policy.duration_discounts[duration] !== undefined) {
+    return policy.duration_discounts[duration]
+  }
+
+  // Fallback to no discount
+  console.error('No duration discount found for:', { duration, policy })
+  return 1.0  // No discount
 }
 
 /**
@@ -86,6 +98,12 @@ export function calculatePrice(
   config: TrainerPricingConfig,
   policy: PlatformPricingPolicy
 ): Omit<PriceCalculation, 'commission_rate' | 'commission_amount' | 'trainer_payout'> {
+  // Validate inputs
+  if (!config || !policy) {
+    console.error('Invalid pricing data:', { config, policy })
+    throw new Error('가격 정보가 올바르지 않습니다')
+  }
+
   // Get session price (includes service type)
   const sessionPrice = getSessionPrice(sessionType, serviceType, config, policy)
 

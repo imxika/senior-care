@@ -24,6 +24,9 @@ export default async function TrainerBookingPage({ params, searchParams }: PageP
   const sessionType = (search.session as '1:1' | '2:1' | '3:1') || '1:1'
   const serviceType = search.service as 'home' | 'center' | 'all' | undefined
 
+  // Debug log
+  console.log('TrainerBookingPage - id:', id, 'typeof:', typeof id)
+
   const supabase = await createClient()
 
   // 인증 확인
@@ -91,10 +94,12 @@ export default async function TrainerBookingPage({ params, searchParams }: PageP
     .eq('is_active', true)
     .single()
 
+  console.log('Trainer fetched - id:', trainer?.id)
   console.log('Trainer max_group_size:', trainer?.max_group_size)
   console.log('Trainer years_experience:', trainer?.years_experience)
 
   if (error || !trainer) {
+    console.error('Trainer fetch error:', error)
     notFound()
   }
 
@@ -102,7 +107,10 @@ export default async function TrainerBookingPage({ params, searchParams }: PageP
   const experienceYears = trainer.years_experience || trainer.experience_years || 0
 
   // 가격 정책 가져오기
+  console.log('Fetching pricing for trainer:', id)
   const pricing = await getTrainerPricing(id)
+  console.log('Pricing fetched:', pricing ? 'success' : 'failed')
+
   if (!pricing) {
     return (
       <div className="container mx-auto px-4 py-12">

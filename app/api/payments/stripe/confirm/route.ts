@@ -97,19 +97,22 @@ export async function POST(request: NextRequest) {
       amount: paymentIntent.amount
     });
 
+    // Prepare metadata with proper typing
+    const existingMetadata = (payment.payment_metadata as Record<string, any>) || {};
+    const updatedMetadata = {
+      ...existingMetadata,
+      stripePaymentIntentId: paymentIntent.id,
+      paymentIntentStatus: paymentIntent.status,
+      authorizedAt: new Date().toISOString(),
+      amount: paymentIntent.amount,
+    };
+
     const { error: updateError } = await supabase
       .from('payments')
       .update({
         payment_status: 'authorized', // 🔑 카드 Hold 상태 (청구 안 됨!)
         payment_method: paymentIntent.payment_method_types?.[0] || 'card',
-        confirmed_at: new Date().toISOString(),
-        payment_metadata: {
-          ...(payment.payment_metadata || {}),
-          stripePaymentIntentId: paymentIntent.id,
-          paymentIntentStatus: paymentIntent.status,
-          authorizedAt: new Date().toISOString(),
-          amount: paymentIntent.amount,
-        },
+        payment_metadata: updatedMetadata,
       })
       .eq('id', payment.id);
 
