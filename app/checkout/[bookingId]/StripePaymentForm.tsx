@@ -20,11 +20,31 @@ interface StripePaymentFormProps {
   onError?: (error: string) => void
 }
 
+// 복구 정보 타입
+interface RecoveryInfo {
+  canRetry: boolean
+  suggestedAction: 'retry' | 'change_card' | 'contact_support' | 'wait'
+  retryAfterSeconds?: number
+  shouldContactSupport: boolean
+}
+
 function CheckoutForm({ bookingId, amount, onSuccess, onError }: StripePaymentFormProps) {
   const stripe = useStripe()
   const elements = useElements()
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [recoveryInfo, setRecoveryInfo] = useState<RecoveryInfo | null>(null)
+  const [retryCountdown, setRetryCountdown] = useState<number | null>(null)
+
+  // 재시도 카운트다운 타이머
+  useEffect(() => {
+    if (retryCountdown !== null && retryCountdown > 0) {
+      const timer = setTimeout(() => {
+        setRetryCountdown(retryCountdown - 1)
+      }, 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [retryCountdown])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,6 +55,7 @@ function CheckoutForm({ bookingId, amount, onSuccess, onError }: StripePaymentFo
 
     setIsLoading(true)
     setErrorMessage(null)
+    setRecoveryInfo(null)
 
     try {
       // Confirm Payment Intent (카드 Hold 실행)
@@ -44,7 +65,13 @@ function CheckoutForm({ bookingId, amount, onSuccess, onError }: StripePaymentFo
       })
 
       if (error) {
+        // Stripe 클라이언트 에러 처리
         setErrorMessage(error.message || '결제 처리 중 오류가 발생했습니다.')
+        setRecoveryInfo({
+          canRetry: true,
+          suggestedAction: error.type === 'card_error' ? 'change_card' : 'retry',
+          shouldContactSupport: false
+        })
         onError?.(error.message || 'Payment failed')
         setIsLoading(false)
         return
@@ -65,7 +92,26 @@ function CheckoutForm({ bookingId, amount, onSuccess, onError }: StripePaymentFo
         const data = await response.json()
 
         if (!response.ok) {
-          throw new Error(data.error || '결제 확인 처리 실패')
+          // 서버 에러 처리 (복구 정보 포함)
+          setErrorMessage(data.userMessage || data.error || '결제 확인 처리 실패')
+
+          if (data.canRetry !== undefined) {
+            setRecoveryInfo({
+              canRetry: data.canRetry,
+              suggestedAction: data.suggestedAction || 'retry',
+              retryAfterSeconds: data.retryAfterSeconds,
+              shouldContactSupport: data.shouldContactSupport || false
+            })
+
+            // 재시도 대기 시간이 있으면 카운트다운 시작
+            if (data.retryAfterSeconds) {
+              setRetryCountdown(data.retryAfterSeconds)
+            }
+          }
+
+          onError?.(data.userMessage || data.error)
+          setIsLoading(false)
+          return
         }
 
         // 성공 - 예약 대기 페이지로 리다이렉트
@@ -77,6 +123,12 @@ function CheckoutForm({ bookingId, amount, onSuccess, onError }: StripePaymentFo
     } catch (err) {
       const message = err instanceof Error ? err.message : '결제 처리 중 오류가 발생했습니다.'
       setErrorMessage(message)
+      setRecoveryInfo({
+        canRetry: true,
+        suggestedAction: 'retry',
+        retryAfterSeconds: 30,
+        shouldContactSupport: false
+      })
       onError?.(message)
       setIsLoading(false)
     }
@@ -89,17 +141,49 @@ function CheckoutForm({ bookingId, amount, onSuccess, onError }: StripePaymentFo
         <PaymentElement />
       </div>
 
-      {/* Error Message */}
+      {/* Error Message with Recovery Info */}
       {errorMessage && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-600">{errorMessage}</p>
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg space-y-3">
+          <div className="flex items-start gap-2">
+            <span className="text-red-600">⚠️</span>
+            <p className="text-sm text-red-600 flex-1">{errorMessage}</p>
+          </div>
+
+          {/* Recovery Actions */}
+          {recoveryInfo && (
+            <div className="space-y-2 pt-2 border-t border-red-200">
+              {recoveryInfo.suggestedAction === 'change_card' && (
+                <p className="text-sm text-red-700">
+                  💡 다른 카드를 사용하거나 카드 정보를 확인해주세요.
+                </p>
+              )}
+
+              {recoveryInfo.suggestedAction === 'wait' && retryCountdown !== null && retryCountdown > 0 && (
+                <p className="text-sm text-red-700">
+                  ⏱️ {retryCountdown}초 후에 다시 시도할 수 있습니다.
+                </p>
+              )}
+
+              {recoveryInfo.shouldContactSupport && (
+                <p className="text-sm text-red-700">
+                  📞 문제가 지속되면 고객센터(1234-5678)로 문의해주세요.
+                </p>
+              )}
+
+              {recoveryInfo.canRetry && recoveryInfo.suggestedAction === 'retry' && !retryCountdown && (
+                <p className="text-sm text-green-700">
+                  ✓ 다시 시도 버튼을 눌러주세요.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
 
       {/* Submit Button */}
       <button
         type="submit"
-        disabled={!stripe || isLoading}
+        disabled={!stripe || isLoading || (retryCountdown !== null && retryCountdown > 0)}
         className="w-full bg-blue-600 text-white py-4 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
       >
         {isLoading ? (
@@ -107,6 +191,10 @@ function CheckoutForm({ bookingId, amount, onSuccess, onError }: StripePaymentFo
             <Loader2 className="w-5 h-5 animate-spin" />
             처리 중...
           </>
+        ) : retryCountdown !== null && retryCountdown > 0 ? (
+          `${retryCountdown}초 후 다시 시도`
+        ) : errorMessage && recoveryInfo?.canRetry ? (
+          '다시 시도하기'
         ) : (
           `${amount.toLocaleString('ko-KR')}원 결제하기`
         )}

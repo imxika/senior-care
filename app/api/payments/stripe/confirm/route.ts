@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import Stripe from 'stripe';
 import { createNotification, notificationTemplates } from '@/lib/notifications';
+import { handleStripeError, handlePaymentFailure } from '@/lib/payment-recovery';
 
 /**
  * Stripe Payment Intent 승인 (카드 Hold)
@@ -224,11 +225,44 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: unknown) {
-    console.error('Stripe payment confirm error:', error);
+    console.error('💥 [STRIPE CONFIRM] Error:', error);
+
+    // Stripe 에러인 경우 복구 로직 실행
+    if (error instanceof Stripe.errors.StripeError) {
+      const recovery = handleStripeError(error);
+
+      console.error('🔧 [STRIPE CONFIRM] Recovery info:', {
+        canRetry: recovery.canRetry,
+        suggestedAction: recovery.suggestedAction,
+        userMessage: recovery.userMessage
+      });
+
+      // DB에 실패 상태 기록 (paymentId가 있는 경우에만)
+      // Note: 이 시점에서는 bookingId와 paymentId를 스코프에서 가져올 수 없으므로
+      // 클라이언트에서 재시도 로직을 처리하도록 안내
+
+      return NextResponse.json(
+        {
+          error: 'payment_failed',
+          userMessage: recovery.userMessage,
+          canRetry: recovery.canRetry,
+          suggestedAction: recovery.suggestedAction,
+          retryAfterSeconds: recovery.retryAfterSeconds,
+          shouldContactSupport: recovery.shouldContactSupport,
+          technicalMessage: recovery.technicalMessage
+        },
+        { status: 400 }
+      );
+    }
+
+    // 일반 에러
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error occurred'
+        message: error instanceof Error ? error.message : 'Unknown error occurred',
+        canRetry: true,
+        suggestedAction: 'retry' as const,
+        retryAfterSeconds: 30
       },
       { status: 500 }
     );
