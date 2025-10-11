@@ -17,7 +17,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { CANCELLATION_REASON_LABELS, type CancellationReason } from '@/lib/constants'
-import { formatPrice, calculateCancellationFee } from '@/lib/utils'
+import { formatPrice } from '@/lib/utils'
+import { calculateCancellationFee, getCancellationFeeMessage, CANCELLATION_POLICY_TEXT } from '@/lib/cancellation-fee'
 
 interface CancelBookingDialogProps {
   bookingId: string
@@ -43,7 +44,9 @@ export function CancelBookingDialog({
   const [error, setError] = useState<string | null>(null)
 
   // 취소 수수료 계산
-  const cancellationInfo = calculateCancellationFee(total_price, booking_date, start_time)
+  const bookingDateTime = `${booking_date}T${start_time}`
+  const cancellationInfo = calculateCancellationFee(bookingDateTime, total_price)
+  const feeMessage = getCancellationFeeMessage(cancellationInfo)
 
   const handleCancel = async () => {
     setIsLoading(true)
