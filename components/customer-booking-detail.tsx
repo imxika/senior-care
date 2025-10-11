@@ -506,7 +506,11 @@ export function CustomerBookingDetail({ booking, existingReview }: CustomerBooki
                               {(payment.payment_status === 'cancelled' || payment.payment_status === 'refunded') && cancellationType && (
                                 <>
                                   <div className="col-span-2 border-t pt-2 mt-2">
-                                    <p className="text-muted-foreground mb-1 font-semibold">취소/환불 상세</p>
+                                    <p className="text-muted-foreground mb-2 font-semibold">💰 취소/환불 상세</p>
+                                  </div>
+                                  <div className="col-span-2 bg-blue-50 dark:bg-blue-950 p-2 rounded">
+                                    <p className="text-xs text-muted-foreground mb-1">총 예약 금액</p>
+                                    <p className="font-bold text-base">{parseFloat(payment.amount).toLocaleString()}원</p>
                                   </div>
                                   {feeRate !== undefined && (
                                     <div className="col-span-2">
@@ -514,26 +518,28 @@ export function CustomerBookingDetail({ booking, existingReview }: CustomerBooki
                                       <p className="font-semibold text-orange-600">{(feeRate * 100).toFixed(0)}%</p>
                                     </div>
                                   )}
-                                  {feeAmount !== undefined && (
-                                    <div>
-                                      <p className="text-muted-foreground">취소 수수료</p>
-                                      <p className="font-semibold text-orange-600">{feeAmount.toLocaleString()}원</p>
-                                    </div>
-                                  )}
-                                  {refundAmount !== undefined && (
-                                    <div>
-                                      <p className="text-muted-foreground">환불 금액</p>
-                                      <p className="font-semibold text-green-600">{refundAmount.toLocaleString()}원</p>
-                                    </div>
-                                  )}
+                                  <div className="col-span-2 grid grid-cols-2 gap-2">
+                                    {feeAmount !== undefined && (
+                                      <div className="bg-orange-50 dark:bg-orange-950 p-2 rounded">
+                                        <p className="text-xs text-muted-foreground mb-1">취소 수수료</p>
+                                        <p className="font-bold text-orange-600">{feeAmount.toLocaleString()}원</p>
+                                      </div>
+                                    )}
+                                    {refundAmount !== undefined && (
+                                      <div className="bg-green-50 dark:bg-green-950 p-2 rounded">
+                                        <p className="text-xs text-muted-foreground mb-1">실제 환불 금액</p>
+                                        <p className="font-bold text-green-600">{refundAmount.toLocaleString()}원</p>
+                                      </div>
+                                    )}
+                                  </div>
                                   {cancellationType && (
                                     <div className="col-span-2">
                                       <p className="text-muted-foreground">처리 방식</p>
                                       <p className="font-semibold text-xs">
-                                        {cancellationType === 'full_refund' && '전액 환불'}
-                                        {cancellationType === 'partial_refund' && '부분 환불'}
-                                        {cancellationType === 'partial_capture' && '부분 청구'}
-                                        {cancellationType === 'full_capture' && '전액 청구'}
+                                        {cancellationType === 'full_refund' && '✅ 전액 환불 (수수료 없음)'}
+                                        {cancellationType === 'partial_refund' && '⚠️ 부분 환불 (수수료 차감)'}
+                                        {cancellationType === 'partial_capture' && '⚠️ 부분 청구 (수수료 차감)'}
+                                        {cancellationType === 'full_capture' && '❌ 전액 청구 (환불 없음)'}
                                       </p>
                                     </div>
                                   )}
