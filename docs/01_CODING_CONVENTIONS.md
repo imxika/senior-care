@@ -6,6 +6,7 @@ Senior Care MVP 프로젝트의 코딩 컨벤션 및 스타일 가이드입니�
 - [TypeScript 컨벤션](#typescript-컨벤션)
 - [React/Next.js 패턴](#reactnextjs-패턴)
 - [Supabase 쿼리 패턴](#supabase-쿼리-패턴)
+- [로딩 상태 & UX 패턴](#로딩-상태--ux-패턴)
 - [파일 구조](#파일-구조)
 - [네이밍 규칙](#네이밍-규칙)
 - [에러 처리](#에러-처리)
@@ -238,6 +239,158 @@ if (!data) {
 }
 
 // data 사용
+```
+
+---
+
+## 로딩 상태 & UX 패턴
+
+### 로딩 상태 네이밍
+
+```typescript
+// ✅ Boolean 변수: is 접두사 사용
+const [isLoading, setIsLoading] = useState(false)
+const [isSubmitting, setIsSubmitting] = useState(false)
+const [isProcessing, setIsProcessing] = useState(false)
+
+// ❌ 사용 금지
+const [loading, setLoading] = useState(false)  // is 없음
+const [submit, setSubmit] = useState(false)    // 동사형
+```
+
+### 비동기 함수 패턴
+
+```typescript
+// ✅ try-catch-finally 패턴
+const handleSubmit = async () => {
+  setIsLoading(true)
+
+  try {
+    const response = await fetch('/api/endpoint')
+    if (!response.ok) throw new Error('Failed')
+
+    const data = await response.json()
+    // 성공 처리
+  } catch (error) {
+    console.error('Error:', error)
+    // 에러 처리
+  } finally {
+    setIsLoading(false)  // ⚠️ finally에서 항상 false로
+  }
+}
+```
+
+### 버튼 로딩 상태
+
+```typescript
+// ✅ 버튼 비활성화 + 스피너 + 텍스트 변경
+import { Loader2 } from 'lucide-react'
+
+<Button disabled={isLoading}>
+  {isLoading ? (
+    <>
+      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+      처리 중...
+    </>
+  ) : (
+    '제출하기'
+  )}
+</Button>
+```
+
+### 독립적인 로딩 상태 (다중 버튼)
+
+```typescript
+// ✅ 각 버튼마다 독립적인 상태
+const [isEmailLoading, setIsEmailLoading] = useState(false)
+const [isKakaoLoading, setIsKakaoLoading] = useState(false)
+const [isGoogleLoading, setIsGoogleLoading] = useState(false)
+
+// ❌ 공유 상태 (모든 버튼이 동시에 로딩됨)
+const [isLoading, setIsLoading] = useState(false)
+```
+
+### 페이지 로딩 컴포넌트
+
+프로젝트에는 5가지 재사용 가능한 로딩 컴포넌트가 있습니다 (`components/loading/`):
+
+```typescript
+// 1. SimpleLoading (기본) - 빠른 페이지
+import { SimpleLoading } from '@/components/loading'
+export default function Loading() {
+  return <SimpleLoading message="로딩 중..." />
+}
+
+// 2. GradientLoading (프리미엄) ⭐ - 예약/결제
+import { GradientLoading } from '@/components/loading'
+export default function Loading() {
+  return (
+    <GradientLoading
+      message="잠시만 기다려주세요"
+      submessage="최적의 트레이너를 찾고 있습니다"
+    />
+  )
+}
+
+// 3. MinimalLoading (럭셔리) - 관리자
+import { MinimalLoading } from '@/components/loading'
+export default function Loading() {
+  return <MinimalLoading />
+}
+
+// 4. AnimatedLoading (브랜드) - 대시보드
+import { AnimatedLoading } from '@/components/loading'
+export default function Loading() {
+  return <AnimatedLoading />
+}
+
+// 5. SkeletonLoading (레이아웃) - 목록
+import { SkeletonLoading } from '@/components/loading'
+export default function Loading() {
+  return <SkeletonLoading type="list" />  // list, card, detail, form
+}
+```
+
+**선택 가이드:**
+
+| 상황 | 추천 | 이유 |
+|------|------|------|
+| 예약/결제 | GradientLoading | 프리미엄 |
+| 관리자 | MinimalLoading | 전문적 |
+| 대시보드 | AnimatedLoading | 친근함 |
+| 목록 | SkeletonLoading | 빠름 |
+
+### Optimistic Updates
+
+즉시 반응이 필요한 경우 (좋아요, 즐겨찾기 등):
+
+```typescript
+// ✅ Optimistic Update 패턴
+const handleToggle = async () => {
+  // 1. 이전 상태 저장
+  const previous = isFavorited
+
+  // 2. 즉시 UI 업데이트
+  setIsFavorited(!isFavorited)
+
+  try {
+    // 3. 백그라운드 요청
+    await api.toggle()
+  } catch (error) {
+    // 4. 실패 시 롤백
+    setIsFavorited(previous)
+    toast.error('실패')
+  }
+}
+```
+
+### 로딩 UX 계층
+
+```
+Level 1: 버튼 스피너 (0.5~3초) → 즉시 피드백
+Level 2: NProgress 바 (전환) → 진행 표시
+Level 3: Loading 페이지 (1초+) → 전체 로딩
+Level 4: Optimistic (즉시) → 지연 숨김
 ```
 
 ---
@@ -620,6 +773,6 @@ const userName = 'John'  // 코드만 봐도 명확
 
 ---
 
-**마지막 업데이트**: 2025-01-04
+**마지막 업데이트**: 2025-01-11
 **작성자**: Claude Code
-**버전**: 1.0
+**버전**: 2.0 (Loading UX 패턴 추가)
