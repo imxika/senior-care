@@ -87,6 +87,10 @@ const data = {
           url: "/trainer/settings/schedule",
         },
         {
+          title: "가격 설정",
+          url: "/trainer/settings/pricing",
+        },
+        {
           title: "알림",
           url: "/trainer/settings/notifications",
         },

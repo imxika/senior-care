@@ -52,7 +52,7 @@ interface Props {
 
 export function UserManagementClient({ users: initialUsers }: Props) {
   const router = useRouter()
-  const [users, setUsers] = useState(initialUsers)
+  const users = initialUsers
   const [searchQuery, setSearchQuery] = useState('')
   const [filterType, setFilterType] = useState<string>('all')
   const [sortColumn, setSortColumn] = useState<'email' | 'full_name' | 'user_type' | 'created_at' | 'last_sign_in_at'>('created_at')

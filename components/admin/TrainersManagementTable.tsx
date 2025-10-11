@@ -54,31 +54,6 @@ export default function TrainersManagementTable({ trainers, initialStatus }: Pro
     trainerId: null,
   })
   const [rejectionReason, setRejectionReason] = useState('')
-  const [statusFilter, setStatusFilter] = useState(initialStatus || 'all')
-
-  const handleVerifyTrainer = async (trainerId: string) => {
-    setIsLoading(trainerId)
-    setMessage(null)
-
-    try {
-      const response = await fetch('/api/trainers/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trainerId, isVerified: true }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to verify trainer')
-      }
-
-      setMessage({ type: 'success', text: '트레이너가 승인되었습니다' })
-      setTimeout(() => window.location.reload(), 1500)
-    } catch (error) {
-      setMessage({ type: 'error', text: '승인 중 오류가 발생했습니다' })
-    } finally {
-      setIsLoading(null)
-    }
-  }
 
   const handlePublishToSanity = async (trainerId: string) => {
     setIsLoading(`sanity-${trainerId}`)

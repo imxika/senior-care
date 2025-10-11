@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -11,12 +11,12 @@ export function InactivityLogout() {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const supabase = createClient()
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     await supabase.auth.signOut()
     router.push('/login')
-  }
+  }, [supabase, router])
 
-  const resetTimer = () => {
+  const resetTimer = useCallback(() => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current)
     }
@@ -24,7 +24,7 @@ export function InactivityLogout() {
     timeoutRef.current = setTimeout(() => {
       logout()
     }, INACTIVITY_TIMEOUT)
-  }
+  }, [logout])
 
   useEffect(() => {
     const events = [
@@ -50,7 +50,7 @@ export function InactivityLogout() {
         document.removeEventListener(event, resetTimer)
       })
     }
-  }, [])
+  }, [resetTimer])
 
   return null
 }

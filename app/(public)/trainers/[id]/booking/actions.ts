@@ -3,12 +3,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { createNotification, notificationTemplates } from '@/lib/notifications'
-import { BOOKING_STATUS, PRICING } from '@/lib/constants'
-import {
-  mapFormServiceTypeToDb,
-  calculatePricingInfo
-} from '@/lib/utils'
+import { BOOKING_STATUS } from '@/lib/constants'
+import { mapFormServiceTypeToDb } from '@/lib/utils'
 import { formatKSTDate, calculateKSTTimeRange } from '@/lib/date-utils'
+import {
+  calculateCompletePrice,
+  type SessionType,
+  type DurationMinutes,
+  type BookingType
+} from '@/lib/pricing-utils'
 
 export async function createBooking(formData: FormData) {
   const supabase = await createClient()
@@ -97,10 +100,10 @@ export async function createBooking(formData: FormData) {
   // Calculate start and end times in KST
   const { start_time: startTime, end_time: endTime } = calculateKSTTimeRange(time, duration)
 
-  // Get trainer info for notification and pricing
+  // Get trainer info for notification
   const { data: trainer } = await supabase
     .from('trainers')
-    .select('profile_id, hourly_rate')
+    .select('profile_id')
     .eq('id', trainerId)
     .single()
 
@@ -108,9 +111,21 @@ export async function createBooking(formData: FormData) {
     return { error: '트레이너 정보를 찾을 수 없습니다.' }
   }
 
-  // Calculate pricing (utils 사용)
-  const hourlyRate = trainer.hourly_rate || PRICING.DEFAULT_HOURLY_RATE
-  const pricingInfo = calculatePricingInfo(hourlyRate, duration)
+  // Calculate pricing using new pricing system
+  // TODO: Determine booking_type based on how user found trainer (recommended vs direct)
+  // For now, assume all bookings are 'direct' (user chose trainer directly)
+  const bookingType: BookingType = 'direct'
+
+  const priceCalculation = await calculateCompletePrice(
+    sessionType as SessionType,
+    duration as DurationMinutes,
+    bookingType,
+    trainerId
+  )
+
+  if (!priceCalculation) {
+    return { error: '가격 계산 중 오류가 발생했습니다.' }
+  }
 
   // Map service_type from form to DB (utils 사용)
   const dbServiceType = mapFormServiceTypeToDb(serviceType as 'home' | 'center')
@@ -154,7 +169,7 @@ export async function createBooking(formData: FormData) {
     }
   }
 
-  // Insert booking with KST date handling
+  // Insert booking with KST date handling and new pricing
   const { data: booking, error: insertError } = await supabase
     .from('bookings')
     .insert({
@@ -169,8 +184,11 @@ export async function createBooking(formData: FormData) {
       start_time: startTime,
       end_time: endTime,
       duration_minutes: duration,
-      price_per_person: pricingInfo.price_per_person,
-      total_price: pricingInfo.total_price,
+      price_per_person: priceCalculation.final_price / maxParticipants,
+      total_price: priceCalculation.final_price,
+      booking_type: bookingType, // recommended or direct
+      platform_commission: priceCalculation.commission_amount,
+      trainer_payout: priceCalculation.trainer_payout,
       customer_notes: customerNotes || null,
       address_id: finalAddressId,
       status: 'pending_payment' // 🆕 결제 대기 상태로 시작 (결제 완료 후 pending으로 변경)
@@ -196,7 +214,7 @@ export async function createBooking(formData: FormData) {
   participantsToCreate.push({
     booking_id: booking.id,
     customer_id: customerData.id,
-    payment_amount: pricingInfo.total_price, // 호스트가 전액 선결제
+    payment_amount: priceCalculation.final_price, // 호스트가 전액 선결제
     payment_status: 'pending', // 결제 대기 (나중에 결제 시스템 연동)
     is_primary: true,
     attendance_status: 'confirmed',

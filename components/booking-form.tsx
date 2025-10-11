@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { MapPin, Home, Building, Users, Loader2 } from 'lucide-react'
+import { MapPin, Home, Building, Users, Loader2, Phone } from 'lucide-react'
 import { BookingCalendar } from '@/components/booking-calendar'
 import { BookingParticipantsManager } from '@/components/booking-participants-manager'
 import { AddressSelector } from '@/components/address-selector'
@@ -39,6 +39,9 @@ interface BookingFormProps {
   initialSessionType?: '1:1' | '2:1' | '3:1'
   initialServiceType?: 'home' | 'center' | 'all'
   hourlyRate?: number
+  centerName?: string | null
+  centerAddress?: string | null
+  centerPhone?: string | null
 }
 
 export function BookingForm({
@@ -49,7 +52,10 @@ export function BookingForm({
   trainerMaxGroupSize,
   initialSessionType = '1:1',
   initialServiceType,
-  hourlyRate = 100000
+  hourlyRate = 100000,
+  centerName,
+  centerAddress,
+  centerPhone
 }: BookingFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
@@ -242,6 +248,50 @@ export function BookingForm({
         />
       )}
 
+      {/* Center Information - Only show for center visit */}
+      {serviceType === 'center' && centerName && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Building className="h-5 w-5" />
+              센터 정보
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">센터 이름</p>
+                <p className="font-semibold text-base">{centerName}</p>
+              </div>
+              {centerAddress && (
+                <>
+                  <Separator />
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">주소</p>
+                    <p className="text-sm">{centerAddress}</p>
+                  </div>
+                </>
+              )}
+              {centerPhone && (
+                <>
+                  <Separator />
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">연락처</p>
+                    <a
+                      href={`tel:${centerPhone}`}
+                      className="text-sm text-primary hover:underline flex items-center gap-2"
+                    >
+                      <Phone className="h-4 w-4" />
+                      {centerPhone}
+                    </a>
+                  </div>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Duration */}
       <div className="space-y-2">
         <Label htmlFor="duration">예상 시간</Label>
@@ -255,6 +305,21 @@ export function BookingForm({
             <SelectItem value="120">2시간</SelectItem>
           </SelectContent>
         </Select>
+        {totalPrice > 0 && (
+          <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-medium">예상 비용</span>
+              <span className="text-xl font-bold text-primary">
+                {totalPrice.toLocaleString()}원
+              </span>
+            </div>
+            {isGroupSession && (
+              <p className="text-xs text-muted-foreground mt-1">
+                참가자당 약 {Math.round(totalPrice / maxParticipants).toLocaleString()}원
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Group Session Participants - Only show for 2:1 and 3:1 */}

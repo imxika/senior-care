@@ -130,6 +130,9 @@ export default async function TrainerBookingPage({ params, searchParams }: PageP
                 initialSessionType={sessionType}
                 initialServiceType={serviceType}
                 hourlyRate={trainer.hourly_rate || 100000}
+                centerName={trainer.center_name}
+                centerAddress={trainer.center_address}
+                centerPhone={trainer.center_phone}
               />
             </CardContent>
           </Card>

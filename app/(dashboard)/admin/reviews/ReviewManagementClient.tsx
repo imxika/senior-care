@@ -539,16 +539,16 @@ export default function ReviewManagementClient({ reviews: initialReviews }: Prop
             <Button
               variant="outline"
               onClick={() => setDeleteDialog({ open: false, reviewId: null })}
-              disabled={!!loading}
+              disabled={!!isLoading}
             >
               취소
             </Button>
             <Button
               variant="destructive"
               onClick={handleDelete}
-              disabled={!!loading}
+              disabled={!!isLoading}
             >
-              {loading ? '삭제 중...' : '삭제'}
+              {isLoading ? '삭제 중...' : '삭제'}
             </Button>
           </DialogFooter>
         </DialogContent>

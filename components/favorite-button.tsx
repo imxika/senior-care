@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Heart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
@@ -29,11 +29,7 @@ export function FavoriteButton({
   const [customerId, setCustomerId] = useState<string | null>(null)
   const [isCustomer, setIsCustomer] = useState(false)
 
-  useEffect(() => {
-    checkFavoriteStatus()
-  }, [trainerId])
-
-  const checkFavoriteStatus = async () => {
+  const checkFavoriteStatus = useCallback(async () => {
     const supabase = createClient()
 
     // 1. 현재 사용자 확인
@@ -83,7 +79,11 @@ export function FavoriteButton({
       setIsFavorite(false)
       setFavoriteId(null)
     }
-  }
+  }, [trainerId])
+
+  useEffect(() => {
+    checkFavoriteStatus()
+  }, [checkFavoriteStatus])
 
   const handleToggleFavorite = async (e: React.MouseEvent) => {
     e.preventDefault() // 링크 클릭 방지

@@ -2,6 +2,15 @@
 
 Senior Care MVP 프로젝트의 데이터베이스 스키마 및 네이밍 규칙 문서입니다.
 
+**Version**: 2.5
+**Last Updated**: 2025-10-11
+
+## Changelog
+- **v2.5** (2025-10-11): bookings 테이블에 `platform_commission`, `trainer_payout` 추가
+- **v2.4** (2025-10-11): `platform_pricing_policy` 테이블 추가, `trainers.pricing_config` 추가
+- **v2.3** (2025-10-10): Business verification fields 추가
+- **v2.2** (2025-10-09): Payment system tables 추가
+
 ## 목차
 - [테이블 관계도](#테이블-관계도)
 - [ID 참조 규칙](#id-참조-규칙)
@@ -185,10 +194,12 @@ trainers
 ├── rating: DECIMAL(3,2)
 ├── total_reviews: INTEGER
 ├── hourly_rate: DECIMAL(10,2)
+├── pricing_config: JSONB ✨ NEW (가격 설정)
 ├── home_visit_available: BOOLEAN
 ├── center_visit_available: BOOLEAN
 ├── center_address: TEXT
 ├── center_name: TEXT
+├── center_phone: TEXT
 ├── service_areas: TEXT[]
 ├── is_verified: BOOLEAN
 ├── is_active: BOOLEAN
@@ -198,6 +209,25 @@ trainers
 
 -- ⚠️ UNIQUE 제약: profile_id
 -- 한 명의 사용자는 하나의 trainer 레코드만 가능
+```
+
+**pricing_config 구조** ✨:
+```typescript
+{
+  "use_platform_default": true,           // 플랫폼 기본 가격 사용 여부
+  "custom_hourly_rate": null | number,    // 맞춤 시급 (null이면 platform 기본값)
+  "accept_recommended": true,             // 추천 예약 참여 여부
+  "custom_session_prices": null | {       // 맞춤 세션별 가격
+    "1:1": number,
+    "2:1": number,
+    "3:1": number
+  },
+  "custom_duration_discounts": null | {   // 맞춤 시간별 할인
+    "60": number,   // 1.0 = 할인 없음
+    "90": number,   // 0.95 = 5% 할인
+    "120": number   // 0.9 = 10% 할인
+  }
+}
 ```
 
 **용도**:
@@ -226,8 +256,10 @@ bookings
 ├── id: UUID (PK)
 ├── customer_id: UUID (FK → customers.id) ⚠️
 ├── trainer_id: UUID (FK → trainers.id, NULLABLE) ⚠️ ✨ 추천 예약은 NULL
-├── booking_type: booking_type ENUM ('direct', 'recommended') ✨ NEW
-├── price_multiplier: DECIMAL(3,2) DEFAULT 1.00 ✨ NEW
+├── booking_type: booking_type ENUM ('direct', 'recommended') ✨
+├── price_multiplier: DECIMAL(3,2) DEFAULT 1.00 ✨
+├── platform_commission: DECIMAL(10,2) ✨ NEW (플랫폼 수수료 금액)
+├── trainer_payout: DECIMAL(10,2) ✨ NEW (트레이너 실 수령액)
 ├── service_type: TEXT ('home_visit' | 'center_visit')
 ├── group_size: INTEGER
 ├── booking_date: DATE ⭐
@@ -239,9 +271,9 @@ bookings
 ├── customer_notes: TEXT
 ├── trainer_notes: TEXT
 ├── status: TEXT (enum)
-├── matching_status: TEXT ('pending', 'matched', 'approved') ✨ NEW (추천 예약 매칭 상태)
-├── admin_matched_at: TIMESTAMPTZ ✨ NEW (추천 예약 매칭 시각)
-├── admin_matched_by: UUID (FK → profiles.id) ✨ NEW
+├── matching_status: TEXT ('pending', 'matched', 'approved') ✨ (추천 예약 매칭 상태)
+├── admin_matched_at: TIMESTAMPTZ ✨ (추천 예약 매칭 시각)
+├── admin_matched_by: UUID (FK → profiles.id) ✨
 ├── cancellation_reason: TEXT
 ├── cancelled_by: UUID
 ├── cancelled_at: TIMESTAMPTZ
@@ -258,8 +290,13 @@ bookings
   - ✨ **추천 예약의 경우 초기에 NULL, 관리자 매칭 후 설정됨**
 - 날짜/시간은 `booking_date`, `start_time`, `end_time` 분리
 - ✨ **예약 타입**:
-  - `direct`: 지정 예약 (고객이 트레이너 선택, +30% 비용)
-  - `recommended`: 추천 예약 (관리자 매칭, 기본 비용)
+  - `direct`: 지정 예약 (고객이 트레이너 선택, 수수료 20%)
+  - `recommended`: 추천 예약 (관리자 매칭, 수수료 15%)
+- ✨ **가격 정책** (2025-10-11 업데이트):
+  - `platform_commission`: 플랫폼 수수료 (recommended 15%, direct 20%)
+  - `trainer_payout`: 트레이너 실 수령액 (total_price - platform_commission)
+  - Duration discounts: 60분=100%, 90분=95%, 120분=90%
+  - 가격 계산은 `platform_pricing_policy` 테이블과 `trainers.pricing_config` 참조
 - ✨ **matching_status** (추천 예약 전용):
   - `pending`: 매칭 대기 (결제 완료 후)
   - `matched`: 트레이너 배정됨 (Admin 매칭 완료)
@@ -356,7 +393,63 @@ const { data: review } = await supabase
 
 ---
 
-### 6. notifications (알림)
+### 6. platform_pricing_policy (플랫폼 가격 정책) ✨ NEW
+
+```sql
+platform_pricing_policy
+├── id: UUID (PK)
+├── default_hourly_rate: INTEGER (기본 시급, DEFAULT 100000)
+├── min_hourly_rate: INTEGER (최소 시급, DEFAULT 50000)
+├── max_hourly_rate: INTEGER (최대 시급, DEFAULT 200000)
+├── commission_recommended: INTEGER (추천 예약 수수료 %, DEFAULT 15)
+├── commission_direct: INTEGER (직접 예약 수수료 %, DEFAULT 20)
+├── duration_discounts: JSONB (시간별 할인율)
+├── session_prices: JSONB (세션별 기본 가격)
+├── recommended_max_hourly_rate: INTEGER (추천용 최대 시급, DEFAULT 100000)
+├── is_active: BOOLEAN (DEFAULT true)
+├── created_at: TIMESTAMPTZ
+├── updated_at: TIMESTAMPTZ
+└── updated_by: UUID (FK → profiles.id)
+
+-- 단일 레코드로 관리 (is_active = true인 레코드 하나)
+```
+
+**duration_discounts 구조**:
+```json
+{
+  "60": 1.0,   // 1시간: 할인 없음
+  "90": 0.95,  // 1.5시간: 5% 할인
+  "120": 0.9   // 2시간: 10% 할인
+}
+```
+
+**session_prices 구조**:
+```json
+{
+  "1:1": 100000,  // 1:1 프리미엄
+  "2:1": 75000,   // 2:1 소그룹 (1인당)
+  "3:1": 55000    // 3:1 그룹 (1인당)
+}
+```
+
+**용도**:
+- 플랫폼 전체의 기본 가격 정책 관리
+- Admin이 언제든지 수정 가능
+- 트레이너가 맞춤 가격 미설정 시 이 값 사용
+
+**접근 방법**:
+```typescript
+// 현재 활성 가격 정책 조회
+const { data: pricing } = await supabase
+  .from('platform_pricing_policy')
+  .select('*')
+  .eq('is_active', true)
+  .single()
+```
+
+---
+
+### 7. notifications (알림)
 
 ```sql
 notifications
@@ -991,10 +1084,16 @@ credit_transactions (크레딧 거래 내역)
 
 ---
 
-**마지막 업데이트**: 2025-10-09
+**마지막 업데이트**: 2025-10-11
 **작성자**: Claude Code
-**버전**: 2.3
+**버전**: 2.4
 **변경사항**:
+- ✨ 가격 정책 시스템 추가
+  - `platform_pricing_policy` 테이블 추가 (플랫폼 가격 정책 관리)
+  - `trainers.pricing_config` JSONB 컬럼 추가 (트레이너별 맞춤 가격)
+  - `trainers.center_phone` 컬럼 추가 (센터 전화번호)
+  - 수수료율 차별화: 추천 15%, 직접 20%
+  - 시간별 할인 정책: 1.5시간 5%, 2시간 10%
 - 결제 & 정산 시스템 테이블 추가 (payments, settlements, trainer_credits, withdrawals, credit_transactions)
 - 결제 관련 테이블 관계도 업데이트
 - Admin RLS 패턴 추가 (Service Role 클라이언트)

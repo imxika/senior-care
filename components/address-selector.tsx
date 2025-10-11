@@ -68,7 +68,7 @@ export function AddressSelector({ customerId, serviceType, onAddressChange }: Ad
     if (customerId) {
       fetchAddresses()
     }
-  }, [customerId])
+  }, [customerId, onAddressChange])
 
   // 선택 변경 시 부모에게 알림
   const handleAddressSelect = (addressId: string) => {

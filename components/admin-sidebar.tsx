@@ -120,6 +120,10 @@ const data = {
           title: "알림 설정",
           url: "/admin/settings",
         },
+        {
+          title: "가격 정책",
+          url: "/admin/settings/pricing",
+        },
       ],
     },
   ],

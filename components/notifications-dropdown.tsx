@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Bell } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
 import { createClient } from '@/lib/supabase/client'
-import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import { ko } from 'date-fns/locale'
 
@@ -40,8 +39,26 @@ export function NotificationsDropdown() {
     setMounted(true)
   }, [])
 
+  // 알림 목록 불러오기
+  const loadNotifications = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    if (data && !error) {
+      setNotifications(data)
+      setUnreadCount(data.filter(n => !n.is_read).length)
+    }
+  }, [supabase])
+
   // 알림 소리 재생
-  const playNotificationSound = async () => {
+  const playNotificationSound = useCallback(async () => {
     try {
       // AudioContext 재사용 또는 생성
       let ctx = audioContext
@@ -73,7 +90,7 @@ export function NotificationsDropdown() {
     } catch (error) {
       console.error('Failed to play notification sound:', error)
     }
-  }
+  }, [audioContext])
 
   useEffect(() => {
     loadNotifications()
@@ -123,24 +140,7 @@ export function NotificationsDropdown() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [])
-
-  async function loadNotifications() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    const { data, error } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(10)
-
-    if (data && !error) {
-      setNotifications(data)
-      setUnreadCount(data.filter(n => !n.is_read).length)
-    }
-  }
+  }, [loadNotifications, playNotificationSound, supabase])
 
   async function markAsRead(notificationId: string) {
     await supabase
