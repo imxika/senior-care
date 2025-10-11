@@ -63,11 +63,19 @@ export function FavoriteToggleButton({
   }
 
   const handleToggle = async () => {
-    setIsLoading(true)
     const supabase = createClient()
 
+    // Optimistic Update: 즉시 UI 업데이트
+    const previousState = isFavorited
+    const previousId = favoriteId
+
     if (isFavorited && favoriteId) {
-      // 즐겨찾기 해제
+      // 즉시 UI 업데이트 (Optimistic)
+      setIsFavorited(false)
+      setFavoriteId(null)
+      setIsLoading(true)
+
+      // 백그라운드에서 서버 요청
       const { error } = await supabase
         .from('favorites')
         .delete()
@@ -75,16 +83,22 @@ export function FavoriteToggleButton({
 
       if (error) {
         console.error('Error removing favorite:', error)
+        // 실패 시 롤백
+        setIsFavorited(previousState)
+        setFavoriteId(previousId)
         toast.error('즐겨찾기 해제 실패')
-        setIsLoading(false)
-        return
+      } else {
+        toast.success('즐겨찾기 해제 완료')
+        router.refresh()
       }
 
-      setIsFavorited(false)
-      setFavoriteId(null)
-      toast.success('즐겨찾기 해제 완료')
+      setIsLoading(false)
     } else {
-      // 즐겨찾기 추가
+      // 즉시 UI 업데이트 (Optimistic)
+      setIsFavorited(true)
+      setIsLoading(true)
+
+      // 백그라운드에서 서버 요청
       const { data, error } = await supabase
         .from('favorites')
         .insert({
@@ -96,18 +110,18 @@ export function FavoriteToggleButton({
 
       if (error) {
         console.error('Error adding favorite:', error)
+        // 실패 시 롤백
+        setIsFavorited(previousState)
+        setFavoriteId(previousId)
         toast.error('즐겨찾기 추가 실패')
-        setIsLoading(false)
-        return
+      } else {
+        setFavoriteId(data.id)
+        toast.success('즐겨찾기에 추가되었습니다')
+        router.refresh()
       }
 
-      setIsFavorited(true)
-      setFavoriteId(data.id)
-      toast.success('즐겨찾기에 추가되었습니다')
+      setIsLoading(false)
     }
-
-    setIsLoading(false)
-    router.refresh()
   }
 
   // 고객이 아니면 버튼 표시 안함
