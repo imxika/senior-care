@@ -17,6 +17,18 @@ export interface PlatformPricingPolicy {
     '2:1': number
     '3:1': number
   }
+  session_prices_v2?: {
+    center_visit: {
+      '1:1': number
+      '2:1': number
+      '3:1': number
+    }
+    home_visit: {
+      '1:1': number
+      '2:1': number
+      '3:1': number
+    }
+  }
   is_active: boolean
   effective_from: string
   created_at: string
@@ -51,6 +63,11 @@ export type BookingType = 'recommended' | 'direct'
  * Session Type
  */
 export type SessionType = '1:1' | '2:1' | '3:1'
+
+/**
+ * Service Type
+ */
+export type ServiceType = 'center_visit' | 'home_visit'
 
 /**
  * Duration in minutes
@@ -155,6 +172,7 @@ export function getHourlyRate(
  */
 export function getSessionPrice(
   sessionType: SessionType,
+  serviceType: ServiceType,
   config: TrainerPricingConfig,
   policy: PlatformPricingPolicy
 ): number {
@@ -166,7 +184,12 @@ export function getSessionPrice(
     return config.custom_session_prices[sessionType]
   }
 
-  // Use platform default
+  // Use platform default with service type distinction
+  if (policy.session_prices_v2) {
+    return policy.session_prices_v2[serviceType][sessionType]
+  }
+
+  // Fallback to old format
   return policy.session_prices[sessionType]
 }
 
@@ -195,6 +218,7 @@ export function getDurationDiscount(
  * Calculate total price with discounts
  *
  * @param sessionType - Session type (1:1, 2:1, 3:1)
+ * @param serviceType - Service type (center_visit or home_visit)
  * @param duration - Duration in minutes (60, 90, 120)
  * @param config - Trainer pricing config
  * @param policy - Platform pricing policy
@@ -202,16 +226,17 @@ export function getDurationDiscount(
  */
 export function calculatePrice(
   sessionType: SessionType,
+  serviceType: ServiceType,
   duration: DurationMinutes,
   config: TrainerPricingConfig,
   policy: PlatformPricingPolicy
 ): Omit<PriceCalculation, 'commission_rate' | 'commission_amount' | 'trainer_payout'> {
-  // Get hourly rate
-  const hourlyRate = getHourlyRate(config, policy)
+  // Get session price (includes service type)
+  const sessionPrice = getSessionPrice(sessionType, serviceType, config, policy)
 
-  // Calculate base price (hourly_rate * hours)
+  // Calculate base price (session_price * hours)
   const hours = duration / 60
-  const basePrice = Math.round(hourlyRate * hours)
+  const basePrice = Math.round(sessionPrice * hours)
 
   // Get duration discount rate
   const discountRate = getDurationDiscount(duration, config, policy)
@@ -263,6 +288,7 @@ export function calculateCommission(
  * Calculate complete price breakdown including commission
  *
  * @param sessionType - Session type (1:1, 2:1, 3:1)
+ * @param serviceType - Service type (center_visit or home_visit)
  * @param duration - Duration in minutes (60, 90, 120)
  * @param bookingType - Type of booking (recommended or direct)
  * @param trainerId - Trainer ID
@@ -270,6 +296,7 @@ export function calculateCommission(
  */
 export async function calculateCompletePrice(
   sessionType: SessionType,
+  serviceType: ServiceType,
   duration: DurationMinutes,
   bookingType: BookingType,
   trainerId: string
@@ -283,7 +310,7 @@ export async function calculateCompletePrice(
   const { config, policy } = pricing
 
   // Calculate base price with discounts
-  const priceBreakdown = calculatePrice(sessionType, duration, config, policy)
+  const priceBreakdown = calculatePrice(sessionType, serviceType, duration, config, policy)
 
   // Calculate commission
   const commission = calculateCommission(

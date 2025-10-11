@@ -14,7 +14,7 @@ import { BookingParticipantsManager } from '@/components/booking-participants-ma
 import { AddressSelector } from '@/components/address-selector'
 import { createBooking } from '@/app/(public)/trainers/[id]/booking/actions'
 import { formatKSTDate } from '@/lib/date-utils'
-import type { TrainerPricingConfig, PlatformPricingPolicy, SessionType, DurationMinutes } from '@/lib/pricing-utils'
+import type { TrainerPricingConfig, PlatformPricingPolicy, SessionType, ServiceType, DurationMinutes } from '@/lib/pricing-utils'
 import { calculatePrice } from '@/lib/pricing-client'
 
 interface Participant {
@@ -78,9 +78,10 @@ export function BookingForm({
   const [participants, setParticipants] = useState<Participant[]>([])
 
   // Calculate total price using pricing policy
-  const totalPrice = duration && sessionType
+  const totalPrice = duration && sessionType && serviceType
     ? calculatePrice(
         sessionType as SessionType,
+        (serviceType === 'home' ? 'home_visit' : 'center_visit') as ServiceType,
         parseInt(duration) as DurationMinutes,
         pricingConfig,
         pricingPolicy

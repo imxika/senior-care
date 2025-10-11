@@ -3,7 +3,7 @@
  * This file can be imported in client components
  */
 
-import type { TrainerPricingConfig, PlatformPricingPolicy, SessionType, DurationMinutes, PriceCalculation } from './pricing-utils'
+import type { TrainerPricingConfig, PlatformPricingPolicy, SessionType, ServiceType, DurationMinutes, PriceCalculation } from './pricing-utils'
 
 /**
  * Get hourly rate for a trainer
@@ -27,6 +27,7 @@ export function getHourlyRate(
  */
 export function getSessionPrice(
   sessionType: SessionType,
+  serviceType: ServiceType,
   config: TrainerPricingConfig,
   policy: PlatformPricingPolicy
 ): number {
@@ -38,7 +39,12 @@ export function getSessionPrice(
     return config.custom_session_prices[sessionType]
   }
 
-  // Use platform default
+  // Use platform default with service type distinction
+  if (policy.session_prices_v2) {
+    return policy.session_prices_v2[serviceType][sessionType]
+  }
+
+  // Fallback to old format
   return policy.session_prices[sessionType]
 }
 
@@ -67,6 +73,7 @@ export function getDurationDiscount(
  * Calculate total price with discounts
  *
  * @param sessionType - Session type (1:1, 2:1, 3:1)
+ * @param serviceType - Service type (center_visit or home_visit)
  * @param duration - Duration in minutes (60, 90, 120)
  * @param config - Trainer pricing config
  * @param policy - Platform pricing policy
@@ -74,16 +81,17 @@ export function getDurationDiscount(
  */
 export function calculatePrice(
   sessionType: SessionType,
+  serviceType: ServiceType,
   duration: DurationMinutes,
   config: TrainerPricingConfig,
   policy: PlatformPricingPolicy
 ): Omit<PriceCalculation, 'commission_rate' | 'commission_amount' | 'trainer_payout'> {
-  // Get hourly rate
-  const hourlyRate = getHourlyRate(config, policy)
+  // Get session price (includes service type)
+  const sessionPrice = getSessionPrice(sessionType, serviceType, config, policy)
 
-  // Calculate base price (hourly_rate * hours)
+  // Calculate base price (session_price * hours)
   const hours = duration / 60
-  const basePrice = Math.round(hourlyRate * hours)
+  const basePrice = Math.round(sessionPrice * hours)
 
   // Get duration discount rate
   const discountRate = getDurationDiscount(duration, config, policy)

@@ -24,6 +24,18 @@ interface PricingPolicy {
     '2:1': number
     '3:1': number
   }
+  session_prices_v2?: {
+    center_visit: {
+      '1:1': number
+      '2:1': number
+      '3:1': number
+    }
+    home_visit: {
+      '1:1': number
+      '2:1': number
+      '3:1': number
+    }
+  }
   is_active: boolean
   effective_from: string
 }
@@ -47,10 +59,27 @@ export default function PricingSettingsForm({ initialData }: PricingSettingsForm
   const [discount90, setDiscount90] = useState(initialData.duration_discounts['90'] * 100)
   const [discount120, setDiscount120] = useState(initialData.duration_discounts['120'] * 100)
 
-  // Session prices
-  const [price1on1, setPrice1on1] = useState(initialData.session_prices['1:1'])
-  const [price2on1, setPrice2on1] = useState(initialData.session_prices['2:1'])
-  const [price3on1, setPrice3on1] = useState(initialData.session_prices['3:1'])
+  // Session prices (center visit)
+  const [priceCenterVisit1on1, setPriceCenterVisit1on1] = useState(
+    initialData.session_prices_v2?.center_visit['1:1'] ?? initialData.session_prices['1:1']
+  )
+  const [priceCenterVisit2on1, setPriceCenterVisit2on1] = useState(
+    initialData.session_prices_v2?.center_visit['2:1'] ?? initialData.session_prices['2:1']
+  )
+  const [priceCenterVisit3on1, setPriceCenterVisit3on1] = useState(
+    initialData.session_prices_v2?.center_visit['3:1'] ?? initialData.session_prices['3:1']
+  )
+
+  // Session prices (home visit)
+  const [priceHomeVisit1on1, setPriceHomeVisit1on1] = useState(
+    initialData.session_prices_v2?.home_visit['1:1'] ?? initialData.session_prices['1:1']
+  )
+  const [priceHomeVisit2on1, setPriceHomeVisit2on1] = useState(
+    initialData.session_prices_v2?.home_visit['2:1'] ?? initialData.session_prices['2:1']
+  )
+  const [priceHomeVisit3on1, setPriceHomeVisit3on1] = useState(
+    initialData.session_prices_v2?.home_visit['3:1'] ?? initialData.session_prices['3:1']
+  )
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -65,9 +94,16 @@ export default function PricingSettingsForm({ initialData }: PricingSettingsForm
     formData.append('discount_60', (discount60 / 100).toString())
     formData.append('discount_90', (discount90 / 100).toString())
     formData.append('discount_120', (discount120 / 100).toString())
-    formData.append('price_1on1', price1on1.toString())
-    formData.append('price_2on1', price2on1.toString())
-    formData.append('price_3on1', price3on1.toString())
+
+    // Center visit prices
+    formData.append('price_center_visit_1on1', priceCenterVisit1on1.toString())
+    formData.append('price_center_visit_2on1', priceCenterVisit2on1.toString())
+    formData.append('price_center_visit_3on1', priceCenterVisit3on1.toString())
+
+    // Home visit prices
+    formData.append('price_home_visit_1on1', priceHomeVisit1on1.toString())
+    formData.append('price_home_visit_2on1', priceHomeVisit2on1.toString())
+    formData.append('price_home_visit_3on1', priceHomeVisit3on1.toString())
 
     const result = await updatePricingPolicy(formData)
 
@@ -209,25 +245,86 @@ export default function PricingSettingsForm({ initialData }: PricingSettingsForm
         </CardContent>
       </Card>
 
-      {/* Session Prices */}
+      {/* Session Prices - Center Visit */}
       <Card>
         <CardHeader>
-          <CardTitle>세션 타입별 기본 가격</CardTitle>
+          <CardTitle>센터 방문 세션 가격</CardTitle>
           <CardDescription>
-            1시간 기준 세션 타입별 인당 가격을 설정합니다. (단위: 원)
+            1시간 기준 센터 방문 세션의 세션 타입별 인당 가격을 설정합니다. (단위: 원)
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="price_1on1">1:1 세션 (1인)</Label>
+              <Label htmlFor="price_center_visit_1on1">1:1 세션 (1인)</Label>
               <Input
-                id="price_1on1"
+                id="price_center_visit_1on1"
                 type="number"
                 min="0"
                 step="1000"
-                value={price1on1}
-                onChange={(e) => setPrice1on1(Number(e.target.value))}
+                value={priceCenterVisit1on1}
+                onChange={(e) => setPriceCenterVisit1on1(Number(e.target.value))}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                권장: 70,000원
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="price_center_visit_2on1">2:1 세션 (1인당)</Label>
+              <Input
+                id="price_center_visit_2on1"
+                type="number"
+                min="0"
+                step="1000"
+                value={priceCenterVisit2on1}
+                onChange={(e) => setPriceCenterVisit2on1(Number(e.target.value))}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                권장: 52,500원
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="price_center_visit_3on1">3:1 세션 (1인당)</Label>
+              <Input
+                id="price_center_visit_3on1"
+                type="number"
+                min="0"
+                step="1000"
+                value={priceCenterVisit3on1}
+                onChange={(e) => setPriceCenterVisit3on1(Number(e.target.value))}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                권장: 38,500원
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Session Prices - Home Visit */}
+      <Card>
+        <CardHeader>
+          <CardTitle>방문 재활 세션 가격</CardTitle>
+          <CardDescription>
+            1시간 기준 방문 재활 세션의 세션 타입별 인당 가격을 설정합니다. (단위: 원)
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="price_home_visit_1on1">1:1 세션 (1인)</Label>
+              <Input
+                id="price_home_visit_1on1"
+                type="number"
+                min="0"
+                step="1000"
+                value={priceHomeVisit1on1}
+                onChange={(e) => setPriceHomeVisit1on1(Number(e.target.value))}
                 required
               />
               <p className="text-xs text-muted-foreground">
@@ -236,14 +333,14 @@ export default function PricingSettingsForm({ initialData }: PricingSettingsForm
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="price_2on1">2:1 세션 (1인당)</Label>
+              <Label htmlFor="price_home_visit_2on1">2:1 세션 (1인당)</Label>
               <Input
-                id="price_2on1"
+                id="price_home_visit_2on1"
                 type="number"
                 min="0"
                 step="1000"
-                value={price2on1}
-                onChange={(e) => setPrice2on1(Number(e.target.value))}
+                value={priceHomeVisit2on1}
+                onChange={(e) => setPriceHomeVisit2on1(Number(e.target.value))}
                 required
               />
               <p className="text-xs text-muted-foreground">
@@ -252,14 +349,14 @@ export default function PricingSettingsForm({ initialData }: PricingSettingsForm
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="price_3on1">3:1 세션 (1인당)</Label>
+              <Label htmlFor="price_home_visit_3on1">3:1 세션 (1인당)</Label>
               <Input
-                id="price_3on1"
+                id="price_home_visit_3on1"
                 type="number"
                 min="0"
                 step="1000"
-                value={price3on1}
-                onChange={(e) => setPrice3on1(Number(e.target.value))}
+                value={priceHomeVisit3on1}
+                onChange={(e) => setPriceHomeVisit3on1(Number(e.target.value))}
                 required
               />
               <p className="text-xs text-muted-foreground">

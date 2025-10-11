@@ -8,6 +8,7 @@ import { Separator } from '@/components/ui/separator'
 import { Star, MapPin, Award, Calendar, Home, Building, Mail, Phone, CheckCircle2, Users } from 'lucide-react'
 import Link from 'next/link'
 import { FavoriteToggleButton } from '@/components/favorite-toggle-button'
+import { getTrainerPricing } from '@/lib/pricing-utils'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -69,6 +70,9 @@ export default async function TrainerDetailPage({ params }: PageProps) {
   if (error || !trainer) {
     notFound()
   }
+
+  // Get trainer pricing information
+  const pricing = await getTrainerPricing(id)
 
   // Use years_experience as it's the actual column in DB
   const experienceYears = trainer.years_experience || trainer.experience_years || 0
@@ -503,16 +507,101 @@ export default async function TrainerDetailPage({ params }: PageProps) {
           )}
 
           {/* Pricing */}
-          {trainer.hourly_rate && (
+          {pricing && pricing.policy && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">시간당 요금</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">
-                  {trainer.hourly_rate.toLocaleString()}원
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">1시간 기준</p>
+              <CardContent className="space-y-3">
+                {/* 트레이너가 커스텀 가격 설정한 경우 */}
+                {!pricing.config.use_platform_default && pricing.config.custom_session_prices ? (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-2">트레이너 지정 가격</p>
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">1:1 세션:</span>
+                        <span className="font-bold">{pricing.config.custom_session_prices['1:1']?.toLocaleString() || '미설정'}원</span>
+                      </div>
+                      {pricing.config.custom_session_prices['2:1'] && trainer.max_group_size && trainer.max_group_size >= 2 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">2:1 세션:</span>
+                          <span className="font-bold">{pricing.config.custom_session_prices['2:1'].toLocaleString()}원 (1인당)</span>
+                        </div>
+                      )}
+                      {pricing.config.custom_session_prices['3:1'] && trainer.max_group_size && trainer.max_group_size >= 3 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">3:1 세션:</span>
+                          <span className="font-bold">{pricing.config.custom_session_prices['3:1'].toLocaleString()}원 (1인당)</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : pricing.policy.session_prices_v2 ? (
+                  /* 플랫폼 가격 정책 사용 - 서비스 타입별 구분 */
+                  <>
+                    {/* 센터 방문 가격 */}
+                    {trainer.center_visit_available && (
+                      <div>
+                        <p className="text-sm font-semibold mb-2 flex items-center gap-1">
+                          <Building className="h-4 w-4" />
+                          센터 방문
+                        </p>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">1:1 세션:</span>
+                            <span className="font-bold">{pricing.policy.session_prices_v2.center_visit['1:1'].toLocaleString()}원</span>
+                          </div>
+                          {trainer.max_group_size && trainer.max_group_size >= 2 && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">2:1 세션:</span>
+                              <span className="font-bold">{pricing.policy.session_prices_v2.center_visit['2:1'].toLocaleString()}원 (1인당)</span>
+                            </div>
+                          )}
+                          {trainer.max_group_size && trainer.max_group_size >= 3 && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">3:1 세션:</span>
+                              <span className="font-bold">{pricing.policy.session_prices_v2.center_visit['3:1'].toLocaleString()}원 (1인당)</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 방문 재활 가격 */}
+                    {trainer.home_visit_available && (
+                      <div>
+                        <p className="text-sm font-semibold mb-2 flex items-center gap-1">
+                          <Home className="h-4 w-4" />
+                          방문 재활
+                        </p>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">1:1 세션:</span>
+                            <span className="font-bold">{pricing.policy.session_prices_v2.home_visit['1:1'].toLocaleString()}원</span>
+                          </div>
+                          {trainer.max_group_size && trainer.max_group_size >= 2 && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">2:1 세션:</span>
+                              <span className="font-bold">{pricing.policy.session_prices_v2.home_visit['2:1'].toLocaleString()}원 (1인당)</span>
+                            </div>
+                          )}
+                          {trainer.max_group_size && trainer.max_group_size >= 3 && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">3:1 세션:</span>
+                              <span className="font-bold">{pricing.policy.session_prices_v2.home_visit['3:1'].toLocaleString()}원 (1인당)</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  /* Fallback to old format */
+                  <div className="text-3xl font-bold">
+                    {trainer.hourly_rate?.toLocaleString() || pricing.policy.session_prices['1:1'].toLocaleString()}원
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground mt-2">* 1시간 기준, 시간별 할인 적용 가능</p>
               </CardContent>
             </Card>
           )}

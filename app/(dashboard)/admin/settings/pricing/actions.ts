@@ -29,9 +29,16 @@ export async function updatePricingPolicy(formData: FormData) {
   const discount60 = parseFloat(formData.get('discount_60') as string)
   const discount90 = parseFloat(formData.get('discount_90') as string)
   const discount120 = parseFloat(formData.get('discount_120') as string)
-  const price1on1 = parseInt(formData.get('price_1on1') as string)
-  const price2on1 = parseInt(formData.get('price_2on1') as string)
-  const price3on1 = parseInt(formData.get('price_3on1') as string)
+
+  // Center visit prices
+  const priceCenterVisit1on1 = parseInt(formData.get('price_center_visit_1on1') as string)
+  const priceCenterVisit2on1 = parseInt(formData.get('price_center_visit_2on1') as string)
+  const priceCenterVisit3on1 = parseInt(formData.get('price_center_visit_3on1') as string)
+
+  // Home visit prices
+  const priceHomeVisit1on1 = parseInt(formData.get('price_home_visit_1on1') as string)
+  const priceHomeVisit2on1 = parseInt(formData.get('price_home_visit_2on1') as string)
+  const priceHomeVisit3on1 = parseInt(formData.get('price_home_visit_3on1') as string)
 
   // Validate commission rates
   if (commissionRecommended < 0 || commissionRecommended > 100) {
@@ -47,7 +54,10 @@ export async function updatePricingPolicy(formData: FormData) {
   }
 
   // Validate prices
-  if (price1on1 < 0 || price2on1 < 0 || price3on1 < 0) {
+  if (
+    priceCenterVisit1on1 < 0 || priceCenterVisit2on1 < 0 || priceCenterVisit3on1 < 0 ||
+    priceHomeVisit1on1 < 0 || priceHomeVisit2on1 < 0 || priceHomeVisit3on1 < 0
+  ) {
     return { error: '가격은 0원 이상이어야 합니다.' }
   }
 
@@ -58,10 +68,17 @@ export async function updatePricingPolicy(formData: FormData) {
     '120': discount120
   }
 
-  const sessionPrices = {
-    '1:1': price1on1,
-    '2:1': price2on1,
-    '3:1': price3on1
+  const sessionPricesV2 = {
+    center_visit: {
+      '1:1': priceCenterVisit1on1,
+      '2:1': priceCenterVisit2on1,
+      '3:1': priceCenterVisit3on1
+    },
+    home_visit: {
+      '1:1': priceHomeVisit1on1,
+      '2:1': priceHomeVisit2on1,
+      '3:1': priceHomeVisit3on1
+    }
   }
 
   // Update pricing policy
@@ -71,7 +88,7 @@ export async function updatePricingPolicy(formData: FormData) {
       commission_recommended: commissionRecommended,
       commission_direct: commissionDirect,
       duration_discounts: durationDiscounts,
-      session_prices: sessionPrices,
+      session_prices_v2: sessionPricesV2,
       updated_at: new Date().toISOString()
     })
     .eq('id', policyId)

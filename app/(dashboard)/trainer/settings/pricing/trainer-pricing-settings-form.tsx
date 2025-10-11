@@ -125,9 +125,24 @@ export default function TrainerPricingSettingsForm({
               <AlertDescription>
                 <div className="space-y-1 text-sm">
                   <p><strong>플랫폼 기본 가격:</strong></p>
-                  <p>• 1:1 세션: {policy.session_prices['1:1'].toLocaleString()}원/시간</p>
-                  <p>• 2:1 세션: {policy.session_prices['2:1'].toLocaleString()}원/시간 (1인당)</p>
-                  <p>• 3:1 세션: {policy.session_prices['3:1'].toLocaleString()}원/시간 (1인당)</p>
+                  {policy.session_prices_v2 ? (
+                    <>
+                      <p className="mt-2 font-semibold">센터 방문:</p>
+                      <p>• 1:1 세션: {policy.session_prices_v2.center_visit['1:1'].toLocaleString()}원/시간</p>
+                      <p>• 2:1 세션: {policy.session_prices_v2.center_visit['2:1'].toLocaleString()}원/시간 (1인당)</p>
+                      <p>• 3:1 세션: {policy.session_prices_v2.center_visit['3:1'].toLocaleString()}원/시간 (1인당)</p>
+                      <p className="mt-2 font-semibold">방문 재활:</p>
+                      <p>• 1:1 세션: {policy.session_prices_v2.home_visit['1:1'].toLocaleString()}원/시간</p>
+                      <p>• 2:1 세션: {policy.session_prices_v2.home_visit['2:1'].toLocaleString()}원/시간 (1인당)</p>
+                      <p>• 3:1 세션: {policy.session_prices_v2.home_visit['3:1'].toLocaleString()}원/시간 (1인당)</p>
+                    </>
+                  ) : (
+                    <>
+                      <p>• 1:1 세션: {policy.session_prices['1:1'].toLocaleString()}원/시간</p>
+                      <p>• 2:1 세션: {policy.session_prices['2:1'].toLocaleString()}원/시간 (1인당)</p>
+                      <p>• 3:1 세션: {policy.session_prices['3:1'].toLocaleString()}원/시간 (1인당)</p>
+                    </>
+                  )}
                   <p className="mt-2"><strong>할인 정책:</strong></p>
                   <p>• 90분 수업: {(100 - policy.duration_discounts['90'] * 100).toFixed(0)}% 할인</p>
                   <p>• 120분 수업: {(100 - policy.duration_discounts['120'] * 100).toFixed(0)}% 할인</p>
