@@ -4,9 +4,6 @@
 
 import { Database } from './database.types'
 import type {
-  UserRole,
-  ServiceType,
-  BookingStatus,
   BookingType,
   MobilityLevel,
   Gender

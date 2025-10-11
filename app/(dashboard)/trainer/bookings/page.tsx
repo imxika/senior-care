@@ -117,6 +117,7 @@ export default async function TrainerBookingsPage({ searchParams }: PageProps) {
       )
     `)
     .eq('trainer_id', trainerInfo.id)
+    .not('status', 'in', '(pending_payment,expired)') // 결제 대기 및 만료 예약 제외
     .order('booking_date', { ascending: false })
 
   if (error) {

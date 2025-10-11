@@ -133,7 +133,7 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
       )
     `)
     .eq('customer_id', customer.id)
-    .neq('status', 'expired')  // 만료된 예약 제외
+    .not('status', 'in', '(pending_payment,expired)') // 결제 대기 및 만료 예약 제외
     .order('booking_date', { ascending: false })
     .limit(100)
 
