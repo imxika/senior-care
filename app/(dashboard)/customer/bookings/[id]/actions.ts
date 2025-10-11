@@ -119,41 +119,76 @@ export async function cancelBooking(
     // 9. Payment Intent 상태 확인
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
 
-    if (paymentIntent.status !== 'requires_capture') {
+    console.log('💳 [CANCEL] Payment Intent status:', paymentIntent.status)
+
+    // 10. Stripe 처리 (상태에 따라 다르게 처리)
+    let stripeResult: 'full_refund' | 'partial_capture' | 'full_capture' | 'partial_refund'
+    let capturedAmount = 0
+    let refundedAmount = 0
+
+    // 상태별 처리
+    if (paymentIntent.status === 'requires_capture') {
+      // 아직 캡처되지 않은 경우: cancel 또는 partial capture
+      if (feeCalculation.feeRate === 0) {
+        // 전액 환불: Payment Intent 완전 취소
+        await stripe.paymentIntents.cancel(paymentIntentId)
+        stripeResult = 'full_refund'
+        console.log('✅ [CANCEL] Full refund - Payment Intent cancelled')
+      } else if (feeCalculation.feeRate === 1.0) {
+        // 100% 수수료: 전액 청구
+        const captured = await stripe.paymentIntents.capture(paymentIntentId)
+        capturedAmount = captured.amount
+        stripeResult = 'full_capture'
+        console.log('✅ [CANCEL] Full capture - 100% fee charged')
+      } else {
+        // 부분 청구: 수수료만 청구
+        const captureAmountInCents = feeCalculation.feeAmount
+        const captured = await stripe.paymentIntents.capture(paymentIntentId, {
+          amount_to_capture: captureAmountInCents,
+        })
+        capturedAmount = captured.amount
+        stripeResult = 'partial_capture'
+        console.log('✅ [CANCEL] Partial capture:', {
+          capturedAmount: captureAmountInCents,
+          feeRate: feeCalculation.feeRate
+        })
+      }
+    } else if (paymentIntent.status === 'succeeded') {
+      // 이미 캡처된 경우: refund 처리
+      if (feeCalculation.feeRate === 0) {
+        // 전액 환불
+        const refund = await stripe.refunds.create({
+          payment_intent: paymentIntentId,
+        })
+        refundedAmount = refund.amount
+        stripeResult = 'full_refund'
+        console.log('✅ [CANCEL] Full refund created:', refundedAmount)
+      } else if (feeCalculation.feeRate === 1.0) {
+        // 100% 수수료: 환불 없음
+        capturedAmount = paymentIntent.amount
+        stripeResult = 'full_capture'
+        console.log('✅ [CANCEL] No refund - 100% fee')
+      } else {
+        // 부분 환불: 환불액만큼 refund
+        const refund = await stripe.refunds.create({
+          payment_intent: paymentIntentId,
+          amount: feeCalculation.refundAmount,
+        })
+        refundedAmount = refund.amount
+        capturedAmount = paymentIntent.amount - refundedAmount
+        stripeResult = 'partial_refund'
+        console.log('✅ [CANCEL] Partial refund:', {
+          refundedAmount,
+          capturedAmount,
+          feeRate: feeCalculation.feeRate
+        })
+      }
+    } else {
+      // 처리 불가능한 상태
       console.error('❌ [CANCEL] Invalid Payment Intent status:', paymentIntent.status)
       return {
-        error: 'Cannot cancel - invalid payment status',
-        status: paymentIntent.status
+        error: `취소할 수 없는 결제 상태입니다: ${paymentIntent.status}`,
       }
-    }
-
-    // 10. Stripe 처리 (전액 환불 vs 부분 청구)
-    let stripeResult: 'full_refund' | 'partial_capture' | 'full_capture'
-    let capturedAmount = 0
-
-    if (feeCalculation.feeRate === 0) {
-      // 전액 환불: Payment Intent 완전 취소
-      await stripe.paymentIntents.cancel(paymentIntentId)
-      stripeResult = 'full_refund'
-      console.log('✅ [CANCEL] Full refund - Payment Intent cancelled')
-    } else if (feeCalculation.feeRate === 1.0) {
-      // 100% 수수료: 전액 청구
-      const captured = await stripe.paymentIntents.capture(paymentIntentId)
-      capturedAmount = captured.amount
-      stripeResult = 'full_capture'
-      console.log('✅ [CANCEL] Full capture - 100% fee charged')
-    } else {
-      // 부분 청구: 수수료만 청구
-      const captureAmountInCents = feeCalculation.feeAmount
-      const captured = await stripe.paymentIntents.capture(paymentIntentId, {
-        amount_to_capture: captureAmountInCents,
-      })
-      capturedAmount = captured.amount
-      stripeResult = 'partial_capture'
-      console.log('✅ [CANCEL] Partial capture:', {
-        capturedAmount: captureAmountInCents,
-        feeRate: feeCalculation.feeRate
-      })
     }
 
     // 11. DB 업데이트 시작
