@@ -30,7 +30,7 @@ export function AddressSelector({ customerId, serviceType, onAddressChange }: Ad
   const [newAddress, setNewAddress] = useState('')
   const [newAddressDetail, setNewAddressDetail] = useState('')
   const [newAddressLabel, setNewAddressLabel] = useState('')
-  const [loading, setLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(true)
 
   // 주소 목록 불러오기
   useEffect(() => {
@@ -62,7 +62,7 @@ export function AddressSelector({ customerId, serviceType, onAddressChange }: Ad
         // 에러 시에도 새 주소 입력 가능하도록
         setSelectedMode('new')
       }
-      setLoading(false)
+      setIsLoading(false)
     }
 
     if (customerId) {
@@ -90,7 +90,7 @@ export function AddressSelector({ customerId, serviceType, onAddressChange }: Ad
     return null
   }
 
-  if (loading) {
+  if (isLoading) {
     return <div className="text-sm text-muted-foreground">주소 정보를 불러오는 중...</div>
   }
 

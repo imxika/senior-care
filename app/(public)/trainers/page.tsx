@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { SimpleLoading } from '@/components/loading'
 import { getVerifiedTrainers } from '@/lib/supabase/queries'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -60,7 +61,7 @@ function TrainersPageContent() {
   const serviceType = searchParams.get('service') || 'all' // 'home', 'center', 'all'
 
   const [trainers, setTrainers] = useState<Trainer[]>([])
-  const [loading, setLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [serviceFilter, setServiceFilter] = useState<'all' | 'home' | 'center'>(
     serviceType as 'all' | 'home' | 'center'
@@ -111,7 +112,7 @@ function TrainersPageContent() {
       console.error('Error loading trainers:', error)
       console.error('Error details:', JSON.stringify(error, null, 2))
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
@@ -161,10 +162,10 @@ function TrainersPageContent() {
     setSessionFilter('all')
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-xl">로딩 중...</p>
+      <div className="flex flex-1 items-center justify-center min-h-screen">
+        <SimpleLoading message="트레이너 목록을 불러오는 중..." />
       </div>
     )
   }
@@ -519,10 +520,10 @@ function TrainersPageContent() {
                   ) : (
                     <Link
                       href={`/trainers/${trainer.id}/booking?session=${sessionType}&service=${serviceType}`}
-                      className="w-full"
+                      className="w-full cursor-pointer"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <Button className="w-full h-12 text-base">
+                      <Button className="w-full h-12 text-base cursor-pointer">
                         예약하기
                       </Button>
                     </Link>

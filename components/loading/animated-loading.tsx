@@ -1,16 +1,37 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import { Heart, Users, Sparkles, Award } from 'lucide-react'
 
 interface AnimatedLoadingProps {
   message?: string
   submessage?: string
   className?: string
+  minDisplayTime?: number  // 최소 표시 시간 (밀리초)
 }
 
 export function AnimatedLoading({
   message = '건강한 삶을 준비하고 있습니다',
   submessage = '최고의 트레이너와 함께하세요',
-  className = ''
+  className = '',
+  minDisplayTime = 3000  // 기본 3초
 }: AnimatedLoadingProps) {
+  const [isVisible, setIsVisible] = useState(true)
+
+  useEffect(() => {
+    if (minDisplayTime > 0) {
+      const timer = setTimeout(() => {
+        setIsVisible(false)
+      }, minDisplayTime)
+
+      return () => clearTimeout(timer)
+    }
+  }, [minDisplayTime])
+
+  if (!isVisible && minDisplayTime > 0) {
+    return null
+  }
+
   return (
     <div className={`flex flex-1 flex-col items-center justify-center min-h-[400px] ${className}`}>
       <div className="relative flex flex-col items-center space-y-8 animate-in fade-in duration-500">

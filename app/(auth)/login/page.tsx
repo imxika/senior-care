@@ -6,8 +6,23 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { MessageCircle, Chrome, LogIn, Loader2 } from 'lucide-react'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { MessageCircle, Chrome, LogIn, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link'
+import { AnimatedLoading } from '@/components/loading'
+
+// 에러 메시지 한국어 번역
+function translateError(errorMessage: string): string {
+  const errorMap: Record<string, string> = {
+    'Invalid login credentials': '이메일 또는 비밀번호가 올바르지 않습니다.',
+    'Email not confirmed': '이메일 인증이 완료되지 않았습니다.',
+    'User not found': '존재하지 않는 사용자입니다.',
+    'Invalid email': '올바른 이메일 형식이 아닙니다.',
+    'Password should be at least 6 characters': '비밀번호는 최소 6자 이상이어야 합니다.',
+  }
+
+  return errorMap[errorMessage] || errorMessage
+}
 
 export default function LoginPage() {
   const supabase = createClient()
@@ -16,6 +31,7 @@ export default function LoginPage() {
   const [isEmailLoading, setIsEmailLoading] = useState(false)
   const [isKakaoLoading, setIsKakaoLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
+  const [isRedirecting, setIsRedirecting] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   // 이메일 + 비밀번호 로그인
@@ -32,16 +48,18 @@ export default function LoginPage() {
 
       if (error) throw error
 
-      setMessage({ type: 'success', text: '로그인 성공! 리다이렉트 중...' })
+      // AnimatedLoading 표시
+      setIsRedirecting(true)
 
-      // 완전히 새로고침하여 헤더 상태 업데이트
+      // 3초 후 리다이렉트
       setTimeout(() => {
         window.location.href = '/'
-      }, 500)
+      }, 3000)
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '로그인 중 오류가 발생했습니다.'
       setMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : '로그인 중 오류가 발생했습니다.'
+        text: translateError(errorMessage)
       })
     } finally {
       setIsEmailLoading(false)
@@ -62,9 +80,10 @@ export default function LoginPage() {
       })
       if (error) throw error
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '카카오 로그인 중 오류가 발생했습니다.'
       setMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : '카카오 로그인 중 오류가 발생했습니다.'
+        text: translateError(errorMessage)
       })
     } finally {
       setIsKakaoLoading(false)
@@ -85,13 +104,27 @@ export default function LoginPage() {
       })
       if (error) throw error
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '구글 로그인 중 오류가 발생했습니다.'
       setMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : '구글 로그인 중 오류가 발생했습니다.'
+        text: translateError(errorMessage)
       })
     } finally {
       setIsGoogleLoading(false)
     }
+  }
+
+  // 로그인 성공 후 AnimatedLoading 전체 화면 표시
+  if (isRedirecting) {
+    return (
+      <div className="fixed inset-0 z-50 bg-background flex items-center justify-center">
+        <AnimatedLoading
+          message="로그인 성공!"
+          submessage="환영합니다"
+          minDisplayTime={3000}
+        />
+      </div>
+    )
   }
 
   return (
@@ -215,15 +248,19 @@ export default function LoginPage() {
 
           {/* 메시지 표시 */}
           {message && (
-            <div
-              className={`p-4 rounded-lg text-base md:text-lg ${
-                message.type === 'success'
-                  ? 'bg-green-50 text-green-800 border border-green-200'
-                  : 'bg-red-50 text-red-800 border border-red-200'
-              }`}
+            <Alert
+              variant={message.type === 'error' ? 'destructive' : 'default'}
+              className={message.type === 'success' ? 'border-green-500 bg-green-50 text-green-900 dark:border-green-700 dark:bg-green-950 dark:text-green-100' : ''}
             >
-              {message.text}
-            </div>
+              {message.type === 'error' ? (
+                <AlertCircle className="h-5 w-5" />
+              ) : (
+                <CheckCircle2 className="h-5 w-5" />
+              )}
+              <AlertDescription className="text-base md:text-lg font-medium ml-2">
+                {message.text}
+              </AlertDescription>
+            </Alert>
           )}
 
           {/* 회원가입 링크 */}

@@ -57,7 +57,7 @@ interface AuthStatus {
 export default function BookingsPage() {
   const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [authStatus, setAuthStatus] = useState<AuthStatus>({
     isAuthenticated: false,
@@ -79,18 +79,18 @@ export default function BookingsPage() {
         fetchBookings();
       } else {
         setError('로그인이 필요합니다. /test-payment 페이지에서 로그인해주세요.');
-        setLoading(false);
+        setIsLoading(false);
       }
     } catch (err: unknown) {
       console.error('Auth check error:', err);
       setError('인증 상태를 확인할 수 없습니다.');
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   const fetchBookings = async () => {
     try {
-      setLoading(true);
+      setIsLoading(true);
       setError(null);
 
       const response = await fetch('/api/bookings');
@@ -120,7 +120,7 @@ export default function BookingsPage() {
       console.error('Fetch bookings error:', err);
       setError(err instanceof Error ? err.message : '예약 목록을 불러오는데 실패했습니다.');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -156,7 +156,7 @@ export default function BookingsPage() {
     }).format(date);
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">

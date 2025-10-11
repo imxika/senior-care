@@ -47,7 +47,7 @@ interface Props {
 }
 
 export default function TrainersManagementTable({ trainers, initialStatus }: Props) {
-  const [loading, setLoading] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [rejectDialog, setRejectDialog] = useState<{ open: boolean; trainerId: string | null }>({
     open: false,
@@ -57,7 +57,7 @@ export default function TrainersManagementTable({ trainers, initialStatus }: Pro
   const [statusFilter, setStatusFilter] = useState(initialStatus || 'all')
 
   const handleVerifyTrainer = async (trainerId: string) => {
-    setLoading(trainerId)
+    setIsLoading(trainerId)
     setMessage(null)
 
     try {
@@ -76,12 +76,12 @@ export default function TrainersManagementTable({ trainers, initialStatus }: Pro
     } catch (error) {
       setMessage({ type: 'error', text: '승인 중 오류가 발생했습니다' })
     } finally {
-      setLoading(null)
+      setIsLoading(null)
     }
   }
 
   const handlePublishToSanity = async (trainerId: string) => {
-    setLoading(`sanity-${trainerId}`)
+    setIsLoading(`sanity-${trainerId}`)
     setMessage(null)
 
     try {
@@ -112,7 +112,7 @@ export default function TrainersManagementTable({ trainers, initialStatus }: Pro
       const errorMessage = error instanceof Error ? error.message : '작업 중 오류가 발생했습니다'
       setMessage({ type: 'error', text: errorMessage })
     } finally {
-      setLoading(null)
+      setIsLoading(null)
     }
   }
 
@@ -122,7 +122,7 @@ export default function TrainersManagementTable({ trainers, initialStatus }: Pro
       return
     }
 
-    setLoading(`reject-${rejectDialog.trainerId}`)
+    setIsLoading(`reject-${rejectDialog.trainerId}`)
     setMessage(null)
 
     try {
@@ -146,12 +146,12 @@ export default function TrainersManagementTable({ trainers, initialStatus }: Pro
     } catch (error) {
       setMessage({ type: 'error', text: '거절 처리 중 오류가 발생했습니다' })
     } finally {
-      setLoading(null)
+      setIsLoading(null)
     }
   }
 
   const handleApproveAndPublish = async (trainerId: string) => {
-    setLoading(`both-${trainerId}`)
+    setIsLoading(`both-${trainerId}`)
     setMessage(null)
 
     try {
@@ -195,7 +195,7 @@ export default function TrainersManagementTable({ trainers, initialStatus }: Pro
       const errorMessage = error instanceof Error ? error.message : '작업 중 오류가 발생했습니다'
       setMessage({ type: 'error', text: errorMessage })
     } finally {
-      setLoading(null)
+      setIsLoading(null)
     }
   }
 
@@ -255,10 +255,10 @@ export default function TrainersManagementTable({ trainers, initialStatus }: Pro
                   <div className="mt-4 space-y-2">
                     <Button
                       onClick={() => handleApproveAndPublish(trainer.id)}
-                      disabled={loading === `both-${trainer.id}`}
+                      disabled={isLoading === `both-${trainer.id}`}
                       className="w-full"
                     >
-                      {loading === `both-${trainer.id}` ? (
+                      {isLoading === `both-${trainer.id}` ? (
                         '처리중...'
                       ) : (
                         <>
@@ -324,11 +324,11 @@ export default function TrainersManagementTable({ trainers, initialStatus }: Pro
                   <div className="mt-4 space-y-2">
                     <Button
                       onClick={() => handlePublishToSanity(trainer.id)}
-                      disabled={loading === `sanity-${trainer.id}`}
+                      disabled={isLoading === `sanity-${trainer.id}`}
                       variant="secondary"
                       className="w-full"
                     >
-                      {loading === `sanity-${trainer.id}` ? (
+                      {isLoading === `sanity-${trainer.id}` ? (
                         '게시중...'
                       ) : (
                         <>
@@ -406,9 +406,9 @@ export default function TrainersManagementTable({ trainers, initialStatus }: Pro
             <Button
               variant="destructive"
               onClick={handleRejectTrainer}
-              disabled={!rejectionReason.trim() || loading === `reject-${rejectDialog.trainerId}`}
+              disabled={!rejectionReason.trim() || isLoading === `reject-${rejectDialog.trainerId}`}
             >
-              {loading === `reject-${rejectDialog.trainerId}` ? '처리중...' : '거절'}
+              {isLoading === `reject-${rejectDialog.trainerId}` ? '처리중...' : '거절'}
             </Button>
           </DialogFooter>
         </DialogContent>

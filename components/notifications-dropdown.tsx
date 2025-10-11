@@ -182,7 +182,7 @@ export function NotificationsDropdown() {
   // SSR 방지: 클라이언트에서만 렌더링
   if (!mounted) {
     return (
-      <Button variant="ghost" className="relative h-14 w-14 p-0 shrink-0" disabled>
+      <Button variant="ghost" className="relative h-14 w-14 p-0 shrink-0 cursor-pointer" disabled>
         <Bell className="h-8 w-8" />
       </Button>
     )
@@ -191,7 +191,7 @@ export function NotificationsDropdown() {
   return (
     <DropdownMenu open={isOpen} onOpenChange={handleDropdownOpen}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-14 w-14 p-0 shrink-0">
+        <Button variant="ghost" className="relative h-14 w-14 p-0 shrink-0 cursor-pointer">
           <Bell className="h-8 w-8" />
           {unreadCount > 0 && (
             <Badge

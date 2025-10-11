@@ -21,22 +21,22 @@ import { toast } from 'sonner'
 export function CancelBookingButton({ bookingId }: { bookingId: string }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function handleCancel() {
-    setLoading(true)
+    setIsLoading(true)
     setError(null)
 
     const result = await adminCancelBooking(bookingId, '자동 매칭 실패 - Admin 취소')
 
     if (result.error) {
       setError(result.error)
-      setLoading(false)
+      setIsLoading(false)
       toast.error(result.error)
     } else {
       toast.success('예약이 취소되었습니다')
-      setLoading(false)
+      setIsLoading(false)
       setOpen(false)
       router.refresh()
     }
@@ -63,16 +63,16 @@ export function CancelBookingButton({ bookingId }: { bookingId: string }) {
           <p className="text-sm text-red-600 mt-2">{error}</p>
         )}
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={loading}>취소</AlertDialogCancel>
+          <AlertDialogCancel disabled={isLoading}>취소</AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => {
               e.preventDefault()
               handleCancel()
             }}
-            disabled={loading}
+            disabled={isLoading}
             className="bg-red-600 hover:bg-red-700"
           >
-            {loading ? (
+            {isLoading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 처리 중...

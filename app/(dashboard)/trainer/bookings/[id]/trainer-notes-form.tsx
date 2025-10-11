@@ -18,13 +18,13 @@ export function TrainerNotesForm({ bookingId, initialNotes, initialSummary }: Tr
   const router = useRouter()
   const [notes, setNotes] = useState(initialNotes || '')
   const [summary, setSummary] = useState(initialSummary || '')
-  const [loading, setLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
+    setIsLoading(true)
     setError(null)
     setSuccess(false)
 
@@ -37,10 +37,10 @@ export function TrainerNotesForm({ bookingId, initialNotes, initialSummary }: Tr
 
     if (result.error) {
       setError(result.error)
-      setLoading(false)
+      setIsLoading(false)
     } else {
       setSuccess(true)
-      setLoading(false)
+      setIsLoading(false)
       router.refresh()
 
       // 성공 메시지 3초 후 자동 숨김
@@ -103,8 +103,8 @@ export function TrainerNotesForm({ bookingId, initialNotes, initialSummary }: Tr
       )}
 
       {/* 저장 버튼 */}
-      <Button type="submit" disabled={loading} className="w-full h-12">
-        {loading ? (
+      <Button type="submit" disabled={isLoading} className="w-full h-12">
+        {isLoading ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             저장 중...

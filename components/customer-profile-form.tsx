@@ -39,7 +39,7 @@ interface CustomerProfileFormProps {
 
 export function CustomerProfileForm({ profile, customer }: CustomerProfileFormProps) {
   const router = useRouter()
-  const [loading, setLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
@@ -76,7 +76,7 @@ export function CustomerProfileForm({ profile, customer }: CustomerProfileFormPr
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
+    setIsLoading(true)
     setError(null)
     setSuccess(false)
 
@@ -97,10 +97,10 @@ export function CustomerProfileForm({ profile, customer }: CustomerProfileFormPr
 
     if (result.error) {
       setError(result.error)
-      setLoading(false)
+      setIsLoading(false)
     } else {
       setSuccess(true)
-      setLoading(false)
+      setIsLoading(false)
       router.refresh()
       setTimeout(() => setSuccess(false), 3000)
     }
@@ -315,11 +315,11 @@ export function CustomerProfileForm({ profile, customer }: CustomerProfileFormPr
     {/* Sticky 제출 버튼 */}
     <div className="fixed bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 md:pl-[--sidebar-width]">
       <div className="flex gap-2 justify-end max-w-4xl mx-auto">
-        <Button type="button" variant="outline" onClick={handleCancel} disabled={loading}>
+        <Button type="button" variant="outline" onClick={handleCancel} disabled={isLoading}>
           초기화
         </Button>
-        <Button onClick={handleSubmit} disabled={loading}>
-          {loading ? '저장 중...' : '저장하기'}
+        <Button onClick={handleSubmit} disabled={isLoading}>
+          {isLoading ? '저장 중...' : '저장하기'}
         </Button>
       </div>
     </div>

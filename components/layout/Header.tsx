@@ -8,11 +8,13 @@ import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { getCurrentUser } from "@/app/actions/auth"
 import { NotificationsDropdown } from "@/components/notifications-dropdown"
+import { AnimatedLoading } from "@/components/loading"
 
 export default function Header() {
   const [user, setUser] = useState<{ id: string; email: string | undefined } | null>(null)
   const [userType, setUserType] = useState<string | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [isNavigatingToDashboard, setIsNavigatingToDashboard] = useState(false)
   const supabase = createClient()
   const router = useRouter()
 
@@ -66,6 +68,29 @@ export default function Header() {
     window.location.href = '/'
   }
 
+  const handleDashboardClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault()
+    setIsNavigatingToDashboard(true)
+
+    setTimeout(() => {
+      const dashboardLink = getDashboardLink()
+      window.location.href = dashboardLink
+    }, 3000)
+  }
+
+  // 대시보드로 이동 중일 때 전체 화면 AnimatedLoading 표시
+  if (isNavigatingToDashboard) {
+    return (
+      <div className="fixed inset-0 z-50 bg-background flex items-center justify-center">
+        <AnimatedLoading
+          message="대시보드로 이동 중"
+          submessage="환영합니다"
+          minDisplayTime={3000}
+        />
+      </div>
+    )
+  }
+
   return (
     <header className="border-b bg-white sticky top-0 z-50">
       <div className="container mx-auto px-4">
@@ -80,13 +105,13 @@ export default function Header() {
 
           {/* 데스크탑 네비게이션 */}
           <nav className="hidden md:flex items-center gap-6">
-            <Link href="/trainers" className="text-base hover:text-primary transition-colors">
+            <Link href="/trainers" className="text-base hover:text-primary transition-colors cursor-pointer">
               트레이너 찾기
             </Link>
-            <Link href="/#pricing" className="text-base hover:text-primary transition-colors">
+            <Link href="/#pricing" className="text-base hover:text-primary transition-colors cursor-pointer">
               가격안내
             </Link>
-            <Link href="/about" className="text-base hover:text-primary transition-colors">
+            <Link href="/about" className="text-base hover:text-primary transition-colors cursor-pointer">
               서비스 소개
             </Link>
           </nav>
@@ -103,15 +128,15 @@ export default function Header() {
                 </div>
                 {/* 알림 드롭다운 */}
                 <NotificationsDropdown />
-                <Link href={getDashboardLink()}>
-                  <Button className="h-10 md:h-12">
+                <Link href={getDashboardLink()} className="cursor-pointer" onClick={handleDashboardClick}>
+                  <Button className="h-10 md:h-12 cursor-pointer">
                     <LayoutDashboard className="w-4 h-4 md:w-5 md:h-5 mr-2" />
                     <span className="hidden sm:inline">대시보드</span>
                   </Button>
                 </Link>
                 <Button
                   variant="ghost"
-                  className="h-10 md:h-12"
+                  className="h-10 md:h-12 cursor-pointer"
                   onClick={handleLogout}
                 >
                   <LogOut className="w-4 h-4 md:w-5 md:h-5 mr-2" />

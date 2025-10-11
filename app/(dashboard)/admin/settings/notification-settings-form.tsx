@@ -20,7 +20,7 @@ interface Props {
 }
 
 export function NotificationSettingsForm({ currentSettings }: Props) {
-  const [loading, setLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
   // 기본값 설정
   const [settings, setSettings] = useState<NotificationSettings>({
@@ -40,7 +40,7 @@ export function NotificationSettingsForm({ currentSettings }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
+    setIsLoading(true)
 
     try {
       const result = await updateNotificationSettings(settings)
@@ -57,7 +57,7 @@ export function NotificationSettingsForm({ currentSettings }: Props) {
         description: error instanceof Error ? error.message : '설정 저장에 실패했습니다.',
       })
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
@@ -112,15 +112,15 @@ export function NotificationSettingsForm({ currentSettings }: Props) {
               id={item.key}
               checked={settings[item.key]}
               onCheckedChange={() => handleToggle(item.key)}
-              disabled={loading}
+              disabled={isLoading}
             />
           </div>
         ))}
       </div>
 
       <div className="flex justify-end pt-4 border-t">
-        <Button type="submit" disabled={loading} size="lg">
-          {loading ? '저장 중...' : '설정 저장'}
+        <Button type="submit" disabled={isLoading} size="lg">
+          {isLoading ? '저장 중...' : '설정 저장'}
         </Button>
       </div>
     </form>

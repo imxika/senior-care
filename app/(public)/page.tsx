@@ -39,13 +39,13 @@ export default function Home() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/booking/recommended">
-              <Button size="lg" className="text-lg h-14 px-8 w-full sm:w-auto">
+            <Link href="/booking/recommended" className="cursor-pointer">
+              <Button size="lg" className="text-lg h-14 px-8 w-full sm:w-auto cursor-pointer">
                 <Shield className="w-5 h-5 mr-2" />
                 추천 예약 (기본가)
               </Button>
             </Link>
-            <Button size="lg" variant="outline" className="text-lg h-14 px-8" onClick={handleTrainerClick}>
+            <Button size="lg" variant="outline" className="text-lg h-14 px-8 cursor-pointer" onClick={handleTrainerClick}>
               <Users className="w-5 h-5 mr-2" />
               트레이너 직접 선택 (+30%)
             </Button>
@@ -69,14 +69,14 @@ export default function Home() {
           <TabsList className="grid w-full max-w-3xl mx-auto grid-cols-2 mb-12 h-20 md:h-24 p-2 bg-muted/50">
             <TabsTrigger
               value="home-visit"
-              className="text-lg md:text-2xl font-bold py-6 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              className="text-lg md:text-2xl font-bold py-6 border border-border data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground cursor-pointer hover:bg-primary/10 data-[state=active]:hover:bg-primary transition-all hover:scale-[1.02]"
             >
               <HomeIcon className="w-6 h-6 md:w-8 md:h-8 mr-3" />
               방문 재활
             </TabsTrigger>
             <TabsTrigger
               value="center-visit"
-              className="text-lg md:text-2xl font-bold py-6 data-[state=active]:bg-green-600 data-[state=active]:text-white"
+              className="text-lg md:text-2xl font-bold py-6 border border-border data-[state=active]:border-green-600 data-[state=active]:bg-green-600 data-[state=active]:text-white cursor-pointer hover:bg-green-600/10 data-[state=active]:hover:bg-green-600 transition-all hover:scale-[1.02]"
             >
               <MapPin className="w-6 h-6 md:w-8 md:h-8 mr-3" />
               센터 방문
@@ -123,7 +123,7 @@ export default function Home() {
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {/* 1:1 */}
-              <Card className="border-2 border-primary/50 relative">
+              <Card className="border-2 border-primary/50 relative hover:scale-105 hover:shadow-xl transition-all duration-300">
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                   <span className="bg-primary text-primary-foreground px-4 py-1 rounded-full text-sm font-semibold">
                     추천
@@ -153,14 +153,14 @@ export default function Home() {
                   </ul>
                 </CardContent>
                 <CardFooter className="pt-6">
-                  <Link href="/select-booking-type?session=1:1&service=home" className="w-full">
-                    <Button className="w-full h-16 md:h-12 text-xl md:text-base font-bold active:scale-95 transition-transform" size="lg">선택하기</Button>
+                  <Link href="/select-booking-type?session=1:1&service=home" className="w-full cursor-pointer">
+                    <Button className="w-full h-16 md:h-12 text-xl md:text-base font-bold active:scale-95 transition-transform cursor-pointer" size="lg">선택하기</Button>
                   </Link>
                 </CardFooter>
               </Card>
 
               {/* 1:2 */}
-              <Card className="border-2 hover:border-primary transition-colors">
+              <Card className="border-2 hover:border-orange-600 hover:scale-105 hover:shadow-xl transition-all duration-300">
                 <CardHeader className="text-center">
                   <UsersRound className="w-12 h-12 md:w-10 md:h-10 mx-auto mb-3 text-orange-600" />
                   <CardTitle className="text-2xl md:text-2xl">1:2 듀얼</CardTitle>
@@ -186,14 +186,14 @@ export default function Home() {
                   </ul>
                 </CardContent>
                 <CardFooter className="pt-6">
-                  <Link href="/select-booking-type?session=2:1&service=home" className="w-full">
-                    <Button variant="outline" className="w-full h-16 md:h-12 text-xl md:text-base font-bold border-orange-600 text-orange-600 hover:bg-orange-50 active:scale-95 transition-transform" size="lg">선택하기</Button>
+                  <Link href="/select-booking-type?session=2:1&service=home" className="w-full cursor-pointer">
+                    <Button variant="outline" className="w-full h-16 md:h-12 text-xl md:text-base font-bold border-orange-600 text-orange-600 hover:bg-orange-50 active:scale-95 transition-transform cursor-pointer" size="lg">선택하기</Button>
                   </Link>
                 </CardFooter>
               </Card>
 
               {/* 1:3 */}
-              <Card className="border-2 hover:border-primary transition-colors sm:col-span-2 lg:col-span-1">
+              <Card className="border-2 hover:border-green-600 hover:scale-105 hover:shadow-xl transition-all duration-300 sm:col-span-2 lg:col-span-1">
                 <CardHeader className="text-center">
                   <UsersRound className="w-12 h-12 md:w-10 md:h-10 mx-auto mb-3 text-green-600" />
                   <CardTitle className="text-2xl md:text-2xl">1:3 그룹</CardTitle>
@@ -219,8 +219,8 @@ export default function Home() {
                   </ul>
                 </CardContent>
                 <CardFooter className="pt-6">
-                  <Link href="/select-booking-type?session=3:1&service=home" className="w-full">
-                    <Button variant="outline" className="w-full h-16 md:h-12 text-xl md:text-base font-bold border-green-600 text-green-600 hover:bg-green-50 active:scale-95 transition-transform" size="lg">선택하기</Button>
+                  <Link href="/select-booking-type?session=3:1&service=home" className="w-full cursor-pointer">
+                    <Button variant="outline" className="w-full h-16 md:h-12 text-xl md:text-base font-bold border-green-600 text-green-600 hover:bg-green-50 active:scale-95 transition-transform cursor-pointer" size="lg">선택하기</Button>
                   </Link>
                 </CardFooter>
               </Card>
@@ -267,7 +267,7 @@ export default function Home() {
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {/* 1:1 */}
-              <Card className="border-2 border-primary/50 relative">
+              <Card className="border-2 border-primary/50 relative hover:scale-105 hover:shadow-xl transition-all duration-300">
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                   <span className="bg-green-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
                     추천
@@ -297,14 +297,14 @@ export default function Home() {
                   </ul>
                 </CardContent>
                 <CardFooter className="pt-6">
-                  <Link href="/select-booking-type?session=1:1&service=center" className="w-full">
-                    <Button className="w-full h-16 md:h-12 text-xl md:text-base font-bold bg-green-600 hover:bg-green-700 active:scale-95 transition-transform" size="lg">선택하기</Button>
+                  <Link href="/select-booking-type?session=1:1&service=center" className="w-full cursor-pointer">
+                    <Button className="w-full h-16 md:h-12 text-xl md:text-base font-bold bg-green-600 hover:bg-green-700 active:scale-95 transition-transform cursor-pointer" size="lg">선택하기</Button>
                   </Link>
                 </CardFooter>
               </Card>
 
               {/* 1:2 */}
-              <Card className="border-2 hover:border-green-600 transition-colors">
+              <Card className="border-2 hover:border-green-600 hover:scale-105 hover:shadow-xl transition-all duration-300">
                 <CardHeader className="text-center">
                   <UsersRound className="w-12 h-12 md:w-10 md:h-10 mx-auto mb-3 text-orange-600" />
                   <CardTitle className="text-2xl md:text-2xl">1:2 듀얼</CardTitle>
@@ -330,14 +330,14 @@ export default function Home() {
                   </ul>
                 </CardContent>
                 <CardFooter className="pt-6">
-                  <Link href="/select-booking-type?session=2:1&service=center" className="w-full">
-                    <Button variant="outline" className="w-full h-16 md:h-12 text-xl md:text-base font-bold border-orange-600 text-orange-600 hover:bg-orange-50 active:scale-95 transition-transform" size="lg">선택하기</Button>
+                  <Link href="/select-booking-type?session=2:1&service=center" className="w-full cursor-pointer">
+                    <Button variant="outline" className="w-full h-16 md:h-12 text-xl md:text-base font-bold border-orange-600 text-orange-600 hover:bg-orange-50 active:scale-95 transition-transform cursor-pointer" size="lg">선택하기</Button>
                   </Link>
                 </CardFooter>
               </Card>
 
               {/* 1:3 */}
-              <Card className="border-2 hover:border-green-600 transition-colors sm:col-span-2 lg:col-span-1">
+              <Card className="border-2 hover:border-green-600 hover:scale-105 hover:shadow-xl transition-all duration-300 sm:col-span-2 lg:col-span-1">
                 <CardHeader className="text-center">
                   <UsersRound className="w-12 h-12 md:w-10 md:h-10 mx-auto mb-3 text-green-600" />
                   <CardTitle className="text-2xl md:text-2xl">1:3 그룹</CardTitle>
@@ -363,8 +363,8 @@ export default function Home() {
                   </ul>
                 </CardContent>
                 <CardFooter className="pt-6">
-                  <Link href="/select-booking-type?session=3:1&service=center" className="w-full">
-                    <Button variant="outline" className="w-full h-16 md:h-12 text-xl md:text-base font-bold border-green-600 text-green-600 hover:bg-green-50 active:scale-95 transition-transform" size="lg">선택하기</Button>
+                  <Link href="/select-booking-type?session=3:1&service=center" className="w-full cursor-pointer">
+                    <Button variant="outline" className="w-full h-16 md:h-12 text-xl md:text-base font-bold border-green-600 text-green-600 hover:bg-green-50 active:scale-95 transition-transform cursor-pointer" size="lg">선택하기</Button>
                   </Link>
                 </CardFooter>
               </Card>

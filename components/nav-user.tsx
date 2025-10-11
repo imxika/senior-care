@@ -2,6 +2,9 @@
 
 import { LogOut } from "lucide-react"
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
+import { toast } from "sonner"
 
 import {
   Avatar,
@@ -23,7 +26,6 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { CaretSortIcon } from "@radix-ui/react-icons"
-import { signOut } from "@/app/actions/auth"
 
 export function NavUser({
   user,
@@ -35,6 +37,7 @@ export function NavUser({
   }
 }) {
   const { isMobile } = useSidebar()
+  const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
 
@@ -44,8 +47,30 @@ export function NavUser({
 
   const handleSignOut = async () => {
     setIsLoading(true)
-    await signOut()
-    // redirect는 signOut 함수에서 처리
+
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.auth.signOut()
+
+      if (error) {
+        toast.error('로그아웃 중 오류가 발생했습니다.')
+        return
+      }
+
+      // 로그아웃 성공 Toast
+      toast.success('로그아웃되었습니다', {
+        description: '다음에 또 만나요! 👋'
+      })
+
+      // 0.5초 후 로그인 페이지로 이동
+      setTimeout(() => {
+        window.location.href = '/login'
+      }, 500)
+    } catch (error) {
+      toast.error('로그아웃 중 오류가 발생했습니다.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   // Prevent hydration mismatch
@@ -58,7 +83,7 @@ export function NavUser({
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground cursor-pointer"
             >
               <Avatar className="h-11 w-11 rounded-lg">
                 <AvatarImage src={user.avatar} alt={user.name} />

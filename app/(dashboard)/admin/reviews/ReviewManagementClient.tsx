@@ -74,7 +74,7 @@ export default function ReviewManagementClient({ reviews: initialReviews }: Prop
     open: false,
     reviewId: null,
   })
-  const [loading, setLoading] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState<string | null>(null)
 
   const toggleRow = (reviewId: string) => {
     const newExpanded = new Set(expandedRows)
@@ -103,7 +103,7 @@ export default function ReviewManagementClient({ reviews: initialReviews }: Prop
   }
 
   const handleToggleHide = async (reviewId: string, currentHiddenState: boolean) => {
-    setLoading(reviewId)
+    setIsLoading(reviewId)
     try {
       const response = await fetch('/api/admin/reviews/toggle-hidden', {
         method: 'POST',
@@ -124,14 +124,14 @@ export default function ReviewManagementClient({ reviews: initialReviews }: Prop
     } catch {
       toast.error('처리 중 오류가 발생했습니다')
     } finally {
-      setLoading(null)
+      setIsLoading(null)
     }
   }
 
   const handleDelete = async () => {
     if (!deleteDialog.reviewId) return
 
-    setLoading(deleteDialog.reviewId)
+    setIsLoading(deleteDialog.reviewId)
     try {
       const response = await fetch('/api/admin/reviews/delete', {
         method: 'POST',
@@ -150,7 +150,7 @@ export default function ReviewManagementClient({ reviews: initialReviews }: Prop
     } catch {
       toast.error('삭제 중 오류가 발생했습니다')
     } finally {
-      setLoading(null)
+      setIsLoading(null)
     }
   }
 
@@ -419,7 +419,7 @@ export default function ReviewManagementClient({ reviews: initialReviews }: Prop
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleToggleHide(review.id, review.is_hidden)}
-                                disabled={loading === review.id}
+                                disabled={isLoading === review.id}
                                 className="h-8 px-2"
                               >
                                 {review.is_hidden ? (

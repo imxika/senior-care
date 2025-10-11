@@ -169,7 +169,7 @@ export function FavoriteButton({
         size={size}
         onClick={handleToggleFavorite}
         disabled={isLoading}
-        className={className}
+        className={`${className} cursor-pointer`}
       >
         <Heart
           className={`h-4 w-4 mr-2 ${isFavorite ? 'fill-current text-red-500' : ''}`}
@@ -185,7 +185,7 @@ export function FavoriteButton({
       size={size}
       onClick={handleToggleFavorite}
       disabled={isLoading}
-      className={`${isFavorite ? 'text-red-500 hover:text-red-600' : 'hover:text-red-500'} ${className} flex items-center justify-center`}
+      className={`${isFavorite ? 'text-red-500 hover:text-red-600' : 'hover:text-red-500'} ${className} flex items-center justify-center cursor-pointer`}
     >
       <Heart className={`${size === 'lg' ? 'h-9 w-9' : 'h-5 w-5'} ${isFavorite ? 'fill-current' : ''}`} />
     </Button>

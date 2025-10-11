@@ -44,7 +44,7 @@ const BANKS = [
 export function BillingForm({ trainer }: BillingFormProps) {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const [bankName, setBankName] = useState(trainer.bank_name ?? '')
@@ -59,31 +59,31 @@ export function BillingForm({ trainer }: BillingFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
+    setIsLoading(true)
     setError(null)
 
     // 유효성 검사
     if (!bankName) {
       setError('은행을 선택해주세요')
-      setLoading(false)
+      setIsLoading(false)
       return
     }
 
     if (!accountNumber) {
       setError('계좌번호를 입력해주세요')
-      setLoading(false)
+      setIsLoading(false)
       return
     }
 
     if (!accountHolderName) {
       setError('예금주명을 입력해주세요')
-      setLoading(false)
+      setIsLoading(false)
       return
     }
 
     if (isBusiness && !businessNumber) {
       setError('사업자 등록번호를 입력해주세요')
-      setLoading(false)
+      setIsLoading(false)
       return
     }
 
@@ -98,9 +98,9 @@ export function BillingForm({ trainer }: BillingFormProps) {
 
     if (result.error) {
       setError(result.error)
-      setLoading(false)
+      setIsLoading(false)
     } else {
-      setLoading(false)
+      setIsLoading(false)
       router.refresh()
     }
   }
@@ -244,14 +244,14 @@ export function BillingForm({ trainer }: BillingFormProps) {
               type="button"
               variant="outline"
               onClick={() => router.back()}
-              disabled={loading}
+              disabled={isLoading}
               className="flex-1 h-11 md:h-12 md:flex-none md:min-w-[100px]"
             >
               취소
             </Button>
             <LoadingButton
               type="submit"
-              loading={loading}
+              loading={isLoading}
               loadingText="저장 중..."
               className="flex-1 h-11 md:h-12 md:flex-none md:min-w-[120px]"
             >

@@ -15,7 +15,7 @@ export function TrainerReviewResponse({ reviewId, existingResponse }: TrainerRev
   const router = useRouter()
   const [isEditing, setIsEditing] = useState(false)
   const [response, setResponse] = useState(existingResponse || '')
-  const [loading, setLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async () => {
     if (!response.trim() && !existingResponse) {
@@ -23,7 +23,7 @@ export function TrainerReviewResponse({ reviewId, existingResponse }: TrainerRev
       return
     }
 
-    setLoading(true)
+    setIsLoading(true)
 
     try {
       const res = await fetch(`/api/reviews/${reviewId}/response`, {
@@ -45,14 +45,14 @@ export function TrainerReviewResponse({ reviewId, existingResponse }: TrainerRev
       const errorMessage = error instanceof Error ? error.message : '오류가 발생했습니다';
       toast.error(errorMessage)
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
   const handleDelete = async () => {
     if (!confirm('답글을 삭제하시겠습니까?')) return
 
-    setLoading(true)
+    setIsLoading(true)
 
     try {
       const res = await fetch(`/api/reviews/${reviewId}/response`, {
@@ -73,7 +73,7 @@ export function TrainerReviewResponse({ reviewId, existingResponse }: TrainerRev
       const errorMessage = error instanceof Error ? error.message : '오류가 발생했습니다';
       toast.error(errorMessage)
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
@@ -128,15 +128,15 @@ export function TrainerReviewResponse({ reviewId, existingResponse }: TrainerRev
       <div className="flex gap-2">
         <Button
           onClick={handleSubmit}
-          disabled={loading}
+          disabled={isLoading}
           size="sm"
           className="h-8 text-xs"
         >
-          {loading ? '저장 중...' : '저장'}
+          {isLoading ? '저장 중...' : '저장'}
         </Button>
         <Button
           onClick={handleCancel}
-          disabled={loading}
+          disabled={isLoading}
           variant="outline"
           size="sm"
           className="h-8 text-xs"
@@ -146,7 +146,7 @@ export function TrainerReviewResponse({ reviewId, existingResponse }: TrainerRev
         {existingResponse && (
           <Button
             onClick={handleDelete}
-            disabled={loading}
+            disabled={isLoading}
             variant="destructive"
             size="sm"
             className="h-8 text-xs ml-auto"

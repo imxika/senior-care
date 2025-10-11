@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import dynamic from "next/dynamic"
+import Link from "next/link"
 import {
   Calendar,
   Search,
@@ -112,15 +113,15 @@ export function CustomerSidebar({
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <div className="flex items-center justify-between gap-3 px-4 py-3">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
+          <Link href="/" className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity cursor-pointer">
             <div className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground aspect-square">
               <Home className="size-7" />
             </div>
             <div className="grid flex-1 text-left leading-tight min-w-0">
-              <span className="truncate font-semibold text-lg">Senior Care</span>
+              <span className="truncate font-semibold text-lg">시니어 핏</span>
               <span className="truncate text-base text-muted-foreground">고객</span>
             </div>
-          </div>
+          </Link>
           <div className="shrink-0">
             <NotificationsDropdown />
           </div>
