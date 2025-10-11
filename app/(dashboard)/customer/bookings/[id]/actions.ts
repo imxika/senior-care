@@ -86,12 +86,12 @@ ${notes ? `상세 사유: ${notes}\n` : ''}취소 시기: ${cancellationInfo.tim
     ? `${booking.customer_notes}\n\n${cancellationDetails}`
     : cancellationDetails
 
-  // 결제 정보 조회
+  // 결제 정보 조회 (authorized 또는 paid 상태)
   const { data: payments } = await supabase
     .from('payments')
     .select('id, payment_status, payment_provider, payment_metadata, amount, currency, payment_method, created_at')
     .eq('booking_id', bookingId)
-    .eq('payment_status', 'paid')
+    .in('payment_status', ['authorized', 'paid'])
 
   console.log('결제 정보 조회:', { bookingId, paymentsFound: payments?.length || 0, payments })
 
@@ -141,51 +141,128 @@ ${notes ? `상세 사유: ${notes}\n` : ''}취소 시기: ${cancellationInfo.tim
         provider: string
       } | null = null
 
-      // Stripe 환불
+      // Stripe 처리
       if (paidPayment.payment_provider === 'stripe') {
-        // payment_metadata는 JSONB이므로 안전하게 타입 단언
         const metadata = paidPayment.payment_metadata as Record<string, unknown> | null
         const paymentIntentId = metadata?.stripePaymentIntentId as string | undefined
 
-        console.log('💳 [STRIPE REFUND] Payment metadata:', {
+        console.log('💳 [STRIPE] Payment metadata:', {
           hasMetadata: !!paidPayment.payment_metadata,
           paymentIntentId,
+          paymentStatus: paidPayment.payment_status,
           metadata: paidPayment.payment_metadata,
-          metadataKeys: metadata ? Object.keys(metadata) : [],
-          metadataType: typeof metadata
+          metadataKeys: metadata ? Object.keys(metadata) : []
         })
 
         if (paymentIntentId && typeof paymentIntentId === 'string') {
-          const refundAmountInCents = Math.round(cancellationInfo.refundAmount * 100)
+          // 🆕 authorized 상태면 Partial Capture (수수료만 청구)
+          if (paidPayment.payment_status === 'authorized') {
+            const feeAmountInCents = Math.round(cancellationInfo.feeAmount)
 
-          console.log('💸 [STRIPE REFUND] Creating refund:', {
-            paymentIntentId,
-            refundAmount: cancellationInfo.refundAmount,
-            refundAmountInCents
-          })
+            console.log('💸 [STRIPE PARTIAL CAPTURE] Capturing cancellation fee:', {
+              paymentIntentId,
+              feeAmount: cancellationInfo.feeAmount,
+              feeAmountInCents,
+              feeRate: cancellationInfo.feeRate
+            })
 
-          const refund = await stripe.refunds.create({
-            payment_intent: paymentIntentId,
-            amount: refundAmountInCents,
-            reason: 'requested_by_customer',
-            metadata: {
-              refund_reason: `고객 예약 취소 - ${reason}`,
-              booking_id: bookingId,
-              customer_id: customer.id,
-              refunded_at: new Date().toISOString()
+            if (feeAmountInCents > 0) {
+              // 수수료만 청구
+              const capturedIntent = await stripe.paymentIntents.capture(paymentIntentId, {
+                amount_to_capture: feeAmountInCents
+              })
+
+              refundResult = {
+                refundId: capturedIntent.id,
+                amount: cancellationInfo.refundAmount, // 환불액 (청구 안 된 금액)
+                status: 'partial_capture',
+                provider: 'stripe'
+              }
+
+              console.log('✅ [STRIPE PARTIAL CAPTURE] Fee captured:', {
+                capturedAmount: capturedIntent.amount_received,
+                refundedAmount: cancellationInfo.refundAmount
+              })
+
+              // DB 업데이트 - paid 상태로 변경 (수수료는 청구됨)
+              await serviceSupabase
+                .from('payments')
+                .update({
+                  payment_status: 'paid',
+                  paid_at: new Date().toISOString(),
+                  payment_metadata: {
+                    ...metadata,
+                    partialCapture: {
+                      capturedAmount: capturedIntent.amount_received,
+                      refundedAmount: cancellationInfo.refundAmount,
+                      feeRate: cancellationInfo.feeRate,
+                      reason: `고객 예약 취소 - ${reason}`,
+                      capturedAt: new Date().toISOString()
+                    }
+                  }
+                })
+                .eq('id', paidPayment.id)
+            } else {
+              // 수수료 0원이면 Cancel (전액 환불)
+              const cancelledIntent = await stripe.paymentIntents.cancel(paymentIntentId)
+
+              refundResult = {
+                refundId: cancelledIntent.id,
+                amount: cancellationInfo.refundAmount,
+                status: 'cancelled',
+                provider: 'stripe'
+              }
+
+              console.log('✅ [STRIPE CANCEL] Payment Intent cancelled (no fee):', cancelledIntent.id)
+
+              await serviceSupabase
+                .from('payments')
+                .update({
+                  payment_status: 'cancelled',
+                  payment_metadata: {
+                    ...metadata,
+                    cancelled: {
+                      cancelledAt: new Date().toISOString(),
+                      reason: `고객 예약 취소 - ${reason} (수수료 0%)`
+                    }
+                  }
+                })
+                .eq('id', paidPayment.id)
             }
-          })
-
-          refundResult = {
-            refundId: refund.id,
-            amount: refund.amount / 100,
-            status: refund.status || 'succeeded',
-            provider: 'stripe'
           }
+          // paid 상태면 기존 환불 로직 (부분 환불)
+          else if (paidPayment.payment_status === 'paid') {
+            const refundAmountInCents = Math.round(cancellationInfo.refundAmount)
 
-          console.log('✅ [STRIPE REFUND] Refund completed:', refundResult)
+            console.log('💸 [STRIPE REFUND] Creating refund:', {
+              paymentIntentId,
+              refundAmount: cancellationInfo.refundAmount,
+              refundAmountInCents
+            })
+
+            const refund = await stripe.refunds.create({
+              payment_intent: paymentIntentId,
+              amount: refundAmountInCents,
+              reason: 'requested_by_customer',
+              metadata: {
+                refund_reason: `고객 예약 취소 - ${reason}`,
+                booking_id: bookingId,
+                customer_id: customer.id,
+                refunded_at: new Date().toISOString()
+              }
+            })
+
+            refundResult = {
+              refundId: refund.id,
+              amount: refund.amount,
+              status: refund.status || 'succeeded',
+              provider: 'stripe'
+            }
+
+            console.log('✅ [STRIPE REFUND] Refund completed:', refundResult)
+          }
         } else {
-          console.error('❌ [STRIPE REFUND] No paymentIntentId found in metadata')
+          console.error('❌ [STRIPE] No paymentIntentId found in metadata')
         }
       }
       // Toss 환불

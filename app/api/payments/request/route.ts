@@ -163,11 +163,11 @@ export async function POST(request: NextRequest) {
       // 이벤트 기록 실패는 에러로 처리하지 않음 (주요 기능은 성공)
     }
 
-    // 9. Create payment session based on provider
-    let paymentUrl = '';
+    // 9. Create Payment Intent based on provider
+    let clientSecret = '';
 
     if (paymentProvider === 'stripe') {
-      // Create Stripe session
+      // Create Stripe Payment Intent with Manual Capture
       const Stripe = (await import('stripe')).default;
       const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 
@@ -179,55 +179,57 @@ export async function POST(request: NextRequest) {
         apiVersion: '2025-09-30.clover',
       });
 
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-      const successUrl = `${baseUrl}/payments/success`;
-      const cancelUrl = `${baseUrl}/checkout/${bookingId}`;
-
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        line_items: [
-          {
-            price_data: {
-              currency: 'krw',
-              product_data: {
-                name: orderName,
-                description: `Booking ID: ${bookingId}`,
-              },
-              unit_amount: parseInt(amount.toString()),
-            },
-            quantity: 1,
-          },
-        ],
-        mode: 'payment',
-        success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}&orderId=${orderId}&amount=${amount}`,
-        cancel_url: cancelUrl,
-        customer_email: user.email,
+      // Create Payment Intent (Manual Capture - 카드 Hold만, 청구 안 됨)
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: parseInt(amount.toString()),
+        currency: 'krw',
+        capture_method: 'manual', // 🔑 핵심: 트레이너 승인 시 capture
+        automatic_payment_methods: {
+          enabled: true,
+        },
         metadata: {
           orderId: orderId,
           paymentId: payment.id,
           bookingId: bookingId,
           customerId: customer.id,
         },
+        description: orderName,
       });
 
-      // Update payment with Stripe session info
+      // Update payment with Payment Intent info
       await supabase
         .from('payments')
         .update({
           payment_metadata: {
             ...payment.payment_metadata,
-            stripeSessionId: session.id,
-            stripeSessionUrl: session.url,
+            stripePaymentIntentId: paymentIntent.id,
+            stripeClientSecret: paymentIntent.client_secret,
+            captureMethod: 'manual',
+            paymentStatus: 'intent_created',
           },
         })
         .eq('id', payment.id);
 
-      paymentUrl = session.url || '';
+      clientSecret = paymentIntent.client_secret || '';
+
+      // Log payment intent created event
+      await supabase.rpc('log_payment_event', {
+        p_payment_id: payment.id,
+        p_event_type: 'created',
+        p_metadata: {
+          createdAt: new Date().toISOString(),
+          stripePaymentIntentId: paymentIntent.id,
+          amount: amount,
+          orderId: orderId,
+          captureMethod: 'manual',
+          createdBy: user.id,
+        },
+      });
 
     } else if (paymentProvider === 'toss') {
       // Toss Payments - requires client-side SDK
       // Client will handle Toss Payments widget initialization
-      paymentUrl = ''; // Toss doesn't use direct URL redirect
+      clientSecret = ''; // Toss doesn't use client secret
     }
 
     // 10. 성공 응답
@@ -240,8 +242,10 @@ export async function POST(request: NextRequest) {
         orderName,
         customerName,
         paymentProvider: paymentProvider,
-        sessionUrl: paymentUrl, // Stripe session URL or Toss checkout URL
-        checkoutUrl: paymentUrl // Alias for compatibility
+        clientSecret: clientSecret, // Stripe Payment Intent client secret
+        // Legacy fields for backward compatibility
+        sessionUrl: '',
+        checkoutUrl: ''
       }
     });
 

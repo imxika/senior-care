@@ -9,6 +9,7 @@ interface PaymentProviderButtonProps {
   amount: number
   label: string
   description: string
+  onClientSecretReceived?: (clientSecret: string) => void
 }
 
 export default function PaymentProviderButton({
@@ -17,6 +18,7 @@ export default function PaymentProviderButton({
   amount,
   label,
   description,
+  onClientSecretReceived,
 }: PaymentProviderButtonProps) {
   const [isLoading, setIsLoading] = useState(false)
 
@@ -42,13 +44,15 @@ export default function PaymentProviderButton({
         throw new Error(data.error || '결제 요청 실패')
       }
 
-      // Redirect to payment page
-      if (provider === 'stripe' && data.data?.sessionUrl) {
-        window.location.href = data.data.sessionUrl
-      } else if (provider === 'toss' && data.data?.checkoutUrl) {
+      // Stripe: Payment Intent 방식 (Client Secret 전달)
+      if (provider === 'stripe' && data.data?.clientSecret) {
+        onClientSecretReceived?.(data.data.clientSecret)
+      }
+      // Toss: 기존 방식 유지
+      else if (provider === 'toss' && data.data?.checkoutUrl) {
         window.location.href = data.data.checkoutUrl
       } else {
-        throw new Error('결제 URL을 받지 못했습니다')
+        throw new Error('결제 정보를 받지 못했습니다')
       }
     } catch (error) {
       console.error('Payment error:', error)
@@ -76,6 +80,8 @@ export default function PaymentProviderButton({
               <Loader2 className="w-4 h-4 animate-spin" />
               처리 중...
             </>
+          ) : provider === 'stripe' ? (
+            `${amount.toLocaleString('ko-KR')}원 카드 정보 입력`
           ) : (
             `${amount.toLocaleString('ko-KR')}원 결제하기`
           )}

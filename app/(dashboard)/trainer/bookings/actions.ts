@@ -71,6 +71,69 @@ export async function updateBookingStatus(
     return { error: '권한이 없습니다.' }
   }
 
+  // 🆕 승인 시: Payment Intent Capture (카드에서 실제 청구)
+  if (status === 'confirmed') {
+    const { data: payments } = await serviceSupabase
+      .from('payments')
+      .select('id, payment_status, amount, payment_provider, payment_metadata')
+      .eq('booking_id', bookingId)
+      .eq('payment_status', 'authorized') // Hold 상태
+
+    if (payments && payments.length > 0) {
+      for (const payment of payments) {
+        try {
+          console.log('💳 [TRAINER APPROVE] Capturing payment:', payment.id)
+
+          if (payment.payment_provider === 'stripe') {
+            const Stripe = (await import('stripe')).default
+            const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+              apiVersion: '2025-09-30.clover',
+            })
+
+            const paymentIntentId = payment.payment_metadata?.stripePaymentIntentId
+
+            if (paymentIntentId) {
+              // Payment Intent Capture (실제 청구)
+              const capturedIntent = await stripe.paymentIntents.capture(paymentIntentId)
+              console.log('✅ [TRAINER APPROVE] Payment captured:', capturedIntent.id)
+
+              // DB 업데이트
+              await serviceSupabase
+                .from('payments')
+                .update({
+                  payment_status: 'paid',
+                  paid_at: new Date().toISOString(),
+                  payment_metadata: {
+                    ...payment.payment_metadata,
+                    capturedAt: new Date().toISOString(),
+                    capturedAmount: capturedIntent.amount_received,
+                    stripeChargeId: capturedIntent.latest_charge,
+                  }
+                })
+                .eq('id', payment.id)
+
+              // payment_events 기록
+              await serviceSupabase.rpc('log_payment_event', {
+                p_payment_id: payment.id,
+                p_event_type: 'confirmed',
+                p_metadata: {
+                  capturedAt: new Date().toISOString(),
+                  stripePaymentIntentId: paymentIntentId,
+                  capturedAmount: capturedIntent.amount_received,
+                  capturedByTrainer: trainer.id,
+                }
+              })
+            }
+          }
+          // Toss는 기존 방식 유지 (즉시 결제)
+        } catch (captureError) {
+          console.error('❌ [TRAINER APPROVE] Capture error:', captureError)
+          return { error: '결제 처리 중 오류가 발생했습니다.' }
+        }
+      }
+    }
+  }
+
   // Update booking status
   interface BookingUpdateData {
     status: string
@@ -114,22 +177,22 @@ export async function updateBookingStatus(
     return { error: `예약 상태 업데이트 중 오류: ${updateError.message}` }
   }
 
-  // 거절 시 자동 환불 처리
+  // 🆕 거절 시: Payment Intent Cancel (환불 불필요!)
   if (status === 'cancelled') {
     // 결제 내역 조회
     const { data: payments } = await serviceSupabase
       .from('payments')
       .select('id, payment_status, amount, payment_provider, payment_metadata')
       .eq('booking_id', bookingId)
-      .eq('payment_status', 'paid')
+      .in('payment_status', ['authorized', 'paid']) // Hold 또는 이미 청구된 경우
 
-    // 결제 완료된 건이 있으면 환불 처리
+    // 결제 처리
     if (payments && payments.length > 0) {
       for (const payment of payments) {
         try {
-          console.log('💰 Processing refund for payment:', payment.id)
+          console.log('💰 [TRAINER REJECT] Processing payment:', payment.id, payment.payment_status)
 
-          // Stripe 환불
+          // Stripe
           if (payment.payment_provider === 'stripe') {
             const Stripe = (await import('stripe')).default
             const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -139,17 +202,68 @@ export async function updateBookingStatus(
             const paymentIntentId = payment.payment_metadata?.stripePaymentIntentId
 
             if (paymentIntentId) {
-              const refund = await stripe.refunds.create({
-                payment_intent: paymentIntentId,
-                reason: 'requested_by_customer',
-                metadata: {
-                  refund_reason: `트레이너 예약 거절 (사유: ${rejectionReason})${rejectionNote ? ` - ${rejectionNote}` : ''}`,
-                  refunded_by_trainer: trainer.id,
-                  refunded_at: new Date().toISOString(),
-                }
-              })
+              // authorized 상태면 Cancel (환불 불필요!)
+              if (payment.payment_status === 'authorized') {
+                const cancelledIntent = await stripe.paymentIntents.cancel(paymentIntentId, {
+                  cancellation_reason: 'requested_by_customer',
+                })
+                console.log('✅ [TRAINER REJECT] Payment Intent cancelled (no charge):', cancelledIntent.id)
 
-              console.log('✅ Stripe refund successful:', refund.id)
+                // DB 업데이트
+                await serviceSupabase
+                  .from('payments')
+                  .update({
+                    payment_status: 'cancelled',
+                    payment_metadata: {
+                      ...payment.payment_metadata,
+                      cancelledAt: new Date().toISOString(),
+                      cancellationReason: `트레이너 예약 거절 (사유: ${rejectionReason})${rejectionNote ? ` - ${rejectionNote}` : ''}`,
+                      cancelledByTrainer: trainer.id,
+                    }
+                  })
+                  .eq('id', payment.id)
+
+                // payment_events 기록
+                await serviceSupabase.rpc('log_payment_event', {
+                  p_payment_id: payment.id,
+                  p_event_type: 'cancelled',
+                  p_metadata: {
+                    cancelledAt: new Date().toISOString(),
+                    cancellationReason: `트레이너 예약 거절`,
+                    cancelledByTrainer: trainer.id,
+                  }
+                })
+              }
+              // paid 상태면 Refund (이미 청구됨)
+              else if (payment.payment_status === 'paid') {
+                const refund = await stripe.refunds.create({
+                  payment_intent: paymentIntentId,
+                  reason: 'requested_by_customer',
+                  metadata: {
+                    refund_reason: `트레이너 예약 거절 (사유: ${rejectionReason})${rejectionNote ? ` - ${rejectionNote}` : ''}`,
+                    refunded_by_trainer: trainer.id,
+                    refunded_at: new Date().toISOString(),
+                  }
+                })
+                console.log('✅ [TRAINER REJECT] Payment refunded:', refund.id)
+
+                // DB 업데이트
+                await serviceSupabase
+                  .from('payments')
+                  .update({
+                    payment_status: 'refunded',
+                    refunded_at: new Date().toISOString(),
+                    payment_metadata: {
+                      ...payment.payment_metadata,
+                      refund: {
+                        reason: `트레이너 예약 거절 (사유: ${rejectionReason})${rejectionNote ? ` - ${rejectionNote}` : ''}`,
+                        refundedByTrainer: trainer.id,
+                        refundedAt: new Date().toISOString(),
+                      }
+                    }
+                  })
+                  .eq('id', payment.id)
+              }
             }
           }
           // Toss Payments 환불
@@ -174,34 +288,32 @@ export async function updateBookingStatus(
               if (tossResponse.ok) {
                 const tossData = await tossResponse.json()
                 console.log('✅ Toss refund successful:', tossData.transactionKey)
+
+                // DB 업데이트
+                await serviceSupabase
+                  .from('payments')
+                  .update({
+                    payment_status: 'refunded',
+                    refunded_at: new Date().toISOString(),
+                    payment_metadata: {
+                      ...payment.payment_metadata,
+                      refund: {
+                        reason: `트레이너 예약 거절 (사유: ${rejectionReason})${rejectionNote ? ` - ${rejectionNote}` : ''}`,
+                        refundedByTrainer: trainer.id,
+                        refundedAt: new Date().toISOString(),
+                      }
+                    }
+                  })
+                  .eq('id', payment.id)
               } else {
                 console.error('❌ Toss refund failed:', await tossResponse.json())
               }
             }
           }
 
-          // DB 업데이트
-          await serviceSupabase
-            .from('payments')
-            .update({
-              payment_status: 'refunded',
-              refunded_at: new Date().toISOString(),
-              payment_metadata: {
-                ...payment.payment_metadata,
-                refund: {
-                  reason: `트레이너 예약 거절 (사유: ${rejectionReason})${rejectionNote ? ` - ${rejectionNote}` : ''}`,
-                  refundedByTrainer: trainer.id,
-                  refundedAt: new Date().toISOString(),
-                }
-              }
-            })
-            .eq('id', payment.id)
-
-          console.log('✅ Payment status updated to refunded')
-
-        } catch (refundError) {
-          console.error('❌ Refund error:', refundError)
-          // 환불 실패해도 예약 거절은 계속 진행 (관리자가 수동 처리)
+        } catch (paymentError) {
+          console.error('❌ [TRAINER REJECT] Payment processing error:', paymentError)
+          // 환불/취소 실패해도 예약 거절은 계속 진행 (관리자가 수동 처리)
         }
       }
     }

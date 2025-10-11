@@ -4,8 +4,12 @@ import Stripe from 'stripe';
 import { createNotification, notificationTemplates } from '@/lib/notifications';
 
 /**
- * Stripe 결제 승인
+ * Stripe Payment Intent 승인 (카드 Hold)
  * POST /api/payments/stripe/confirm
+ *
+ * Payment Intent가 confirmed되어 카드 Hold 상태가 되면:
+ * - payment_status: 'authorized' (아직 청구 안 됨!)
+ * - booking_status: 'pending' (트레이너 승인 대기)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -21,9 +25,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. 요청 데이터 파싱
-    const { sessionId, orderId, amount } = await request.json();
+    const { paymentIntentId, bookingId } = await request.json();
 
-    if (!sessionId || !orderId || !amount) {
+    if (!paymentIntentId || !bookingId) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -37,7 +41,7 @@ export async function POST(request: NextRequest) {
         *,
         booking:bookings!inner(*)
       `)
-      .eq('toss_order_id', orderId)
+      .eq('booking_id', bookingId)
       .eq('payment_provider', 'stripe')
       .single();
 
@@ -63,15 +67,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 5. 금액 일치 확인
-    if (parseFloat(payment.amount) !== amount) {
-      return NextResponse.json(
-        { error: 'Amount mismatch' },
-        { status: 400 }
-      );
-    }
-
-    // 6. Stripe 클라이언트 초기화
+    // 5. Stripe 클라이언트 초기화
     const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
     if (!stripeSecretKey) {
       throw new Error('STRIPE_SECRET_KEY is not defined');
@@ -81,71 +77,38 @@ export async function POST(request: NextRequest) {
       apiVersion: '2025-09-30.clover',
     });
 
-    // 7. Stripe Checkout Session 조회
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    // 6. Payment Intent 조회
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
-    // 8. Session 상태 확인
-    if (session.payment_status !== 'paid') {
-      // DB 업데이트 - 실패 기록
-      await supabase
-        .from('payments')
-        .update({
-          payment_status: 'failed',
-          failed_at: new Date().toISOString(),
-          failure_code: 'PAYMENT_NOT_COMPLETED',
-          failure_message: `Payment status: ${session.payment_status}`,
-        })
-        .eq('id', payment.id);
-
+    // 7. Payment Intent 상태 확인 (requires_capture = 카드 Hold 성공)
+    if (paymentIntent.status !== 'requires_capture') {
+      console.error('❌ [STRIPE CONFIRM] Invalid status:', paymentIntent.status);
       return NextResponse.json(
-        { error: 'Payment not completed', status: session.payment_status },
+        { error: 'Payment Intent status is not requires_capture', status: paymentIntent.status },
         { status: 400 }
       );
     }
 
-    // 9. PaymentIntent 조회 (추가 정보 확인용)
-    let paymentIntent = null;
-    let latestCharge = null;
-    if (session.payment_intent && typeof session.payment_intent === 'string') {
-      paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent);
-
-      // latest_charge로 charge 정보 가져오기
-      if (paymentIntent.latest_charge && typeof paymentIntent.latest_charge === 'string') {
-        latestCharge = await stripe.charges.retrieve(paymentIntent.latest_charge);
-      }
-    }
-
-    // 10. DB 업데이트 - 결제 성공
-    console.log('💳 [STRIPE CONFIRM] Updating payment:', {
+    // 8. DB 업데이트 - 카드 Hold 성공 (청구는 아직 안 됨!)
+    console.log('💳 [STRIPE CONFIRM] Card authorized (not charged yet):', {
       paymentId: payment.id,
-      sessionId: session.id,
-      paymentStatus: session.payment_status,
-      amount: session.amount_total
+      paymentIntentId: paymentIntent.id,
+      status: paymentIntent.status,
+      amount: paymentIntent.amount
     });
 
     const { error: updateError } = await supabase
       .from('payments')
       .update({
-        toss_payment_key: session.id, // Stripe Session ID를 저장
-        payment_status: 'paid',
-        payment_method: paymentIntent?.payment_method_types?.[0] || 'card',
-        paid_at: new Date(session.created * 1000).toISOString(),
-        card_company: latestCharge?.payment_method_details?.card?.brand || null,
-        card_number_masked: latestCharge?.payment_method_details?.card?.last4
-          ? `****-****-****-${latestCharge.payment_method_details.card.last4}`
-          : null,
+        payment_status: 'authorized', // 🔑 카드 Hold 상태 (청구 안 됨!)
+        payment_method: paymentIntent.payment_method_types?.[0] || 'card',
+        confirmed_at: new Date().toISOString(),
         payment_metadata: {
           ...(payment.payment_metadata || {}),
-          stripeSessionId: session.id,
-          stripePaymentIntentId: session.payment_intent,
-          stripeCustomerId: session.customer,
-          stripeResponse: {
-            id: session.id,
-            amount_total: session.amount_total,
-            currency: session.currency,
-            payment_status: session.payment_status,
-            customer_email: session.customer_email,
-          },
+          stripePaymentIntentId: paymentIntent.id,
+          paymentIntentStatus: paymentIntent.status,
+          authorizedAt: new Date().toISOString(),
+          amount: paymentIntent.amount,
         },
       })
       .eq('id', payment.id);
@@ -153,49 +116,37 @@ export async function POST(request: NextRequest) {
     if (updateError) {
       console.error('❌ [STRIPE CONFIRM] Payment update error:', updateError);
       return NextResponse.json(
-        { error: 'Payment completed but database update failed', details: updateError.message },
+        { error: 'Payment authorized but database update failed', details: updateError.message },
         { status: 500 }
       );
     }
 
-    console.log('✅ [STRIPE CONFIRM] Payment updated successfully');
+    console.log('✅ [STRIPE CONFIRM] Payment authorized successfully');
 
-    // 11. payment_events에 confirmed 이벤트 기록
-    console.log('📝 [STRIPE CONFIRM] Logging payment event');
-
-    const { error: eventError } = await supabase.rpc('log_payment_event', {
+    // 9. payment_events에 authorized 이벤트 기록
+    await supabase.rpc('log_payment_event', {
       p_payment_id: payment.id,
       p_event_type: 'confirmed',
       p_metadata: {
         confirmedAt: new Date().toISOString(),
-        stripeSessionId: session.id,
-        amount: session.amount_total,
-        method: paymentIntent?.payment_method_types?.[0] || 'card',
+        stripePaymentIntentId: paymentIntent.id,
+        amount: paymentIntent.amount,
+        status: 'authorized',
         confirmedBy: user.id,
       },
     });
 
-    if (eventError) {
-      console.error('⚠️ [STRIPE CONFIRM] Event logging failed:', eventError);
-      // Continue anyway - event logging is not critical
-    }
+    // 10. Booking 상태 업데이트 - 트레이너 승인 대기
+    console.log('📅 [STRIPE CONFIRM] Updating booking status to pending');
 
-    // 12. Booking 상태 업데이트 - 결제 완료 → 트레이너 승인 대기
-    console.log('📅 [STRIPE CONFIRM] Updating booking status');
-
-    const { error: bookingUpdateError } = await supabase
+    await supabase
       .from('bookings')
       .update({
-        status: 'pending', // 🆕 결제 완료 후 트레이너 승인 대기 상태로 변경
+        status: 'pending', // 트레이너 승인 대기
       })
       .eq('id', payment.booking_id);
 
-    if (bookingUpdateError) {
-      console.error('⚠️ [STRIPE CONFIRM] Booking update failed:', bookingUpdateError);
-      // Continue anyway
-    }
-
-    // 13. 예약 타입에 따라 후속 처리
+    // 11. 예약 타입에 따라 트레이너 알림 전송
     const { data: booking } = await supabase
       .from('bookings')
       .select('id, booking_type, booking_date, start_time, trainer_id')
@@ -218,7 +169,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (booking.booking_type === 'direct' && booking.trainer_id) {
-      // 🆕 지정 예약: 트레이너에게 승인 요청 알림 전송
+      // 지정 예약: 트레이너에게 승인 요청 알림 전송
       const { data: trainer } = await supabase
         .from('trainers')
         .select('id, profile_id')
@@ -237,52 +188,35 @@ export async function POST(request: NextRequest) {
           link: `/trainer/bookings/${payment.booking_id}`,
         });
 
-        console.log('✅ [PAYMENT] Direct booking - Trainer notification sent');
+        console.log('✅ [STRIPE CONFIRM] Direct booking - Trainer notification sent');
       }
     } else if (booking.booking_type === 'recommended') {
-      // 🆕 추천 예약: 자동 매칭 시작
-      console.log('🚀 [PAYMENT] Recommended booking - Starting auto-matching');
-      console.log('📋 [PAYMENT] Booking info:', {
-        id: booking.id,
-        type: booking.booking_type,
-        date: booking.booking_date,
-        time: booking.start_time,
-        trainerId: booking.trainer_id
-      });
+      // 추천 예약: 자동 매칭 시작
+      console.log('🚀 [STRIPE CONFIRM] Recommended booking - Starting auto-matching');
 
       try {
-        // 자동 매칭 함수 호출 (동적 import로 순환 참조 방지)
         const { notifySuitableTrainers } = await import('@/lib/auto-matching');
-        console.log('📦 [PAYMENT] Auto-matching module loaded');
-
         const autoMatchResult = await notifySuitableTrainers(booking.id);
-        console.log('📊 [PAYMENT] Auto-matching result:', autoMatchResult);
 
         if (autoMatchResult.error) {
-          console.error('❌ [PAYMENT] Auto-matching failed:', autoMatchResult.error);
-          // 자동 매칭 실패해도 결제는 성공 처리 - Admin이 수동 매칭 가능
+          console.error('❌ [STRIPE CONFIRM] Auto-matching failed:', autoMatchResult.error);
         } else {
-          console.log('✅ [PAYMENT] Auto-matching successful:', {
-            notifiedCount: autoMatchResult.notifiedCount,
-            deadline: autoMatchResult.deadline
-          });
+          console.log('✅ [STRIPE CONFIRM] Auto-matching successful');
         }
       } catch (autoMatchError) {
-        console.error('💥 [PAYMENT] Auto-matching exception:', autoMatchError);
+        console.error('💥 [STRIPE CONFIRM] Auto-matching exception:', autoMatchError);
       }
     }
 
-    // 14. 성공 응답
+    // 12. 성공 응답
     return NextResponse.json({
       success: true,
       data: {
         paymentId: payment.id,
-        paymentKey: session.id,
-        orderId: orderId,
-        amount: session.amount_total,
-        status: session.payment_status,
-        approvedAt: new Date(session.created * 1000).toISOString(),
-        method: paymentIntent?.payment_method_types?.[0] || 'card',
+        paymentIntentId: paymentIntent.id,
+        amount: paymentIntent.amount,
+        status: 'authorized', // 카드 Hold 상태
+        authorizedAt: new Date().toISOString(),
       },
     });
 
