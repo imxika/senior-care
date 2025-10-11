@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Prepare metadata with proper typing
-    const existingMetadata = (payment.payment_metadata as Record<string, any>) || {};
+    const existingMetadata = (payment.payment_metadata as Record<string, unknown>) || {};
     const updatedMetadata = {
       ...existingMetadata,
       stripePaymentIntentId: paymentIntent.id,
