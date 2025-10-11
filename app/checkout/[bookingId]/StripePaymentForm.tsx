@@ -9,6 +9,7 @@ import {
   useElements
 } from '@stripe/react-stripe-js'
 import { Loader2 } from 'lucide-react'
+import CancelButton from './CancelButton'
 
 // Stripe Publishable Key 초기화
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
@@ -205,6 +206,11 @@ function CheckoutForm({ bookingId, amount, onSuccess, onError }: StripePaymentFo
         <p>✓ 카드 정보는 안전하게 암호화되어 처리됩니다</p>
         <p className="mt-1">✓ 트레이너 승인 시 실제 결제가 진행됩니다</p>
         <p className="mt-1">✓ 거절 시 자동으로 취소되며 결제되지 않습니다</p>
+      </div>
+
+      {/* 취소 버튼 */}
+      <div className="flex justify-center pt-4 border-t">
+        <CancelButton bookingId={bookingId} />
       </div>
     </form>
   )

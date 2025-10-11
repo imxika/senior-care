@@ -45,7 +45,7 @@ export default function CancelButton({ bookingId }: CancelButtonProps) {
     <button
       onClick={handleCancel}
       disabled={isLoading}
-      className="text-gray-600 hover:text-gray-900 underline disabled:opacity-50 disabled:cursor-not-allowed"
+      className="w-full sm:w-auto px-6 py-3 text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
     >
       {isLoading ? '취소 중...' : '취소하고 예약 목록으로 돌아가기'}
     </button>

@@ -65,7 +65,7 @@ export default function CheckoutContent({ booking }: CheckoutContentProps) {
             </div>
 
             {/* Cancel Button */}
-            <div className="mt-6 text-center">
+            <div className="mt-6 flex justify-center">
               <CancelButton bookingId={booking.id} />
             </div>
           </div>
