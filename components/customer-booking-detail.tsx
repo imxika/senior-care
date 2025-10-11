@@ -427,7 +427,23 @@ export function CustomerBookingDetail({ booking, existingReview }: CustomerBooki
         {booking.total_price > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg md:text-xl">💳 결제 정보</CardTitle>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <CardTitle className="text-lg md:text-xl">💳 결제 정보</CardTitle>
+                {booking.payments && booking.payments.length > 0 && (() => {
+                  const payment = booking.payments[0]
+                  const statusBadge = (() => {
+                    const variants = {
+                      paid: { label: '결제 완료', variant: 'default' as const },
+                      pending: { label: '결제 대기', variant: 'secondary' as const },
+                      failed: { label: '결제 실패', variant: 'destructive' as const },
+                      cancelled: { label: '결제 취소', variant: 'outline' as const },
+                      refunded: { label: '환불 완료', variant: 'outline' as const },
+                    }
+                    return variants[payment.payment_status as keyof typeof variants] || variants.pending
+                  })()
+                  return <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>
+                })()}
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
