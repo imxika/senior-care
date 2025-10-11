@@ -27,13 +27,10 @@ export async function cancelBooking(
       return { error: 'Unauthorized' }
     }
 
-    // 2. 예약 조회 (customer 권한 확인 포함)
+    // 2. 예약 조회
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
-      .select(`
-        *,
-        customer:customers!inner(profile_id)
-      `)
+      .select('*')
       .eq('id', bookingId)
       .single()
 
@@ -42,8 +39,19 @@ export async function cancelBooking(
       return { error: 'Booking not found' }
     }
 
-    // 3. 권한 확인 (본인의 예약인지)
-    if (booking.customer.profile_id !== user.id) {
+    // 3. Customer 조회 및 권한 확인
+    const { data: customer, error: customerError } = await supabase
+      .from('customers')
+      .select('profile_id')
+      .eq('id', booking.customer_id)
+      .single()
+
+    if (customerError || !customer) {
+      console.error('❌ [CANCEL] Customer not found:', customerError)
+      return { error: 'Customer not found' }
+    }
+
+    if (customer.profile_id !== user.id) {
       return { error: 'Forbidden' }
     }
 
