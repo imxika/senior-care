@@ -13,13 +13,15 @@ export default function LoginPage() {
   const supabase = createClient()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [isEmailLoading, setIsEmailLoading] = useState(false)
+  const [isKakaoLoading, setIsKakaoLoading] = useState(false)
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
   // 이메일 + 비밀번호 로그인
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
+    setIsEmailLoading(true)
     setMessage(null)
 
     try {
@@ -42,13 +44,13 @@ export default function LoginPage() {
         text: error instanceof Error ? error.message : '로그인 중 오류가 발생했습니다.'
       })
     } finally {
-      setIsLoading(false)
+      setIsEmailLoading(false)
     }
   }
 
   // Kakao 로그인
   const handleKakaoLogin = async () => {
-    setIsLoading(true)
+    setIsKakaoLoading(true)
     setMessage(null)
 
     try {
@@ -65,13 +67,13 @@ export default function LoginPage() {
         text: error instanceof Error ? error.message : '카카오 로그인 중 오류가 발생했습니다.'
       })
     } finally {
-      setIsLoading(false)
+      setIsKakaoLoading(false)
     }
   }
 
   // Google 로그인
   const handleGoogleLogin = async () => {
-    setIsLoading(true)
+    setIsGoogleLoading(true)
     setMessage(null)
 
     try {
@@ -88,7 +90,7 @@ export default function LoginPage() {
         text: error instanceof Error ? error.message : '구글 로그인 중 오류가 발생했습니다.'
       })
     } finally {
-      setIsLoading(false)
+      setIsGoogleLoading(false)
     }
   }
 
@@ -109,11 +111,11 @@ export default function LoginPage() {
           <div className="space-y-3">
             <Button
               onClick={handleKakaoLogin}
-              disabled={isLoading}
+              disabled={isKakaoLoading}
               className="w-full h-14 md:h-16 text-lg md:text-xl font-bold bg-[#FEE500] hover:bg-[#FDD835] text-black"
               size="lg"
             >
-              {isLoading ? (
+              {isKakaoLoading ? (
                 <>
                   <Loader2 className="w-6 h-6 mr-3 animate-spin" />
                   로그인 중...
@@ -128,12 +130,12 @@ export default function LoginPage() {
 
             <Button
               onClick={handleGoogleLogin}
-              disabled={isLoading}
+              disabled={isGoogleLoading}
               variant="outline"
               className="w-full h-14 md:h-16 text-lg md:text-xl font-bold border-2"
               size="lg"
             >
-              {isLoading ? (
+              {isGoogleLoading ? (
                 <>
                   <Loader2 className="w-6 h-6 mr-3 animate-spin" />
                   로그인 중...
@@ -193,11 +195,11 @@ export default function LoginPage() {
 
             <Button
               type="submit"
-              disabled={isLoading}
+              disabled={isEmailLoading}
               className="w-full h-14 md:h-16 text-lg md:text-xl font-bold"
               size="lg"
             >
-              {isLoading ? (
+              {isEmailLoading ? (
                 <>
                   <Loader2 className="w-6 h-6 mr-3 animate-spin" />
                   로그인 중...
