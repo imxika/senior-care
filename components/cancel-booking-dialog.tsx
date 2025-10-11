@@ -60,7 +60,8 @@ export function CancelBookingDialog({
       setError(null)
     } catch (error) {
       console.error('Failed to cancel booking:', error)
-      setError(error instanceof Error ? error.message : '예약 취소 중 오류가 발생했습니다.')
+      const errorMessage = error instanceof Error ? error.message : '예약 취소 중 오류가 발생했습니다.'
+      setError(errorMessage)
     } finally {
       setIsLoading(false)
     }

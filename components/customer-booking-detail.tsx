@@ -14,6 +14,7 @@ import { canCancelBooking } from '@/lib/utils'
 import type { CancellationReason } from '@/lib/constants'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 interface CustomerBookingDetailProps {
   booking: {
@@ -132,14 +133,23 @@ export function CustomerBookingDetail({ booking, existingReview }: CustomerBooki
     const result = await cancelBooking(bookingId, reason, notes)
 
     if ('error' in result) {
-      alert(result.error)
+      toast.error('예약 취소 실패', {
+        description: result.error,
+        duration: 5000,
+      })
       return
     }
 
     if (result.success) {
       setCancelSuccess({
-        refundAmount: result.refundAmount,
-        feeAmount: result.feeAmount
+        refundAmount: result.refundAmount || 0,
+        feeAmount: result.feeAmount || 0
+      })
+
+      // 성공 토스트
+      toast.success('예약이 취소되었습니다', {
+        description: result.message || `취소 수수료 ${(result.feeAmount || 0).toLocaleString()}원, 환불 금액 ${(result.refundAmount || 0).toLocaleString()}원`,
+        duration: 6000,
       })
 
       // 2초 후 페이지 새로고침
