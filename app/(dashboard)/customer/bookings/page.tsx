@@ -72,7 +72,7 @@ export default async function CustomerBookingsPage({ searchParams }: PageProps) 
   }
 
   // 고객 ID 조회
-  const { data: customer, error: customerError } = await supabase
+  const { data: customer } = await supabase
     .from('customers')
     .select('id')
     .eq('profile_id', user.id)

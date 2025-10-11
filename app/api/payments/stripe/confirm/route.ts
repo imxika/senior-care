@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import Stripe from 'stripe';
 import { createNotification, notificationTemplates } from '@/lib/notifications';
-import { handleStripeError, handlePaymentFailure } from '@/lib/payment-recovery';
+import { handleStripeError } from '@/lib/payment-recovery';
 
 /**
  * Stripe Payment Intent 승인 (카드 Hold)
