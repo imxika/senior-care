@@ -262,8 +262,11 @@ export function CustomerBookingDetail({ booking, existingReview }: CustomerBooki
                 />
               )}
             </div>
+            <CardDescription className="text-xs md:text-sm font-mono mt-1">
+              예약번호: {booking.id}
+            </CardDescription>
             {!canCancel && booking.status !== 'cancelled' && booking.status !== 'completed' && (
-              <CardDescription className="text-orange-600 text-sm">
+              <CardDescription className="text-orange-600 text-sm mt-1">
                 취소는 예약 24시간 전까지만 가능합니다 (남은 시간: {Math.round(hoursUntil)}시간)
               </CardDescription>
             )}

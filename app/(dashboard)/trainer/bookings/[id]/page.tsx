@@ -173,6 +173,9 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
               <CardTitle className="text-lg md:text-xl">예약 정보</CardTitle>
               {getStatusBadge(booking.status)}
             </div>
+            <CardDescription className="text-xs md:text-sm font-mono">
+              예약번호: {booking.id}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-3 md:gap-4 md:grid-cols-2">
