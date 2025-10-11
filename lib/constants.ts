@@ -124,7 +124,7 @@ export const BOOKING_STATUS_CONFIG = {
 // ====================================
 export const BOOKING_CONFIG = {
   DURATION_MINUTES: 30,
-  ADVANCE_BOOKING_DAYS: 30,
+  ADVANCE_BOOKING_DAYS: 15,  // 최대 15일 후까지 예약 가능
   CANCELLATION_HOURS: 24,
   MIN_DURATION_MINUTES: 30,
   MAX_DURATION_MINUTES: 180
