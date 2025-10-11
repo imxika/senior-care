@@ -75,7 +75,14 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
       ),
       payments(
         id,
-        payment_status
+        amount,
+        currency,
+        payment_method,
+        payment_status,
+        payment_provider,
+        paid_at,
+        created_at,
+        payment_metadata
       )
     `)
     .eq('id', id)
@@ -390,10 +397,11 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
         {booking.total_price > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg md:text-xl">결제 정보</CardTitle>
+              <CardTitle className="text-lg md:text-xl">💳 결제 정보</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
+              <div className="space-y-3">
+                {/* 가격 정보 */}
                 {booking.group_size > 1 && (
                   <div className="flex justify-between text-sm md:text-base">
                     <span className="text-muted-foreground">인당 가격</span>
@@ -401,9 +409,127 @@ export default async function TrainerBookingDetailPage({ params }: PageProps) {
                   </div>
                 )}
                 <div className="flex justify-between font-bold text-base md:text-lg pt-2 border-t">
-                  <span>총 금액</span>
+                  <span>총 예약 금액</span>
                   <span>{booking.total_price.toLocaleString()}원</span>
                 </div>
+
+                {/* 결제 상태 */}
+                {booking.payments && booking.payments.length > 0 && (
+                  <>
+                    <div className="border-t pt-3 mt-3 space-y-2">
+                      {booking.payments.map((payment: {
+                        id: string
+                        amount: string
+                        currency: string
+                        payment_method: string
+                        payment_status: string
+                        payment_provider: string
+                        paid_at?: string
+                        created_at: string
+                        payment_metadata?: Record<string, unknown>
+                      }) => {
+                        const statusBadge = (() => {
+                          const variants = {
+                            paid: { label: '✅ 결제 완료', variant: 'default' as const },
+                            pending: { label: '⏳ 결제 대기', variant: 'secondary' as const },
+                            failed: { label: '❌ 결제 실패', variant: 'destructive' as const },
+                            cancelled: { label: '🚫 취소', variant: 'outline' as const },
+                            refunded: { label: '💰 환불 완료', variant: 'outline' as const },
+                          }
+                          return variants[payment.payment_status as keyof typeof variants] || variants.pending
+                        })()
+
+                        const providerLabel = payment.payment_provider === 'stripe' ? '💵 Stripe' : '💳 Toss'
+
+                        // 환불/취소 정보 추출
+                        const metadata = payment.payment_metadata
+                        const cancellationType = metadata?.cancellationType as string | undefined
+                        const feeRate = metadata?.feeRate as number | undefined
+                        const feeAmount = metadata?.feeAmount as number | undefined
+                        const refundAmount = metadata?.refundAmount as number | undefined
+
+                        return (
+                          <div key={payment.id} className="bg-muted/50 rounded-lg p-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Badge variant={statusBadge.variant} className="text-xs">
+                                {statusBadge.label}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">{providerLabel}</span>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div>
+                                <p className="text-muted-foreground">결제 금액</p>
+                                <p className="font-semibold">{parseFloat(payment.amount).toLocaleString()}원</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">결제 수단</p>
+                                <p className="font-semibold">{payment.payment_method || '카드'}</p>
+                              </div>
+                              {payment.paid_at && (
+                                <div className="col-span-2">
+                                  <p className="text-muted-foreground">결제 완료 시각</p>
+                                  <p className="font-semibold">
+                                    {new Date(payment.paid_at).toLocaleString('ko-KR', {
+                                      year: 'numeric',
+                                      month: '2-digit',
+                                      day: '2-digit',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                    })}
+                                  </p>
+                                </div>
+                              )}
+
+                              {/* 취소/환불 정보 */}
+                              {(payment.payment_status === 'cancelled' || payment.payment_status === 'refunded') && cancellationType && (
+                                <>
+                                  <div className="col-span-2 border-t pt-2 mt-2">
+                                    <p className="text-muted-foreground mb-1 font-semibold">취소/환불 상세</p>
+                                  </div>
+                                  {feeRate !== undefined && (
+                                    <div className="col-span-2">
+                                      <p className="text-muted-foreground">취소 수수료율</p>
+                                      <p className="font-semibold text-orange-600">{(feeRate * 100).toFixed(0)}%</p>
+                                    </div>
+                                  )}
+                                  {feeAmount !== undefined && (
+                                    <div>
+                                      <p className="text-muted-foreground">취소 수수료 (트레이너 수령)</p>
+                                      <p className="font-semibold text-green-600">{feeAmount.toLocaleString()}원</p>
+                                    </div>
+                                  )}
+                                  {refundAmount !== undefined && (
+                                    <div>
+                                      <p className="text-muted-foreground">고객 환불 금액</p>
+                                      <p className="font-semibold text-blue-600">{refundAmount.toLocaleString()}원</p>
+                                    </div>
+                                  )}
+                                  {cancellationType && (
+                                    <div className="col-span-2">
+                                      <p className="text-muted-foreground">처리 방식</p>
+                                      <p className="font-semibold text-xs">
+                                        {cancellationType === 'full_refund' && '전액 환불 (수령 없음)'}
+                                        {cancellationType === 'partial_refund' && '부분 환불 (일부 수령)'}
+                                        {cancellationType === 'partial_capture' && '부분 청구 (일부 수령)'}
+                                        {cancellationType === 'full_capture' && '전액 청구 (전액 수령)'}
+                                      </p>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+
+                              <div className="col-span-2">
+                                <p className="text-muted-foreground">결제 ID</p>
+                                <p className="font-mono text-xs">{payment.id.slice(0, 12)}...</p>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>
