@@ -29,8 +29,10 @@ export async function middleware(request: NextRequest) {
     }
   )
 
+  // 세션 확인 (getUser는 JWT 유효성도 체크함)
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser()
 
   // Public routes that don't require auth
@@ -50,9 +52,31 @@ export async function middleware(request: NextRequest) {
   const isTrainerRoute = request.nextUrl.pathname.startsWith('/trainer/') || request.nextUrl.pathname === '/trainer'
   const isAdminRoute = request.nextUrl.pathname.startsWith('/admin/')
 
-  // If not logged in and trying to access protected route
-  if (!user && (isCustomerRoute || isTrainerRoute || isAdminRoute)) {
-    return NextResponse.redirect(new URL('/login', request.url))
+  // 세션 만료 또는 인증 오류 시 로그아웃 처리
+  if (authError || !user) {
+    if (isCustomerRoute || isTrainerRoute || isAdminRoute) {
+      // 보호된 라우트 접근 시도: 로그인 페이지로 리다이렉트
+      const loginUrl = new URL('/login', request.url)
+      if (authError) {
+        loginUrl.searchParams.set('message', '세션이 만료되었습니다. 다시 로그인해주세요.')
+      }
+
+      // 응답 객체 생성하여 쿠키 삭제
+      const redirectResponse = NextResponse.redirect(loginUrl)
+
+      // 모든 Supabase 인증 쿠키 삭제
+      const cookieNames = request.cookies.getAll().map(c => c.name).filter(name =>
+        name.startsWith('sb-') || name.includes('supabase')
+      )
+
+      cookieNames.forEach(name => {
+        redirectResponse.cookies.delete(name)
+      })
+
+      return redirectResponse
+    }
+    // 공개 라우트는 그대로 진행
+    return response
   }
 
   // If logged in

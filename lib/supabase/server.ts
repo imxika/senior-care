@@ -16,12 +16,13 @@ export async function createClient() {
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) => {
-              // 세션 쿠키로 설정 (브라우저 닫으면 자동 삭제)
+              // 30분 타임아웃 설정
               cookieStore.set(name, value, {
                 ...options,
-                maxAge: undefined, // maxAge 제거
-                expires: undefined, // expires 제거
-                // 세션 쿠키는 maxAge와 expires가 없으면 브라우저 세션 동안만 유지
+                maxAge: 30 * 60, // 30분 (초 단위)
+                sameSite: 'lax',
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
               })
             })
           } catch {
