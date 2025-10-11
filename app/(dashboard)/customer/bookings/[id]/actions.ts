@@ -207,7 +207,8 @@ export async function cancelBooking(
     }
 
     // 11-2. Payment 상태 업데이트
-    const paymentStatus = stripeResult === 'full_refund' ? 'cancelled' : 'paid'
+    const paymentStatus = stripeResult === 'full_refund' ? 'cancelled' :
+                         (stripeResult === 'partial_refund' || stripeResult === 'partial_capture') ? 'refunded' : 'paid'
 
     const { error: paymentUpdateError } = await supabase
       .from('payments')
@@ -221,6 +222,7 @@ export async function cancelBooking(
           feeAmount: feeCalculation.feeAmount,
           refundAmount: feeCalculation.refundAmount,
           capturedAmount,
+          refundedAmount,
           cancelledAt: new Date().toISOString(),
           cancelledBy: user.id,
         },
@@ -229,6 +231,8 @@ export async function cancelBooking(
 
     if (paymentUpdateError) {
       console.error('❌ [CANCEL] Payment update error:', paymentUpdateError)
+    } else {
+      console.log('✅ [CANCEL] Payment status updated to:', paymentStatus)
     }
 
     // 11-3. Payment event 로그
@@ -265,7 +269,7 @@ export async function cancelBooking(
         const scheduledAt = new Date(bookingDateTime)
         const customerName = profile?.full_name || '고객'
 
-        const notification = notificationTemplates.bookingCancelled(customerName, scheduledAt)
+        const notification = notificationTemplates.bookingCancelledByCustomer(customerName, scheduledAt)
 
         await createNotification({
           userId: trainer.profile_id,
