@@ -136,6 +136,13 @@ export default async function RecommendedBookingPage({ searchParams }: PageProps
     customer = newCustomer
   }
 
+  // 플랫폼 가격 정책 조회
+  const { data: pricingPolicy } = await supabase
+    .from('platform_pricing_policies')
+    .select('*')
+    .eq('is_active', true)
+    .single()
+
   return (
     <div className="container mx-auto p-6 max-w-3xl">
       <div className="mb-6">
@@ -157,6 +164,7 @@ export default async function RecommendedBookingPage({ searchParams }: PageProps
             customerId={customer.id}
             initialSessionType={sessionType}
             initialServiceType={serviceType}
+            pricingPolicy={pricingPolicy}
           />
         </CardContent>
       </Card>
