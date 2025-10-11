@@ -461,6 +461,14 @@ export function CustomerBookingDetail({ booking, existingReview }: CustomerBooki
 
                         const providerLabel = payment.payment_provider === 'stripe' ? '💵 Stripe' : '💳 Toss'
 
+                        // 환불/취소 정보 추출
+                        const metadata = payment.payment_metadata as Record<string, unknown> | undefined
+                        const cancellationType = metadata?.cancellationType as string | undefined
+                        const feeRate = metadata?.feeRate as number | undefined
+                        const feeAmount = metadata?.feeAmount as number | undefined
+                        const refundAmount = metadata?.refundAmount as number | undefined
+                        const capturedAmount = metadata?.capturedAmount as number | undefined
+
                         return (
                           <div key={payment.id} className="bg-muted/50 rounded-lg p-3 space-y-2">
                             <div className="flex items-center justify-between">
@@ -493,6 +501,45 @@ export function CustomerBookingDetail({ booking, existingReview }: CustomerBooki
                                   </p>
                                 </div>
                               )}
+
+                              {/* 취소/환불 정보 */}
+                              {(payment.payment_status === 'cancelled' || payment.payment_status === 'refunded') && cancellationType && (
+                                <>
+                                  <div className="col-span-2 border-t pt-2 mt-2">
+                                    <p className="text-muted-foreground mb-1 font-semibold">취소/환불 상세</p>
+                                  </div>
+                                  {feeRate !== undefined && (
+                                    <div className="col-span-2">
+                                      <p className="text-muted-foreground">취소 수수료율</p>
+                                      <p className="font-semibold text-orange-600">{(feeRate * 100).toFixed(0)}%</p>
+                                    </div>
+                                  )}
+                                  {feeAmount !== undefined && (
+                                    <div>
+                                      <p className="text-muted-foreground">취소 수수료</p>
+                                      <p className="font-semibold text-orange-600">{feeAmount.toLocaleString()}원</p>
+                                    </div>
+                                  )}
+                                  {refundAmount !== undefined && (
+                                    <div>
+                                      <p className="text-muted-foreground">환불 금액</p>
+                                      <p className="font-semibold text-green-600">{refundAmount.toLocaleString()}원</p>
+                                    </div>
+                                  )}
+                                  {cancellationType && (
+                                    <div className="col-span-2">
+                                      <p className="text-muted-foreground">처리 방식</p>
+                                      <p className="font-semibold text-xs">
+                                        {cancellationType === 'full_refund' && '전액 환불'}
+                                        {cancellationType === 'partial_refund' && '부분 환불'}
+                                        {cancellationType === 'partial_capture' && '부분 청구'}
+                                        {cancellationType === 'full_capture' && '전액 청구'}
+                                      </p>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+
                               <div className="col-span-2">
                                 <p className="text-muted-foreground">결제 ID</p>
                                 <p className="font-mono text-xs">{payment.id.slice(0, 12)}...</p>
